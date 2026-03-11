@@ -3,6 +3,7 @@ export default {
   content: [
     "./index.html",
     "./src/**/*.{js,ts,jsx,tsx}", // Thêm ts và tsx vào đây
+    "./components/**/*.{js,ts,jsx,tsx}",
   ],
   theme: {
     extend: {
