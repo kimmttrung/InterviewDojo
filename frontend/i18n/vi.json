@@ -1,0 +1,106 @@
+{
+    "navbar": {
+        "logo": "InterviewDojo"
+    },
+    "language": {
+        "en": "English",
+        "vi": "Tiếng Việt",
+        "jp": "日本語"
+    },
+    "theme": {
+        "light": "Sáng",
+        "dark": "Tối",
+        "system": "Hệ thống"
+    },
+    "sidebar": {
+        "dashboard": "Bảng điều khiển",
+        "practice": "Luyện tập độc lập",
+        "peerInterview": "Phỏng vấn cùng bạn",
+        "questionBank": "Ngân hàng câu hỏi",
+        "feedback": "Xem phản hồi",
+        "analytics": "Phân tích",
+        "profile": "Hồ sơ",
+        "logout": "Đăng xuất"
+    },
+    "auth": {
+        "welcome": "Chào mừng đến InterviewDojo",
+        "description": "Thành thạo các phỏng vấn kỹ thuật của bạn với nền tảng luyện tập toàn diện của chúng tôi",
+        "googleSignIn": "Đăng nhập bằng Google",
+        "githubSignIn": "Đăng nhập bằng GitHub",
+        "or": "hoặc",
+        "signIn": "Đăng nhập",
+        "noAccount": "Chưa có tài khoản?",
+        "createAccount": "Tạo tài khoản"
+    },
+    "dashboard": {
+        "title": "Bảng điều khiển",
+        "welcome": "Chào mừng trở lại, {{name}}!",
+        "stats": {
+            "totalInterviews": "Tổng phỏng vấn",
+            "completed": "hoàn thành",
+            "averageScore": "Điểm trung bình",
+            "practiceStreak": "Chuỗi luyện tập",
+            "days": "ngày",
+            "weakestSkill": "Kỹ năng yếu nhất",
+            "improved": "cải thiện"
+        },
+        "progress": "Tiến độ của bạn",
+        "recentSessions": "Các phiên gần đây"
+    },
+    "practice": {
+        "title": "Luyện tập độc lập",
+        "startRecording": "Bắt đầu ghi âm",
+        "stopRecording": "Dừng ghi âm",
+        "submitAnswer": "Gửi câu trả lời",
+        "timeRemaining": "Thời gian còn lại",
+        "question": "Câu hỏi",
+        "difficulty": "Độ khó"
+    },
+    "peerInterview": {
+        "title": "Phỏng vấn cùng bạn",
+        "findPeer": "Tìm bạn",
+        "matchingStatus": "Trạng thái khớp",
+        "searching": "Đang tìm bạn...",
+        "waiting": "Chờ kết nối..."
+    },
+    "questionBank": {
+        "title": "Ngân hàng câu hỏi",
+        "searchPlaceholder": "Tìm kiếm câu hỏi...",
+        "filterByCategory": "Lọc theo danh mục",
+        "filterByDifficulty": "Lọc theo độ khó",
+        "allCategories": "Tất cả danh mục",
+        "allDifficulties": "Tất cả độ khó",
+        "easy": "Dễ",
+        "medium": "Trung bình",
+        "hard": "Khó",
+        "noQuestions": "Không tìm thấy câu hỏi",
+        "questions": "Câu hỏi"
+    },
+    "feedback": {
+        "title": "Xem phản hồi",
+        "sessions": "Các phiên phỏng vấn",
+        "feedbackScore": "Điểm phản hồi",
+        "comments": "Bình luận",
+        "date": "Ngày",
+        "noSessions": "Chưa có phiên phỏng vấn nào"
+    },
+    "profile": {
+        "title": "Hồ sơ",
+        "userInfo": "Thông tin người dùng",
+        "targetRole": "Vị trí mục tiêu",
+        "experienceYears": "Năm kinh nghiệm",
+        "languagePreference": "Ngôn ngữ ưa thích",
+        "editProfile": "Chỉnh sửa hồ sơ",
+        "save": "Lưu thay đổi"
+    },
+    "common": {
+        "loading": "Đang tải...",
+        "error": "Lỗi",
+        "success": "Thành công",
+        "cancel": "Hủy",
+        "save": "Lưu",
+        "delete": "Xóa",
+        "edit": "Chỉnh sửa",
+        "close": "Đóng"
+    }
+}

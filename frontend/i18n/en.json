@@ -1,0 +1,106 @@
+{
+    "navbar": {
+        "logo": "InterviewDojo"
+    },
+    "language": {
+        "en": "English",
+        "vi": "Tiếng Việt",
+        "jp": "日本語"
+    },
+    "theme": {
+        "light": "Light",
+        "dark": "Dark",
+        "system": "System"
+    },
+    "sidebar": {
+        "dashboard": "Dashboard",
+        "practice": "Solo Practice",
+        "peerInterview": "Peer Interview",
+        "questionBank": "Question Bank",
+        "feedback": "Feedback Review",
+        "analytics": "Analytics",
+        "profile": "Profile",
+        "logout": "Logout"
+    },
+    "auth": {
+        "welcome": "Welcome to InterviewDojo",
+        "description": "Master your technical interviews with our comprehensive practice platform",
+        "googleSignIn": "Sign in with Google",
+        "githubSignIn": "Sign in with GitHub",
+        "or": "or",
+        "signIn": "Sign In",
+        "noAccount": "Don't have an account?",
+        "createAccount": "Create account"
+    },
+    "dashboard": {
+        "title": "Dashboard",
+        "welcome": "Welcome back, {{name}}!",
+        "stats": {
+            "totalInterviews": "Total Interviews",
+            "completed": "completed",
+            "averageScore": "Average Score",
+            "practiceStreak": "Practice Streak",
+            "days": "days",
+            "weakestSkill": "Weakest Skill",
+            "improved": "improved"
+        },
+        "progress": "Your Progress",
+        "recentSessions": "Recent Sessions"
+    },
+    "practice": {
+        "title": "Solo Practice",
+        "startRecording": "Start Recording",
+        "stopRecording": "Stop Recording",
+        "submitAnswer": "Submit Answer",
+        "timeRemaining": "Time Remaining",
+        "question": "Question",
+        "difficulty": "Difficulty"
+    },
+    "peerInterview": {
+        "title": "Peer Interview",
+        "findPeer": "Find Peer",
+        "matchingStatus": "Matching Status",
+        "searching": "Searching for peer...",
+        "waiting": "Waiting to connect..."
+    },
+    "questionBank": {
+        "title": "Question Bank",
+        "searchPlaceholder": "Search questions...",
+        "filterByCategory": "Filter by Category",
+        "filterByDifficulty": "Filter by Difficulty",
+        "allCategories": "All Categories",
+        "allDifficulties": "All Difficulties",
+        "easy": "Easy",
+        "medium": "Medium",
+        "hard": "Hard",
+        "noQuestions": "No questions found",
+        "questions": "Questions"
+    },
+    "feedback": {
+        "title": "Feedback Review",
+        "sessions": "Interview Sessions",
+        "feedbackScore": "Feedback Score",
+        "comments": "Comments",
+        "date": "Date",
+        "noSessions": "No interview sessions yet"
+    },
+    "profile": {
+        "title": "Profile",
+        "userInfo": "User Information",
+        "targetRole": "Target Role",
+        "experienceYears": "Experience Years",
+        "languagePreference": "Language Preference",
+        "editProfile": "Edit Profile",
+        "save": "Save Changes"
+    },
+    "common": {
+        "loading": "Loading...",
+        "error": "Error",
+        "success": "Success",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close"
+    }
+}
