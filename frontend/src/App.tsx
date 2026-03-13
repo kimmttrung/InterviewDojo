@@ -9,6 +9,8 @@ import i18n from "../i18n";
 import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
 import Dashboard from "./pages/Dashboard";
+import Practice from "./pages/Practice";
+import Home from "./pages/Home";
 
 
 // Pages
@@ -54,7 +56,8 @@ export function App({ queryClient }: AppProps) {
               <Route path="/" element={<Auth />} />
               <Route path="/select-role" element={isAuthenticated() ? <SelectRole /> : <Navigate to="/" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-              {/* <Route path="/practice" element={<ProtectedRoute element={<Practice />} />} /> */}
+              <Route path="/homepage" element={<ProtectedRoute element={<Home />} />} />
+              <Route path="/practice" element={<ProtectedRoute element={<Practice />} />} />
               {/* <Route path="/peer-interview" element={<ProtectedRoute element={<PeerInterview />} />} /> */}
               {/* <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} /> */}
               {/* <Route path="/feedback" element={<ProtectedRoute element={<Feedback />} />} /> */}
