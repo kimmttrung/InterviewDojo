@@ -1,6 +1,7 @@
 {
     "navbar": {
-        "logo": "InterviewDojo"
+        "logo": "InterviewDojo",
+        "welcomeBack": "Chào mừng bạn trở lại!"
     },
     "language": {
         "en": "English",
@@ -29,6 +30,12 @@
         "githubSignIn": "Đăng nhập bằng GitHub",
         "or": "hoặc",
         "signIn": "Đăng nhập",
+        "email": "Email",
+        "password": "Mật khẩu",
+        "forgotPassword": "Quên mật khẩu?",
+        "processing": "Đang xử lý...",
+        "loginNow": "Đăng nhập ngay",
+        "continueWith": "Hoặc tiếp tục với",
         "noAccount": "Chưa có tài khoản?",
         "createAccount": "Tạo tài khoản"
     },
@@ -101,6 +108,7 @@
         "save": "Lưu",
         "delete": "Xóa",
         "edit": "Chỉnh sửa",
-        "close": "Đóng"
+        "close": "Đóng",
+        "back": "Quay lại"
     }
 }

@@ -11,6 +11,7 @@ import SelectRole from "./pages/SelectRole";
 import Dashboard from "./pages/Dashboard";
 import Practice from "./pages/Practice";
 import Home from "./pages/Home";
+import Login from "./pages/Login";
 
 
 // Pages
@@ -54,7 +55,8 @@ export function App({ queryClient }: AppProps) {
             <Sonner />
             <Routes>
               <Route path="/" element={<Auth />} />
-              <Route path="/select-role" element={isAuthenticated() ? <SelectRole /> : <Navigate to="/" replace />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/select-role" element={isAuthenticated() ? <SelectRole /> : <Navigate to="/login" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
               <Route path="/homepage" element={<ProtectedRoute element={<Home />} />} />
               <Route path="/practice" element={<ProtectedRoute element={<Practice />} />} />

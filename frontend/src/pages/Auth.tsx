@@ -11,13 +11,13 @@ export default function Auth() {
     const handleGoogleLogin = () => {
         // Simulate login and redirect to role selection
         localStorage.setItem('user', JSON.stringify({ name: 'John Doe', email: 'john@example.com' }));
-        navigate('/select-role');
+        navigate('/login');
     };
 
     const handleGithubLogin = () => {
         // Simulate login and redirect to role selection
         localStorage.setItem('user', JSON.stringify({ name: 'Jane Doe', email: 'jane@example.com' }));
-        navigate('/select-role');
+        navigate('/login');
     };
 
     return (
