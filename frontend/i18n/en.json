@@ -1,6 +1,7 @@
 {
     "navbar": {
-        "logo": "InterviewDojo"
+        "logo": "InterviewDojo",
+        "welcomeBack": "Welcome back!"
     },
     "language": {
         "en": "English",
@@ -29,6 +30,12 @@
         "githubSignIn": "Sign in with GitHub",
         "or": "or",
         "signIn": "Sign In",
+        "email": "Email",
+        "password": "Password",
+        "forgotPassword": "Forgot password?",
+        "processing": "Processing...",
+        "loginNow": "Log In",
+        "continueWith": "Or continue with",
         "noAccount": "Don't have an account?",
         "createAccount": "Create account"
     },
@@ -101,6 +108,7 @@
         "save": "Save",
         "delete": "Delete",
         "edit": "Edit",
-        "close": "Close"
+        "close": "Close",
+        "back": "Back"
     }
 }
