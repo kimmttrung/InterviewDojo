@@ -1,0 +1,104 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id               Int            @id @default(autoincrement())
+  email            String         @unique
+  name             String?
+  targetRole       String?        @map("target_role")
+  experienceYears  Int            @default(0) @map("experience_years")
+  status           String         @default("offline")
+  avatarUrl        String?        @map("avatar_url")
+  creditBalance    Float          @default(0.0) @map("credit_balance")
+  createdAt        DateTime       @default(now()) @map("created_at")
+  
+  interviews       MockSession[]  @relation("interviewer")
+  isInterviewed    MockSession[]  @relation("interviewee")
+  feedbacks        Feedback[]
+}
+
+model Category {
+  id          Int        @id @default(autoincrement())
+  name        String     @unique
+  description String?
+  questions   Question[]
+}
+
+model Question {
+  id            Int               @id @default(autoincrement())
+  categoryId    Int               @map("category_id")
+  category      Category          @relation(fields: [categoryId], references: [id])
+  content       String
+  difficulty    String            // Hard | Medium | Easy
+  sampleAnswer  String?           @map("sample_answer")
+  estimatedTime Int               @map("estimated_time")
+  sessions      MockSession[]
+  companies     QuestionCompany[]
+}
+
+model Company {
+  id        Int               @id @default(autoincrement())
+  name      String            @unique
+  logoUrl   String?           @map("logo_url")
+  questions QuestionCompany[]
+}
+
+model QuestionCompany {
+  questionId Int @map("question_id")
+  companyId  Int @map("company_id")
+  question   Question @relation(fields: [questionId], references: [id])
+  company    Company  @relation(fields: [companyId], references: [id])
+
+  @@id([questionId, companyId])
+}
+
+model MockSession {
+  id              Int          @id @default(autoincrement())
+  interviewerId   Int          @map("interviewer_id")
+  intervieweeId   Int          @map("interviewee_id")
+  questionId      Int          @map("question_id")
+  scheduledAt     DateTime     @default(now()) @map("scheduled_at")
+  durationMinutes Int          @map("duration_minutes")
+  status          String       @default("scheduled")
+  recordingUrl    String?      @map("recording_url")
+  meetingLink     String?      @map("meeting_link")
+
+  interviewer     User         @relation("interviewer", fields: [interviewerId], references: [id])
+  interviewee     User         @relation("interviewee", fields: [intervieweeId], references: [id])
+  question        Question     @relation(fields: [questionId], references: [id])
+  feedback        Feedback[]
+  aiAnalysis      AiAnalysis?
+}
+
+model Feedback {
+  id             Int         @id @default(autoincrement())
+  sessionId      Int         @map("session_id")
+  reviewerId     Int         @map("reviewer_id")
+  communication  Int
+  technical      Int
+  problemSolving Int         @map("problem_solving")
+  comment        String?
+  createdAt      DateTime    @default(now()) @map("created_at")
+
+  session        MockSession @relation(fields: [sessionId], references: [id])
+  reviewer       User        @relation(fields: [reviewerId], references: [id])
+}
+
+model AiAnalysis {
+  id           Int         @id @default(autoincrement())
+  sessionId    Int         @unique @map("session_id")
+  transcript   String?
+  strengths    Json?
+  weaknesses   Json?
+  suggestions  Json?
+  overallScore Float       @map("overall_score")
+  processedAt  DateTime    @default(now()) @map("processed_at")
+
+  session      MockSession @relation(fields: [sessionId], references: [id])
+}
+
