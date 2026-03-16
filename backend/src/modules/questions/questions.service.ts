@@ -13,10 +13,10 @@ export class QuestionsService {
       where: {
         // Lọc theo Category
         categoryId: categoryId || undefined,
-        
+
         // Lọc theo Difficulty (Level)
         difficulty: difficulty || undefined,
-        
+
         // Lọc theo Company (Truy vấn qua bảng trung gian QuestionCompany)
         companies: companyId
           ? {
@@ -25,7 +25,7 @@ export class QuestionsService {
               },
             }
           : undefined,
-          
+
         // Thêm tính năng tìm kiếm theo nội dung (Optional)
         content: search
           ? {
