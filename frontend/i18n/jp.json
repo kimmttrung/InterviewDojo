@@ -39,6 +39,21 @@
         "noAccount": "アカウントをお持ちではありませんか？",
         "createAccount": "アカウントを作成"
     },
+    "register": {
+        "title": "新しいアカウントを作成",
+        "subtitle": "私たちと一緒にTech Jobへの挑戦を始めましょう",
+        "fullName": "氏名",
+        "fullNamePlaceholder": "山田 太郎",
+        "email": "仕事用メール",
+        "password": "パスワード",
+        "confirmPassword": "パスワード確認",
+        "registerNow": "登録する",
+        "creatingAccount": "アカウント作成中...",
+        "haveAccount": "すでにアカウントをお持ちですか？",
+        "loginHere": "ログインはこちら",
+        "passwordMismatch": "パスワードが一致しません",
+        "registerSuccess": "登録成功！ログインしてください"
+    },
     "dashboard": {
         "title": "ダッシュボード",
         "welcome": "おかえりなさい、{{name}}さん！",

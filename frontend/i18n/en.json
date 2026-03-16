@@ -39,6 +39,21 @@
         "noAccount": "Don't have an account?",
         "createAccount": "Create account"
     },
+    "register": {
+        "title": "Create New Account",
+        "subtitle": "Start your journey to conquer tech jobs with us",
+        "fullName": "Full Name",
+        "fullNamePlaceholder": "Kerra",
+        "email": "Email",
+        "password": "Password",
+        "confirmPassword": "Confirm Password",
+        "registerNow": "Register Now",
+        "creatingAccount": "Creating account...",
+        "haveAccount": "Already have an account?",
+        "loginHere": "Login here",
+        "passwordMismatch": "Password confirmation does not match!",
+        "registerSuccess": "Registration successful! Please login."
+    },
     "dashboard": {
         "title": "Dashboard",
         "welcome": "Welcome back, {{name}}!",
