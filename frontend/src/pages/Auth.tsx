@@ -75,7 +75,10 @@ export default function Auth() {
 
                 <p className="text-center text-sm text-muted-foreground mt-6">
                     {t('auth.noAccount')}{' '}
-                    <button className="text-primary hover:underline font-medium">
+                    <button
+                        onClick={() => navigate('/register')}
+                        className="text-primary hover:underline font-medium"
+                    >
                         {t('auth.createAccount')}
                     </button>
                 </p>

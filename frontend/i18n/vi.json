@@ -39,6 +39,21 @@
         "noAccount": "Chưa có tài khoản?",
         "createAccount": "Tạo tài khoản"
     },
+    "register": {
+        "title": "Tạo tài khoản mới",
+        "subtitle": "Bắt đầu hành trình chinh phục tech job cùng chúng tôi",
+        "fullName": "Họ và tên",
+        "fullNamePlaceholder": "Mai Tấn Trung",
+        "email": "Email công việc",
+        "password": "Mật khẩu",
+        "confirmPassword": "Xác nhận mật khẩu",
+        "registerNow": "Đăng ký ngay",
+        "creatingAccount": "Đang tạo tài khoản...",
+        "haveAccount": "Đã có tài khoản?",
+        "loginHere": "Đăng nhập tại đây",
+        "passwordMismatch": "Mật khẩu xác nhận không khớp!",
+        "registerSuccess": "Đăng ký thành công! Hãy đăng nhập."
+    },
     "dashboard": {
         "title": "Bảng điều khiển",
         "welcome": "Chào mừng trở lại, {{name}}!",

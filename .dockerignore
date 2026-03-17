@@ -1,0 +1,26 @@
+# Dependency directories
+**/node_modules
+**/dist
+**/build
+
+# Version control
+.git
+.gitignore
+
+# Logs
+**/logs
+*.log
+npm-debug.log*
+
+# Env files
+**/.env
+**/.env.local
+**/.env.example
+
+# IDEs
+.vscode
+.idea
+
+# Docker specific
+docker-compose.yml
+Dockerfile

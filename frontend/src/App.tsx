@@ -12,6 +12,7 @@ import Dashboard from "./pages/Dashboard";
 import Practice from "./pages/Practice";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
+import Register from "./pages/Register";
 
 
 // Pages
@@ -56,6 +57,7 @@ export function App({ queryClient }: AppProps) {
             <Routes>
               <Route path="/" element={<Auth />} />
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route path="/select-role" element={isAuthenticated() ? <SelectRole /> : <Navigate to="/login" replace />} />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
               <Route path="/homepage" element={<ProtectedRoute element={<Home />} />} />
