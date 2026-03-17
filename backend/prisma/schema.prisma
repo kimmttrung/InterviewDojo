@@ -6,10 +6,19 @@ datasource db {
   provider = "postgresql"
 }
 
+enum Role {
+  CANDIDATE
+  ADMIN
+}
+
 model User {
   id               Int            @id @default(autoincrement())
   email            String         @unique
+  passwordHash     String         @map("password_hash")
+  
   name             String?
+  role             Role           @default(CANDIDATE)
+
   targetRole       String?        @map("target_role")
   experienceYears  Int            @default(0) @map("experience_years")
   status           String         @default("offline")
