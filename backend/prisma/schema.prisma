@@ -6,108 +6,147 @@ datasource db {
   provider = "postgresql"
 }
 
-enum Role {
-  CANDIDATE
-  ADMIN
+model User {
+  id              Int           @id @default(autoincrement())
+  email           String        @unique
+  password        String
+  name            String?
+  bio             String?       @db.Text
+  role            String        @default("candidate") // candidate | admin
+  targetRole      String?       @map("target_role")
+  experienceYears Int           @default(0) @map("experience_years")
+  status          String        @default("offline") // online | busy | offline | away
+  avatarUrl       String?       @map("avatar_url")
+  creditBalance   Float         @default(0.0) @map("credit_balance")
+  createdAt       DateTime      @default(now()) @map("created_at")
+  
+  // Quan hệ
+  interviews      MockSession[] @relation("InterviewerSessions")
+  isInterviewed   MockSession[] @relation("IntervieweeSessions")
+  feedbacksGiven  Feedback[]    @relation("ReviewerFeedbacks")
+  feedbacksGotten Feedback[]    @relation("RevieweeFeedbacks") // Thêm để dễ truy vấn điểm của user
+  skills          UserSkill[]
+  
+  @@map("users")
 }
 
-model User {
-  id               Int            @id @default(autoincrement())
-  email            String         @unique
-  passwordHash     String         @map("password_hash")
+model Skill {
+  id       Int         @id @default(autoincrement())
+  name     String      @unique // Java, Python, SQL, etc.
+  category String?     // Technical, Soft Skill
   
-  name             String?
-  role             Role           @default(CANDIDATE)
+  users    UserSkill[]
+  
+  @@map("skills")
+}
 
-  targetRole       String?        @map("target_role")
-  experienceYears  Int            @default(0) @map("experience_years")
-  status           String         @default("offline")
-  avatarUrl        String?        @map("avatar_url")
-  creditBalance    Float          @default(0.0) @map("credit_balance")
-  createdAt        DateTime       @default(now()) @map("created_at")
-  
-  interviews       MockSession[]  @relation("interviewer")
-  isInterviewed    MockSession[]  @relation("interviewee")
-  feedbacks        Feedback[]
+model UserSkill {
+  userId  Int   @map("user_id")
+  skillId Int   @map("skill_id")
+  score   Float @default(0) // Điểm số kỹ năng để phục vụ matchmaking
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
+
+  @@id([userId, skillId])
+  @@map("user_skills")
 }
 
 model Category {
   id          Int        @id @default(autoincrement())
-  name        String     @unique
-  description String?
+  name        String     @unique // DSA, System Design, etc.
+  description String?    @db.Text
+  
   questions   Question[]
+  
+  @@map("categories")
 }
 
 model Question {
   id            Int               @id @default(autoincrement())
   categoryId    Int               @map("category_id")
-  category      Category          @relation(fields: [categoryId], references: [id])
-  content       String
+  content       String            @db.Text
   difficulty    String            // Hard | Medium | Easy
-  sampleAnswer  String?           @map("sample_answer")
+  sampleAnswer  String?           @map("sample_answer") @db.Text
   estimatedTime Int               @map("estimated_time")
+  
+  category      Category          @relation(fields: [categoryId], references: [id])
   sessions      MockSession[]
   companies     QuestionCompany[]
+  
+  @@map("questions")
 }
 
 model Company {
   id        Int               @id @default(autoincrement())
-  name      String            @unique
+  name      String            @unique // Google, Meta, Amazon, v.v.
   logoUrl   String?           @map("logo_url")
+  
   questions QuestionCompany[]
+  
+  @@map("companies")
 }
 
 model QuestionCompany {
   questionId Int @map("question_id")
   companyId  Int @map("company_id")
-  question   Question @relation(fields: [questionId], references: [id])
-  company    Company  @relation(fields: [companyId], references: [id])
+  
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  company  Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@id([questionId, companyId])
+  @@map("question_companies")
 }
 
 model MockSession {
-  id              Int          @id @default(autoincrement())
-  interviewerId   Int          @map("interviewer_id")
-  intervieweeId   Int          @map("interviewee_id")
-  questionId      Int          @map("question_id")
-  scheduledAt     DateTime     @default(now()) @map("scheduled_at")
-  durationMinutes Int          @map("duration_minutes")
-  status          String       @default("scheduled")
-  recordingUrl    String?      @map("recording_url")
-  meetingLink     String?      @map("meeting_link")
+  id              Int      @id @default(autoincrement())
+  interviewerId   Int      @map("interviewer_id")
+  intervieweeId   Int      @map("interviewee_id")
+  questionId      Int      @map("question_id")
+  scheduledAt     DateTime @default(now()) @map("scheduled_at")
+  durationMinutes Int      @map("duration_minutes")
+  status          String   @default("scheduled") // scheduled | ongoing | completed | cancelled
+  recordingUrl    String?  @map("recording_url")
+  meetingLink     String?  @map("meeting_link")
 
-  interviewer     User         @relation("interviewer", fields: [interviewerId], references: [id])
-  interviewee     User         @relation("interviewee", fields: [intervieweeId], references: [id])
-  question        Question     @relation(fields: [questionId], references: [id])
-  feedback        Feedback[]
-  aiAnalysis      AiAnalysis?
+  interviewer User        @relation("InterviewerSessions", fields: [interviewerId], references: [id])
+  interviewee User        @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
+  question    Question    @relation(fields: [questionId], references: [id])
+  feedbacks   Feedback[]
+  aiAnalysis  AiAnalysis?
+  
+  @@map("mock_sessions")
 }
 
 model Feedback {
-  id             Int         @id @default(autoincrement())
-  sessionId      Int         @map("session_id")
-  reviewerId     Int         @map("reviewer_id")
-  communication  Int
-  technical      Int
-  problemSolving Int         @map("problem_solving")
-  comment        String?
-  createdAt      DateTime    @default(now()) @map("created_at")
+  id             Int      @id @default(autoincrement())
+  sessionId      Int      @map("session_id")
+  reviewerId     Int      @map("reviewer_id")
+  revieweeId     Int      @map("reviewee_id") // Bổ sung để biết feedback này dành cho ai
+  communication  Int      // 1-5
+  technical      Int      // 1-5
+  problemSolving Int      @map("problem_solving") // 1-5
+  comment        String?  @db.Text
+  createdAt      DateTime @default(now()) @map("created_at")
 
-  session        MockSession @relation(fields: [sessionId], references: [id])
-  reviewer       User        @relation(fields: [reviewerId], references: [id])
+  session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewer User        @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
+  reviewee User        @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
+  
+  @@map("feedbacks")
 }
 
 model AiAnalysis {
-  id           Int         @id @default(autoincrement())
-  sessionId    Int         @unique @map("session_id")
-  transcript   String?
-  strengths    Json?
-  weaknesses   Json?
-  suggestions  Json?
-  overallScore Float       @map("overall_score")
-  processedAt  DateTime    @default(now()) @map("processed_at")
+  id           Int      @id @default(autoincrement())
+  sessionId    Int      @unique @map("session_id")
+  transcript   String?  @db.Text
+  strengths    Json?    // Array of strings
+  weaknesses   Json?    // Array of strings
+  suggestions  Json?    // Array of strings
+  overallScore Float    @map("overall_score")
+  processedAt  DateTime @default(now()) @map("processed_at")
 
-  session      MockSession @relation(fields: [sessionId], references: [id])
+  session MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  
+  @@map("ai_analyses")
 }
-

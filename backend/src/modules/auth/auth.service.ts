@@ -9,7 +9,6 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
-import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -27,14 +26,14 @@ export class AuthService {
       throw new BadRequestException('Email đã tồn tại');
     }
 
-    const passwordHash = await bcrypt.hash(dto.password, 10);
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
 
     const user = await this.prisma.user.create({
       data: {
         email: dto.email,
-        passwordHash,
+        password: hashedPassword,
         name: dto.name,
-        role: Role.CANDIDATE,
+        role: 'candidate',
       },
     });
 
@@ -50,10 +49,7 @@ export class AuthService {
       throw new UnauthorizedException('Sai email hoặc mật khẩu');
     }
 
-    const isPasswordValid = await bcrypt.compare(
-      dto.password,
-      user.passwordHash,
-    );
+    const isPasswordValid = await bcrypt.compare(dto.password, user.password);
 
     if (!isPasswordValid) {
       throw new UnauthorizedException('Sai email hoặc mật khẩu');
@@ -74,7 +70,7 @@ export class AuthService {
     });
   }
 
-  private async generateTokens(userId: number, email: string, role: Role) {
+  private async generateTokens(userId: number, email: string, role: string) {
     const payload: JwtPayload = {
       sub: userId,
       email,
@@ -82,12 +78,12 @@ export class AuthService {
     };
 
     const accessToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_ACCESS_SECRET,
+      secret: process.env.JWT_ACCESS_SECRET as string,
       expiresIn: '1h',
     });
 
     const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
+      secret: process.env.JWT_REFRESH_SECRET as string,
       expiresIn: '7d',
     });
 
