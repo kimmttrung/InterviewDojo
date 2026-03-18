@@ -1,6 +1,7 @@
 {
     "navbar": {
-        "logo": "InterviewDojo"
+        "logo": "InterviewDojo",
+        "welcomeBack": "Chào mừng bạn trở lại!"
     },
     "language": {
         "en": "English",
@@ -29,8 +30,29 @@
         "githubSignIn": "Đăng nhập bằng GitHub",
         "or": "hoặc",
         "signIn": "Đăng nhập",
+        "email": "Email",
+        "password": "Mật khẩu",
+        "forgotPassword": "Quên mật khẩu?",
+        "processing": "Đang xử lý...",
+        "loginNow": "Đăng nhập ngay",
+        "continueWith": "Hoặc tiếp tục với",
         "noAccount": "Chưa có tài khoản?",
         "createAccount": "Tạo tài khoản"
+    },
+    "register": {
+        "title": "Tạo tài khoản mới",
+        "subtitle": "Bắt đầu hành trình chinh phục tech job cùng chúng tôi",
+        "fullName": "Họ và tên",
+        "fullNamePlaceholder": "Mai Tấn Trung",
+        "email": "Email công việc",
+        "password": "Mật khẩu",
+        "confirmPassword": "Xác nhận mật khẩu",
+        "registerNow": "Đăng ký ngay",
+        "creatingAccount": "Đang tạo tài khoản...",
+        "haveAccount": "Đã có tài khoản?",
+        "loginHere": "Đăng nhập tại đây",
+        "passwordMismatch": "Mật khẩu xác nhận không khớp!",
+        "registerSuccess": "Đăng ký thành công! Hãy đăng nhập."
     },
     "dashboard": {
         "title": "Bảng điều khiển",
@@ -101,6 +123,7 @@
         "save": "Lưu",
         "delete": "Xóa",
         "edit": "Chỉnh sửa",
-        "close": "Đóng"
+        "close": "Đóng",
+        "back": "Quay lại"
     }
 }

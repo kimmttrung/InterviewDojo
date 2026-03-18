@@ -11,13 +11,13 @@ export default function Auth() {
     const handleGoogleLogin = () => {
         // Simulate login and redirect to role selection
         localStorage.setItem('user', JSON.stringify({ name: 'John Doe', email: 'john@example.com' }));
-        navigate('/select-role');
+        navigate('/login');
     };
 
     const handleGithubLogin = () => {
         // Simulate login and redirect to role selection
         localStorage.setItem('user', JSON.stringify({ name: 'Jane Doe', email: 'jane@example.com' }));
-        navigate('/select-role');
+        navigate('/login');
     };
 
     return (
@@ -75,7 +75,10 @@ export default function Auth() {
 
                 <p className="text-center text-sm text-muted-foreground mt-6">
                     {t('auth.noAccount')}{' '}
-                    <button className="text-primary hover:underline font-medium">
+                    <button
+                        onClick={() => navigate('/register')}
+                        className="text-primary hover:underline font-medium"
+                    >
                         {t('auth.createAccount')}
                     </button>
                 </p>

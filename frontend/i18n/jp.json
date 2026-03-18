@@ -1,6 +1,7 @@
 {
     "navbar": {
-        "logo": "InterviewDojo"
+        "logo": "InterviewDojo",
+        "welcomeBack": "おかえりなさい！"
     },
     "language": {
         "en": "English",
@@ -24,13 +25,34 @@
     },
     "auth": {
         "welcome": "InterviewDojoへようこそ",
-        "description": "当社の包括的な練習プラットフォームで技術面接をマスターしてください",
-        "googleSignIn": "Googleでサインイン",
-        "githubSignIn": "GitHubでサインイン",
+        "description": "このプラットフォームで技術面接のスキルを効果的に練習できます",
+        "googleSignIn": "Googleでログイン",
+        "githubSignIn": "GitHubでログイン",
         "or": "または",
-        "signIn": "サインイン",
+        "signIn": "ログイン",
+        "email": "メールアドレス",
+        "password": "パスワード",
+        "forgotPassword": "パスワードを忘れましたか？",
+        "processing": "処理中...",
+        "loginNow": "ログイン",
+        "continueWith": "または次の方法で続行",
         "noAccount": "アカウントをお持ちではありませんか？",
         "createAccount": "アカウントを作成"
+    },
+    "register": {
+        "title": "新しいアカウントを作成",
+        "subtitle": "私たちと一緒にTech Jobへの挑戦を始めましょう",
+        "fullName": "氏名",
+        "fullNamePlaceholder": "山田 太郎",
+        "email": "仕事用メール",
+        "password": "パスワード",
+        "confirmPassword": "パスワード確認",
+        "registerNow": "登録する",
+        "creatingAccount": "アカウント作成中...",
+        "haveAccount": "すでにアカウントをお持ちですか？",
+        "loginHere": "ログインはこちら",
+        "passwordMismatch": "パスワードが一致しません",
+        "registerSuccess": "登録成功！ログインしてください"
     },
     "dashboard": {
         "title": "ダッシュボード",
@@ -101,6 +123,7 @@
         "save": "保存",
         "delete": "削除",
         "edit": "編集",
-        "close": "閉じる"
+        "close": "閉じる",
+        "back": "戻る"
     }
 }
