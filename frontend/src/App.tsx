@@ -53,7 +53,12 @@ export function App({ queryClient }: AppProps) {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <Toaster />
-            <Sonner />
+            <Sonner
+              position="top-right"
+              duration={3000}
+              richColors
+              closeButton
+            />
             <Routes>
               <Route path="/" element={<Auth />} />
               <Route path="/login" element={<Login />} />

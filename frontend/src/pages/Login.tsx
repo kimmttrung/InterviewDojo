@@ -6,6 +6,8 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
+import { authService } from '../../services/auth.service';
+import { showToast } from '../../lib/toast';
 
 export default function Login() {
     const { t } = useTranslation();
@@ -13,15 +15,36 @@ export default function Login() {
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
+    const [formData, setFormData] = useState({
+        email: '',
+        password: ''
+    });
+
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setIsLoading(true);
-        // Mô phỏng quá trình đăng nhập
-        setTimeout(() => {
-            localStorage.setItem('user', JSON.stringify({ name: 'Mai Tan Trung', email: 'trung@hnu.edu.vn' }));
-            setIsLoading(false);
+        try {
+            setIsLoading(true);
+            const res = await authService.login({
+                email: formData.email,
+                password: formData.password
+            })
+
+            console.log("check res", res);
+
+            const { access_token, user } = res.data;
+
+            // lưu token
+            localStorage.setItem('access_token', access_token);
+
+            // lưu user
+            localStorage.setItem('user', JSON.stringify(user));
+            showToast.success(t('Login successful'));
+
             navigate('/select-role');
-        }, 1500);
+
+        } catch (error) {
+            showToast.error("Something went wrong");
+        }
     };
 
     return (
@@ -61,6 +84,8 @@ export default function Login() {
                                 placeholder="name@example.com"
                                 className="pl-10 h-11 bg-muted/50 focus:bg-background transition-all"
                                 required
+                                value={formData.email}
+                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                             />
                         </div>
                     </div>
@@ -81,6 +106,9 @@ export default function Login() {
                                 placeholder="••••••••"
                                 className="pl-10 h-11 bg-muted/50 focus:bg-background transition-all"
                                 required
+                                value={formData.password}
+                                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+
                             />
                             <button
                                 type="button"
@@ -125,3 +153,5 @@ export default function Login() {
         </div>
     );
 }
+
+
