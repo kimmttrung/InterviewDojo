@@ -15,7 +15,7 @@ export class GetQuestionsFilterDto {
 
   @IsOptional()
   @IsEnum(Difficulty)
-  difficulty?: string; 
+  difficulty?: string;
 
   @IsOptional()
   @Type(() => Number)
@@ -24,5 +24,5 @@ export class GetQuestionsFilterDto {
 
   @IsOptional()
   @IsString()
-  search?: string; 
+  search?: string;
 }
