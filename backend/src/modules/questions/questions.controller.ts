@@ -8,7 +8,8 @@ export class QuestionsController {
 
   @Get()
   async getQuestions(
-    @Query(new ValidationPipe({ transform: true })) filterDto: GetQuestionsFilterDto,
+    @Query(new ValidationPipe({ transform: true }))
+    filterDto: GetQuestionsFilterDto,
   ) {
     return this.questionsService.findAll(filterDto);
   }
