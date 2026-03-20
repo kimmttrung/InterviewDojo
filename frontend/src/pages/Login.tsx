@@ -31,13 +31,14 @@ export default function Login() {
 
             console.log("check res", res);
 
-            const { access_token, user } = res.data;
+            // const { access_token, user } = res.data;
 
             // lưu token
-            localStorage.setItem('access_token', access_token);
+            localStorage.setItem('access_token', res.data.accessToken);
+            localStorage.setItem('refresh_token', res.data.refreshToken);
 
             // lưu user
-            localStorage.setItem('user', JSON.stringify(user));
+            localStorage.setItem('user', JSON.stringify(res.data.user));
             showToast.success(t('Login successful'));
 
             navigate('/select-role');

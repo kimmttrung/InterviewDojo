@@ -98,9 +98,9 @@ export default function SelectRole() {
         const user = JSON.parse(localStorage.getItem('user') || '{}');
         localStorage.setItem(
             'user',
-            JSON.stringify({ ...user, targetRole: roleId, targetRoleName: selectedRole?.name })
+            JSON.stringify({ ...user, targetRole: selectedRole?.name })
         );
-        navigate('/dashboard');
+        navigate('/');
     };
 
     return (

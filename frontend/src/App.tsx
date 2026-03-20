@@ -6,38 +6,31 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { Toaster } from "../components/ui/toaster";
 import { Toaster as Sonner } from "../components/ui/sonner";
 import i18n from "../i18n";
-import Auth from "./pages/Auth";
 import SelectRole from "./pages/SelectRole";
 import Dashboard from "./pages/Dashboard";
 import Practice from "./pages/Practice";
 import Home from "./pages/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
+import QuestionBank from "./pages/QuestionBank";
+import NotFound from "./pages/NotFound";
+import Unauthorized from "./pages/Unauthorized";
 
 
-// Pages
+interface ProtectedRouteProps {
+  element: React.ReactNode;
+  roles?: string[]; // optional, chỉ định role được phép
+}
 
-const isAuthenticated = () => {
-  return localStorage.getItem('user') !== null;
-};
+const ProtectedRoute = ({ element, roles }: ProtectedRouteProps) => {
+  const userStore = localStorage.getItem('user');
+  if (!userStore) return <Navigate to="/login" replace />
 
-const hasSelectedRole = () => {
-  const user = localStorage.getItem('user');
-  if (!user) return false;
-  try {
-    const userData = JSON.parse(user);
-    return userData.targetRole !== undefined;
-  } catch {
-    return false;
-  }
-};
+  const user = JSON.parse(userStore);
 
-const ProtectedRoute = ({ element }: { element: React.ReactNode }) => {
-  if (!isAuthenticated()) {
-    return <Navigate to="/" replace />;
-  }
-  if (!hasSelectedRole()) {
-    return <Navigate to="/select-role" replace />;
+  // role check
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
   }
   return element;
 };
@@ -60,15 +53,34 @@ export function App({ queryClient }: AppProps) {
               closeButton
             />
             <Routes>
-              <Route path="/" element={<Auth />} />
+              <Route path="*" element={<NotFound />} />
+              <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/select-role" element={isAuthenticated() ? <SelectRole /> : <Navigate to="/login" replace />} />
+              <Route
+                path="/select-role"
+                element={
+                  (() => {
+                    const userStore = localStorage.getItem('user');
+                    if (!userStore) return <Navigate to="/login" replace />;
+
+                    const user = JSON.parse(userStore);
+
+                    // đã chọn role rồi → không cho vào lại
+                    if (!user.targetRole) {
+                      return <SelectRole />;
+                    } else {
+                      return <Home />
+                    }
+
+                  })()
+                }
+              />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-              <Route path="/homepage" element={<ProtectedRoute element={<Home />} />} />
-              <Route path="/practice" element={<ProtectedRoute element={<Practice />} />} />
+              <Route path="/" element={<ProtectedRoute element={<Home />} />} />
+              <Route path="/practice" element={<ProtectedRoute element={<Practice />} roles={['candidate']} />} />
+              <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} />
               {/* <Route path="/peer-interview" element={<ProtectedRoute element={<PeerInterview />} />} /> */}
-              {/* <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} /> */}
               {/* <Route path="/feedback" element={<ProtectedRoute element={<Feedback />} />} /> */}
               {/* <Route path="/analytics" element={<ProtectedRoute element={<Analytics />} />} /> */}
               {/* <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} /> */}
