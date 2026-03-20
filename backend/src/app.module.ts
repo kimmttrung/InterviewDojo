@@ -13,7 +13,7 @@ import { UserModule } from './modules/user/user.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    PrismaModule, 
+    PrismaModule,
     QuestionsModule,
     AuthModule,
     RedisModule,

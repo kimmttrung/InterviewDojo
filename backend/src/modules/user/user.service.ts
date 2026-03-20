@@ -1,45 +1,27 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+// user.service.ts
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-
-// Định nghĩa Interface để TypeScript hiểu cấu trúc User đi kèm Skills
-interface UserWithSkills {
-  id: number;
-  email: string;
-  name: string | null;
-  bio: string | null;
-  targetRole: string | null;
-  avatarUrl: string | null;
-  experienceYears: number;
-  skills: {
-    score: number;
-    skill: {
-      name: string;
-      category: string | null;
-    };
-  }[];
-}
 
 @Injectable()
 export class UserService {
   constructor(private readonly prisma: PrismaService) {}
 
   async getMe(userId: number) {
-    // Ép kiểu (as) để tránh lỗi "Unsafe assignment" của ESLint
-    const user = (await this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         skills: {
-          include: {
-            skill: true,
-          },
+          include: { skill: true },
         },
       },
-    })) as UserWithSkills | null;
+    });
 
-    if (!user) {
-      throw new NotFoundException('Không tìm thấy người dùng');
-    }
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
     return {
       id: user.id,
@@ -47,33 +29,58 @@ export class UserService {
       name: user.name,
       bio: user.bio,
       target_role: user.targetRole,
-      avatar_url: user.avatarUrl,
       experience_years: user.experienceYears,
       current_level: this.calculateLevel(user.experienceYears),
-      // Truy cập thuộc tính bây giờ đã an toàn (không còn là any)
-      skills: user.skills.map((us) => ({
-        name: us.skill.name,
-        score: us.score,
-        category: us.skill.category,
+      avatar_url: user.avatarUrl,
+      skills: user.skills?.map((us) => ({
+        name: us.skill.name || 'Unknown',
+        score: us.score || 0,
+        category: us.skill.category || 'Unknown',
       })),
     };
   }
 
   async updateMe(userId: number, dto: UpdateUserDto) {
-    // Sửa lỗi: Truy cập dto['target_company'] nếu TS chưa nhận diện được property trong DTO
-    return this.prisma.user.update({
+    if (!dto) {
+      throw new BadRequestException('Dữ liệu không được để trống');
+    }
+
+    const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
+        name: dto.name,
         bio: dto.bio,
         targetRole: dto.target_role,
+        experienceYears: dto.experience_years,
+        avatarUrl: dto.avatar_url ?? undefined,
+      },
+      include: {
+        skills: { include: { skill: true } },
       },
     });
+    return {
+      message: 'Cập nhật thông tin thành công',
+      data: {
+        id: updatedUser.id,
+        email: updatedUser.email,
+        name: updatedUser.name,
+        bio: updatedUser.bio,
+        target_role: updatedUser.targetRole,
+        experience_years: updatedUser.experienceYears,
+        current_level: this.calculateLevel(updatedUser.experienceYears),
+        avatar_url: updatedUser.avatarUrl,
+        skills: updatedUser.skills.map((us) => ({
+          name: us.skill.name,
+          score: us.score,
+          category: us.skill.category,
+        })),
+      },
+    };
   }
 
   private calculateLevel(years: number): string {
-    if (years <= 0) return 'Intern / Fresher';
-    if (years < 2) return 'Junior';
-    if (years < 5) return 'Mid-level';
-    return 'Senior';
+    if (years >= 5) return 'Senior';
+    if (years >= 2) return 'Mid-level';
+    return 'Junior/Fresher';
   }
 }

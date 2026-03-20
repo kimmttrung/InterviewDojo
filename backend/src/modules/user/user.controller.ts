@@ -1,52 +1,39 @@
+// user.controller.ts
 import {
   Controller,
   Get,
-  Patch,
+  Put,
   Body,
-  Req,
-  UnauthorizedException,
+  UseGuards,
+  ValidationPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { Request } from 'express';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
-interface RequestWithUser extends Request {
-  user: {
-    id?: number;
-    sub?: number;
-    userId?: number;
-    user_id?: number;
-  };
-}
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 @Controller('users')
+@UseGuards(JwtAuthGuard)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get('me')
-  async getMe(@Req() req: RequestWithUser) {
-    const userId = this.getUserId(req);
-    return this.userService.getMe(userId);
+  async getMe(@CurrentUser() user: JwtPayload) {
+    console.log('User ID nhận được:', user.sub);
+    return this.userService.getMe(Number(user.sub));
   }
 
-  @Patch('me')
+  @Put('me') // Đổi từ PATCH sang PUT
   async updateMe(
-    @Req() req: RequestWithUser,
-    @Body() updateUserDto: UpdateUserDto,
+    @CurrentUser() user: JwtPayload,
+    @Body(new ValidationPipe({ whitelist: true, transform: true }))
+    updateUserDto: UpdateUserDto,
   ) {
-    const userId = this.getUserId(req);
-    return this.userService.updateMe(userId, updateUserDto);
-  }
+    // Log để debug dữ liệu nhận được
+    console.log('Dữ liệu PUT nhận được:', updateUserDto);
 
-  private getUserId(req: RequestWithUser): number {
-    if (!req.user) {
-      throw new UnauthorizedException('Không tìm thấy thông tin xác thực');
-    }
-    const id =
-      req.user.id || req.user.sub || req.user.userId || req.user.user_id;
-    if (!id) {
-      throw new UnauthorizedException('Token không hợp lệ hoặc thiếu User ID');
-    }
-    return Number(id);
+    return this.userService.updateMe(Number(user.sub), updateUserDto);
   }
 }
