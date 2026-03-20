@@ -6,7 +6,8 @@ import { Card } from '../../components/ui/card';
 import { Input } from '../../components/ui/input';
 import { Label } from '../../components/ui/label';
 import { Eye, EyeOff, Lock, Mail, User, ArrowLeft, ShieldCheck } from 'lucide-react';
-import { toast } from 'sonner';
+import { showToast } from '../../lib/toast';
+import { authService } from '../../services/auth.service';
 
 export default function Register() {
     const { t } = useTranslation();
@@ -17,7 +18,6 @@ export default function Register() {
     const [isLoading, setIsLoading] = useState(false);
 
     const [formData, setFormData] = useState({
-        fullName: '',
         email: '',
         password: '',
         confirmPassword: ''
@@ -27,17 +27,24 @@ export default function Register() {
         e.preventDefault();
 
         if (formData.password !== formData.confirmPassword) {
-            toast.error(t('register.passwordMismatch'));
+            showToast.error(t('register.passwordMismatch'));
             return;
         }
+        try {
+            setIsLoading(true);
 
-        setIsLoading(true);
-
-        setTimeout(() => {
-            toast.success(t('register.registerSuccess'));
-            setIsLoading(false);
+            await authService.register({
+                email: formData.email,
+                password: formData.password
+            })
+            showToast.success(t('register.registerSuccess'));
             navigate('/login');
-        }, 1500);
+
+        } catch (error) {
+            showToast.error('Register failed')
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
