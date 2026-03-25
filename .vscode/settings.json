@@ -1,0 +1,13 @@
+{
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+  "editor.codeActionsOnSave": {
+    "source.fixAll.eslint": "explicit"
+  },
+  "files.eol": "\n",
+  "eslint.workingDirectories": ["./backend", "./frontend"],
+  "search.exclude": {
+    "**/node_modules": true,
+    "**/dist": true
+  }
+}
