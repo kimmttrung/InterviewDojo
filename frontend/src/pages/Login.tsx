@@ -41,7 +41,7 @@ export default function Login() {
             localStorage.setItem('user', JSON.stringify(res.data.user));
             showToast.success(t('Login successful'));
 
-            navigate('/select-role');
+            navigate('/select-target-role');
 
         } catch (error) {
             showToast.error("Something went wrong");

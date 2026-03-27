@@ -6,7 +6,6 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { Toaster } from "../components/ui/toaster";
 import { Toaster as Sonner } from "../components/ui/sonner";
 import i18n from "../i18n";
-import SelectRole from "./pages/SelectRole";
 import Dashboard from "./pages/Dashboard";
 import Practice from "./pages/Practice";
 import Home from "./pages/Home";
@@ -15,6 +14,8 @@ import Register from "./pages/Register";
 import QuestionBank from "./pages/QuestionBank";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
+import Profile from "./pages/Profile";
+import SelectTargetRole from "./pages/SelectTargetRole";
 
 
 interface ProtectedRouteProps {
@@ -58,34 +59,14 @@ export function App({ queryClient }: AppProps) {
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
               <Route
-                path="/select-role"
-                element={
-                  (() => {
-                    const userStore = localStorage.getItem('user');
-                    if (!userStore) return <Navigate to="/login" replace />;
-
-                    const user = JSON.parse(userStore);
-
-                    // đã chọn role rồi → không cho vào lại
-                    if (!user.targetRole) {
-                      return <SelectRole />;
-                    } else {
-                      return <Home />
-                    }
-
-                  })()
-                }
+                path="/select-target-role"
+                element={<SelectRoleGuard />}
               />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
               <Route path="/" element={<ProtectedRoute element={<Home />} />} />
               <Route path="/practice" element={<ProtectedRoute element={<Practice />} roles={['candidate']} />} />
               <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} />
-              {/* <Route path="/peer-interview" element={<ProtectedRoute element={<PeerInterview />} />} /> */}
-              {/* <Route path="/feedback" element={<ProtectedRoute element={<Feedback />} />} /> */}
-              {/* <Route path="/analytics" element={<ProtectedRoute element={<Analytics />} />} /> */}
-              {/* <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} /> */}
-              {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-              {/* <Route path="*" element={<NotFound />} /> */}
+              <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>
@@ -93,5 +74,21 @@ export function App({ queryClient }: AppProps) {
     </I18nextProvider>
   );
 }
+
+// Tách logic SelectRole ra để dễ quản lý
+const SelectRoleGuard = () => {
+  const userStore = localStorage.getItem('user');
+  if (!userStore) return <Navigate to="/login" replace />;
+
+  const user = JSON.parse(userStore);
+
+  // Nếu chưa có targetRole thì mới cho ở lại trang chọn role
+  if (!user.targetRole) {
+    return <SelectTargetRole />;
+  }
+
+  // Nếu đã có rồi thì về Home luôn
+  return <Navigate to="/" replace />;
+};
 
 export default App;
