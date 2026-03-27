@@ -1,10 +1,10 @@
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../contexts/ThemeContext'
-import { Moon, Sun, Globe, Search, Sparkles } from 'lucide-react'
+import { Moon, Sun, Globe, Search, Sparkles, UserIcon, LogOut } from 'lucide-react'
 import { Button } from '../components/ui/button'
 import { Badge } from '../components/ui/badge'
 import { Input } from '../components/ui/input'
-import { useLocation, Link } from 'react-router-dom'
+import { useLocation, Link, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
   BookOpen,
@@ -19,6 +19,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '../components/ui/dropdown-menu'
 
@@ -29,28 +30,42 @@ export function Navbar() {
   const { t, i18n } = useTranslation()
   const { theme, setTheme } = useTheme()
   const location = useLocation()
+  const navigate = useNavigate();
 
+  const [user, setUser] = useState<any>(null)
+  const [role, setRole] = useState<any>(null)
   const [targetRole, setTargetRole] = useState<string | null>(null)
 
   const menuItems = [
     { label: t("sidebar.dashboard"), href: "/dashboard" },
-    { label: "Practice", href: "/practice" },
+    { label: t("sidebar.practice"), href: "/practice" },
     { label: t("sidebar.questionBank"), href: "/question-bank" },
     { label: t("sidebar.feedback"), href: "/feedback" },
     { label: t("sidebar.analytics"), href: "/analytics" },
   ]
 
   useEffect(() => {
-    const user = localStorage.getItem('user')
-    if (user) {
+    const userStore = localStorage.getItem('user')
+    const token = localStorage.getItem('access_token')
+    if (userStore && token) {
       try {
-        const userData = JSON.parse(user)
-        setTargetRole(userData.targetRoleName || null)
+        const userData = JSON.parse(userStore)
+        setUser(userData)
+        setRole(userData.role)
+        setTargetRole(userData.targetRole || null)
       } catch {
         setTargetRole(null)
       }
     }
-  }, [])
+  }, [location.pathname])
+
+  const handleLogout = () => {
+    localStorage.removeItem('access_token')
+    localStorage.removeItem('refresh_token')
+    localStorage.removeItem('user')
+    setUser(null)
+    navigate('/login')
+  }
 
   const changeLanguage = (lng: string) => {
     i18n.changeLanguage(lng)
@@ -75,7 +90,7 @@ export function Navbar() {
           </div>
 
           <div className="hidden sm:flex flex-col">
-            <Link to="/homepage">
+            <Link to="/">
               <span className="text-sm font-bold text-foreground">
                 {t('navbar.logo')}
               </span>
@@ -189,19 +204,51 @@ export function Navbar() {
 
           {/* Avatar */}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Avatar className="cursor-pointer">
-                <AvatarImage src="https://github.com/shadcn.png" />
-                <AvatarFallback>ID</AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
+          <div className="flex items-center gap-3 border-l pl-3 ml-2">
+            {user ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-primary/10">
+                    <Avatar className="h-9 w-9">
+                      {/* Backend bạn không trả về avatarUrl, nên dùng fallback bằng chữ cái đầu của email/name */}
+                      <AvatarImage src={user.avatarUrl} />
+                      <AvatarFallback className="bg-primary/10 text-primary text-xs">
+                        {user.email?.charAt(0).toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </Button>
+                </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem>{t('sidebar.profile')}</DropdownMenuItem>
-              <DropdownMenuItem>{t('sidebar.logout')}</DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenu>
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
+                      <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                  </DropdownMenu>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => navigate('/profile')}>
+                    <UserIcon className="mr-2 h-4 w-4" />
+                    {t('sidebar.profile')}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+                    <LogOut className="mr-2 h-4 w-4" />
+                    {t('sidebar.logout')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+                  Log in
+                </Button>
+                <Button size="sm" onClick={() => navigate('/register')}>
+                  Sign up
+                </Button>
+              </div>
+            )}
+          </div>
 
         </div>
       </div>

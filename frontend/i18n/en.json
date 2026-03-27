@@ -1,6 +1,7 @@
 {
     "navbar": {
-        "logo": "InterviewDojo"
+        "logo": "InterviewDojo",
+        "welcomeBack": "Welcome back!"
     },
     "language": {
         "en": "English",
@@ -14,7 +15,7 @@
     },
     "sidebar": {
         "dashboard": "Dashboard",
-        "practice": "Solo Practice",
+        "practice": "Practice",
         "peerInterview": "Peer Interview",
         "questionBank": "Question Bank",
         "feedback": "Feedback Review",
@@ -29,8 +30,29 @@
         "githubSignIn": "Sign in with GitHub",
         "or": "or",
         "signIn": "Sign In",
+        "email": "Email",
+        "password": "Password",
+        "forgotPassword": "Forgot password?",
+        "processing": "Processing...",
+        "loginNow": "Log In",
+        "continueWith": "Or continue with",
         "noAccount": "Don't have an account?",
         "createAccount": "Create account"
+    },
+    "register": {
+        "title": "Create New Account",
+        "subtitle": "Start your journey to conquer tech jobs with us",
+        "fullName": "Full Name",
+        "fullNamePlaceholder": "Kerra",
+        "email": "Email",
+        "password": "Password",
+        "confirmPassword": "Confirm Password",
+        "registerNow": "Register Now",
+        "creatingAccount": "Creating account...",
+        "haveAccount": "Already have an account?",
+        "loginHere": "Login here",
+        "passwordMismatch": "Password confirmation does not match!",
+        "registerSuccess": "Registration successful! Please login."
     },
     "dashboard": {
         "title": "Dashboard",
@@ -101,6 +123,7 @@
         "save": "Save",
         "delete": "Delete",
         "edit": "Edit",
-        "close": "Close"
+        "close": "Close",
+        "back": "Back"
     }
 }

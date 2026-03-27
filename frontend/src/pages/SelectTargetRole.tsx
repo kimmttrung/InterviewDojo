@@ -11,7 +11,10 @@ import {
     Terminal,
     Zap,
     Shield,
+    ArrowRight,
 } from 'lucide-react';
+import { showToast } from '../../lib/toast';
+import { userService } from '../../services/user.service';
 
 interface Role {
     id: string;
@@ -22,7 +25,7 @@ interface Role {
     bgColor: string;
 }
 
-export default function SelectRole() {
+export default function SelectTargetRole() {
     const { t } = useTranslation();
     const navigate = useNavigate();
 
@@ -92,15 +95,12 @@ export default function SelectRole() {
             bgColor: 'bg-yellow-500/10',
         },
     ];
-
-    const handleRoleSelect = (roleId: string) => {
+    const handleRoleSelect = async (roleId: string) => {
         const selectedRole = roles.find((r) => r.id === roleId);
-        const user = JSON.parse(localStorage.getItem('user') || '{}');
-        localStorage.setItem(
-            'user',
-            JSON.stringify({ ...user, targetRole: roleId, targetRoleName: selectedRole?.name })
-        );
-        navigate('/dashboard');
+        if (!selectedRole) return;
+
+
+
     };
 
     return (
@@ -163,6 +163,15 @@ export default function SelectRole() {
                     <p className="text-sm text-slate-400 italic">
                         Don't worry, you can update your target role anytime in settings.
                     </p>
+                </div>
+                <div className="pt-4">
+                    <button
+                        onClick={() => navigate('/')}
+                        className="text-slate-600 hover:text-slate-900 text-sm font-semibold flex items-center gap-1 mx-auto transition-all"
+                    >
+                        I'll decide later
+                        <ArrowRight className="w-4 h-4" />
+                    </button>
                 </div>
             </div>
         </div>
