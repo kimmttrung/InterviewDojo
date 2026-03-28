@@ -44,6 +44,16 @@ export class UserService {
       throw new BadRequestException('Dữ liệu không được để trống');
     }
 
+    const skillsUpdateData = dto.skill_ids
+      ? {
+          deleteMany: {}, // Xóa toàn bộ skill cũ của user trong bảng trung gian
+          create: dto.skill_ids.map((skillId) => ({
+            skill: { connect: { id: skillId } }, // Liên kết với bảng Skill
+            score: 0, // Giá trị mặc định khi mới thêm
+          })),
+        }
+      : undefined;
+
     const updatedUser = await this.prisma.user.update({
       where: { id: userId },
       data: {
@@ -51,7 +61,8 @@ export class UserService {
         bio: dto.bio,
         targetRole: dto.target_role,
         experienceYears: dto.experience_years,
-        avatarUrl: dto.avatar_url ?? undefined,
+        avatarUrl: dto.avatar_url,
+        ...(skillsUpdateData && { skills: skillsUpdateData }),
       },
       include: {
         skills: { include: { skill: true } },
@@ -69,11 +80,30 @@ export class UserService {
         current_level: this.calculateLevel(updatedUser.experienceYears),
         avatar_url: updatedUser.avatarUrl,
         skills: updatedUser.skills.map((us) => ({
+          id: us.skill.id,
           name: us.skill.name,
           score: us.score,
           category: us.skill.category,
         })),
       },
+    };
+  }
+
+  async getStats(userId: number) {
+    // Check user exist if needed
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+
+    // Mock data phù hợp cho nền tảng luyện tập
+    return {
+      total_questions_viewed: 145,
+      total_practice_sessions: 24,
+      practice_breakdown: {
+        solo_mode: 18,
+        peer_mode: 6,
+      },
+      average_score: 85.5,
+      streak_days: 5,
     };
   }
 
