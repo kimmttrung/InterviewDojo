@@ -8,6 +8,8 @@ import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { UserModule } from './modules/user/user.module';
 import { StreamModule } from './modules/stream/stream.module';
+import { SocketModule } from './modules/socket/socket.module';
+import { MatchingModule } from './modules/matching/matching.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { StreamModule } from './modules/stream/stream.module';
     RedisModule,
     UserModule,
     StreamModule,
+    SocketModule,
+    MatchingModule,
   ],
   controllers: [AppController],
   providers: [AppService],
