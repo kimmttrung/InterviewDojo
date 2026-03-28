@@ -15,7 +15,7 @@ model User {
   password        String
   name            String?
   bio             String?
-  role            String         @default("candidate") // candidate | admin
+  role            Role           @default(CANDIDATE) // candidate | admin
   status          String         @default("offline")
   avatarUrl       String?        @map("avatar_url")
   experienceYears Int            @default(0) @map("experience_years")
@@ -28,11 +28,12 @@ model User {
 
   // Quan hệ khác
   skills          UserSkill[]
-  savedQuestions  UserQuestion[]
+  savedQuestions  UserBookmark[]
   feedbacksGotten Feedback[]     @relation("RevieweeFeedbacks")
   feedbacksGiven  Feedback[]     @relation("ReviewerFeedbacks")
   isInterviewed   MockSession[]  @relation("IntervieweeSessions")
   interviews      MockSession[]  @relation("InterviewerSessions")
+  attempts        QuestionAttempt[]
 
   @@map("users")
 }
@@ -49,14 +50,15 @@ model TargetRole {
 // --- CÂU HỎI & PHÂN LOẠI ---
 
 model Question {
-  id           Int       @id @default(autoincrement())
+  id           Int          @id @default(autoincrement())
   title        String
-  slug         String    @unique
-  difficulty   String    // Easy | Medium | Hard
-  isPublished  Boolean   @default(false) @map("is_published")
-  data         Json      // Chứa content, snippets, hints, test_cases...
-  createdAt    DateTime  @default(now()) @map("created_at")
-  updatedAt    DateTime  @updatedAt @map("updated_at")
+  slug         String       @unique
+  difficulty   Difficulty   // Easy | Medium | Hard
+  isPublished  Boolean      @default(false) @map("is_published")
+  typeQuestion TypeQuestion @map("type_question")
+  data         Json         // Chứa content, snippets, hints, test_cases...
+  createdAt    DateTime     @default(now()) @map("created_at")
+  updatedAt    DateTime     @updatedAt @map("updated_at")
 
   // Quan hệ Many-to-Many
   categories   CategoryQuestion[]
@@ -65,7 +67,8 @@ model Question {
   
   // Quan hệ khác
   sessions     MockSession[]
-  savedByUsers UserQuestion[]
+  savedByUsers UserBookmark[]
+  attempts     QuestionAttempt[]
 
   @@map("questions")
 }
@@ -103,7 +106,7 @@ model TargetRoleQuestion {
   @@map("target_role_question")
 }
 
-model UserQuestion {
+model UserBookmark {
   userId     Int      @map("user_id")
   questionId Int      @map("question_id")
   savedAt    DateTime @default(now()) @map("saved_at")
@@ -113,6 +116,23 @@ model UserQuestion {
 
   @@id([userId, questionId]) // Composite Primary Key (ngăn save trùng)
   @@map("user_questions")
+}
+
+model QuestionAttempt {
+  id          Int      @id @default(autoincrement())
+  userId      Int      @map("user_id")
+  questionId  Int      @map("question_id")
+  
+  status      String   @default("completed") // started | completed | failed
+  score       Float?   @default(0)
+  userAnswer  Json?    @map("user_answer")   // Lưu code hoặc text mà user đã làm
+  duration    Int?     // Thời gian làm bài tính bằng giây
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("question_attempts")
 }
 
 // --- CÔNG TY & KỸ NĂNG ---
@@ -216,3 +236,17 @@ enum Role {
   CANDIDATE
   ADMIN
 }
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum TypeQuestion {
+  CODE              // nhảy tới màn hình IDE
+  BEHAVIORAL        // phỏng vấn ứng xử
+  SYSTEM_DESIGN     // thiết kế hệ thống 
+  TECHNICAL         // Kiến thức lý thuyết nền tảng 
+}
+
