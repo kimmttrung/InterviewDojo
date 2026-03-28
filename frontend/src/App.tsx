@@ -6,16 +6,17 @@ import { TooltipProvider } from "../components/ui/tooltip";
 import { Toaster } from "../components/ui/toaster";
 import { Toaster as Sonner } from "../components/ui/sonner";
 import i18n from "../i18n";
-import Dashboard from "./pages/Dashboard";
-import Practice from "./pages/Practice";
-import Home from "./pages/Home";
+import Dashboard from "./pages/user/Dashboard";
+import Practice from "./pages/user/Practice";
+import Home from "./pages/user/Home";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
-import QuestionBank from "./pages/QuestionBank";
+import QuestionBank from "./pages/user/QuestionBank";
 import NotFound from "./pages/NotFound";
 import Unauthorized from "./pages/Unauthorized";
-import Profile from "./pages/Profile";
-import SelectTargetRole from "./pages/SelectTargetRole";
+import Profile from "./pages/user/Profile";
+import SelectTargetRole from "./pages/user/SelectTargetRole";
+import AdminDashboard from "./pages/admin/AdminDashboard";
 
 
 interface ProtectedRouteProps {
@@ -67,6 +68,11 @@ export function App({ queryClient }: AppProps) {
               <Route path="/practice" element={<ProtectedRoute element={<Practice />} roles={['candidate']} />} />
               <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
+              <Route
+                path="/admin/dashboard"
+                // 
+                element={<AdminDashboard />}
+              />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>
