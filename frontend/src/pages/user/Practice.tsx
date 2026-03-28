@@ -1,10 +1,10 @@
-import { Layout } from "../../components/Layout";
-import { Footer } from "../../components/Footer";
-import { Card } from "../../components/ui/card";
-import { Button } from "../../components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../components/ui/accordion";
+import { Layout } from "../../../components/Layout";
+import { Footer } from "../../../components/Footer";
+import { Card } from "../../../components/ui/card";
+import { Button } from "../../../components/ui/button";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../../../components/ui/accordion";
 import { CheckCircle2, Calendar, Users, MessageSquare } from "lucide-react";
-import CodeEditer from "../assets/img/CodeEditer.png";
+import CodeEditer from "../../assets/img/CodeEditer.png";
 
 export default function Practice() {
     return (

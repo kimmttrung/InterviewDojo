@@ -1,7 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import { Layout } from '../../components/Layout';
-import { Card } from '../../components/ui/card';
-import { Badge } from '../../components/ui/badge';
+import { Layout } from '../../../components/Layout';
+import { Card } from '../../../components/ui/card';
+import { Badge } from '../../../components/ui/badge';
 import {
     LineChart,
     Line,
