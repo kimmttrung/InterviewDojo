@@ -5,20 +5,26 @@ import {
   IsUrl,
   IsArray,
   IsInt,
+  Min,
 } from 'class-validator';
 
 export class UpdateUserDto {
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
+  @IsOptional()
   @IsString()
-  bio: string;
+  bio?: string;
 
-  @IsString()
-  target_role: string;
+  @IsOptional()
+  @IsInt()
+  target_role_id?: number;
 
+  @IsOptional()
   @IsNumber()
-  experience_years: number;
+  @Min(0)
+  experience_years?: number;
 
   @IsOptional()
   @IsUrl()
