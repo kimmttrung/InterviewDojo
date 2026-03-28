@@ -1,4 +1,7 @@
 {
+  "dependencies": {
+    "@nestjs/mapped-types": "*"
+  },
   "devDependencies": {
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0"

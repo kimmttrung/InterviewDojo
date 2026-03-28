@@ -1,23 +1,22 @@
-import { Routes, Route, Navigate } from "react-router-dom";
-import { I18nextProvider } from "react-i18next";
-import { ThemeProvider } from "../contexts/ThemeContext";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { TooltipProvider } from "../components/ui/tooltip";
-import { Toaster } from "../components/ui/toaster";
-import { Toaster as Sonner } from "../components/ui/sonner";
-import i18n from "../i18n";
-import Dashboard from "./pages/Dashboard";
-import Practice from "./pages/Practice";
-import Home from "./pages/Home";
-import Login from "./pages/Login";
-import Register from "./pages/Register";
-import QuestionBank from "./pages/QuestionBank";
-import NotFound from "./pages/NotFound";
-import Unauthorized from "./pages/Unauthorized";
-import Profile from "./pages/Profile";
-import SelectTargetRole from "./pages/SelectTargetRole";
-
-
+import { Routes, Route, Navigate } from 'react-router-dom';
+import { I18nextProvider } from 'react-i18next';
+import { ThemeProvider } from '../contexts/ThemeContext';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { TooltipProvider } from '../components/ui/tooltip';
+import { Toaster } from '../components/ui/toaster';
+import { Toaster as Sonner } from '../components/ui/sonner';
+import i18n from '../i18n';
+import Dashboard from './pages/Dashboard';
+import Practice from './pages/Practice';
+import Home from './pages/Home';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import QuestionBank from './pages/QuestionBank';
+import NotFound from './pages/NotFound';
+import Unauthorized from './pages/Unauthorized';
+import Profile from './pages/Profile';
+import SelectTargetRole from './pages/SelectTargetRole';
+import InterviewRoom from './pages/InterviewRoom';
 interface ProtectedRouteProps {
   element: React.ReactNode;
   roles?: string[]; // optional, chỉ định role được phép
@@ -25,7 +24,7 @@ interface ProtectedRouteProps {
 
 const ProtectedRoute = ({ element, roles }: ProtectedRouteProps) => {
   const userStore = localStorage.getItem('user');
-  if (!userStore) return <Navigate to="/login" replace />
+  if (!userStore) return <Navigate to="/login" replace />;
 
   const user = JSON.parse(userStore);
 
@@ -47,25 +46,27 @@ export function App({ queryClient }: AppProps) {
         <QueryClientProvider client={queryClient}>
           <TooltipProvider>
             <Toaster />
-            <Sonner
-              position="top-right"
-              duration={3000}
-              richColors
-              closeButton
-            />
+            <Sonner position="top-right" duration={3000} richColors closeButton />
             <Routes>
               <Route path="*" element={<NotFound />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/select-target-role" element={<SelectRoleGuard />} />
               <Route
-                path="/select-target-role"
-                element={<SelectRoleGuard />}
+                path="/interview/:roomId"
+                element={<ProtectedRoute element={<InterviewRoom />} />}
               />
               <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
               <Route path="/" element={<ProtectedRoute element={<Home />} />} />
-              <Route path="/practice" element={<ProtectedRoute element={<Practice />} roles={['candidate']} />} />
-              <Route path="/question-bank" element={<ProtectedRoute element={<QuestionBank />} />} />
+              <Route
+                path="/practice"
+                element={<ProtectedRoute element={<Practice />} roles={['candidate']} />}
+              />
+              <Route
+                path="/question-bank"
+                element={<ProtectedRoute element={<QuestionBank />} />}
+              />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
             </Routes>
           </TooltipProvider>
