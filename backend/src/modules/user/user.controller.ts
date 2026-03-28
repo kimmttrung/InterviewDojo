@@ -24,6 +24,12 @@ export class UserController {
     return this.userService.getMe(Number(user.sub));
   }
 
+  //Thieu bang history interview/answered question
+  @Get('stats')
+  async getStats(@CurrentUser() user: JwtPayload) {
+    return this.userService.getStats(Number(user.sub));
+  }
+
   @Put('me') // Đổi từ PATCH sang PUT
   async updateMe(
     @CurrentUser() user: JwtPayload,

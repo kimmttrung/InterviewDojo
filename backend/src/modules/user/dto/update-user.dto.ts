@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsOptional, IsUrl } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsUrl,
+  IsArray,
+  IsInt,
+} from 'class-validator';
 
 export class UpdateUserDto {
   @IsString()
@@ -16,4 +23,9 @@ export class UpdateUserDto {
   @IsOptional()
   @IsUrl()
   avatar_url?: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsInt({ each: true })
+  skill_ids?: number[];
 }
