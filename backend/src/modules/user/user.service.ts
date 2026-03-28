@@ -14,6 +14,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
+        targetRole: true, // Lấy thông tin từ bảng TargetRole
         skills: {
           include: { skill: true },
         },
@@ -27,11 +28,13 @@ export class UserService {
       email: user.email,
       name: user.name,
       bio: user.bio,
-      target_role: user.targetRole,
+      // Trả về tên của targetRole hoặc null
+      target_role: user.targetRole?.name || null,
       experience_years: user.experienceYears,
       current_level: this.calculateLevel(user.experienceYears),
       avatar_url: user.avatarUrl,
       skills: user.skills?.map((us) => ({
+        id: us.skill.id,
         name: us.skill.name || 'Unknown',
         score: us.score || 0,
         category: us.skill.category || 'Unknown',
@@ -44,12 +47,13 @@ export class UserService {
       throw new BadRequestException('Dữ liệu không được để trống');
     }
 
+    // Xử lý logic cập nhật Skills
     const skillsUpdateData = dto.skill_ids
       ? {
-          deleteMany: {}, // Xóa toàn bộ skill cũ của user trong bảng trung gian
+          deleteMany: {},
           create: dto.skill_ids.map((skillId) => ({
-            skill: { connect: { id: skillId } }, // Liên kết với bảng Skill
-            score: 0, // Giá trị mặc định khi mới thêm
+            skill: { connect: { id: skillId } },
+            score: 0,
           })),
         }
       : undefined;
@@ -59,15 +63,20 @@ export class UserService {
       data: {
         name: dto.name,
         bio: dto.bio,
-        targetRole: dto.target_role,
-        experienceYears: dto.experience_years,
         avatarUrl: dto.avatar_url,
+        experienceYears: dto.experience_years,
+        // CẬP NHẬT: Kết nối với bảng TargetRole thông qua ID
+        ...(dto.target_role_id && {
+          targetRole: { connect: { id: dto.target_role_id } },
+        }),
         ...(skillsUpdateData && { skills: skillsUpdateData }),
       },
       include: {
+        targetRole: true,
         skills: { include: { skill: true } },
       },
     });
+
     return {
       message: 'Cập nhật thông tin thành công',
       data: {
@@ -75,7 +84,7 @@ export class UserService {
         email: updatedUser.email,
         name: updatedUser.name,
         bio: updatedUser.bio,
-        target_role: updatedUser.targetRole,
+        target_role: updatedUser.targetRole?.name || null,
         experience_years: updatedUser.experienceYears,
         current_level: this.calculateLevel(updatedUser.experienceYears),
         avatar_url: updatedUser.avatarUrl,
@@ -90,11 +99,10 @@ export class UserService {
   }
 
   async getStats(userId: number) {
-    // Check user exist if needed
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
-    // Mock data phù hợp cho nền tảng luyện tập
+    // Giữ nguyên mock data cho stats
     return {
       total_questions_viewed: 145,
       total_practice_sessions: 24,

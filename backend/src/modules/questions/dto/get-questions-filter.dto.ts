@@ -2,9 +2,9 @@ import { IsOptional, IsInt, IsString, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 
 export enum Difficulty {
-  EASY = 'Easy',
-  MEDIUM = 'Medium',
-  HARD = 'Hard',
+  EASY = 'EASY',
+  MEDIUM = 'MEDIUM',
+  HARD = 'HARD',
 }
 
 export class GetQuestionsFilterDto {
@@ -15,12 +15,17 @@ export class GetQuestionsFilterDto {
 
   @IsOptional()
   @IsEnum(Difficulty)
-  difficulty?: string;
+  difficulty?: Difficulty;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   companyId?: number;
+
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  targetRoleId?: number;
 
   @IsOptional()
   @IsString()
