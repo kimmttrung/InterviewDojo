@@ -63,7 +63,7 @@ export function App({ queryClient }: AppProps) {
               <Route path="/" element={<ProtectedRoute element={<Home />} />} />
               <Route
                 path="/practice"
-                element={<ProtectedRoute element={<Practice />} roles={['candidate']} />}
+                element={<ProtectedRoute element={<Practice />} roles={['CANDIDATE']} />}
               />
               <Route
                 path="/question-bank"
