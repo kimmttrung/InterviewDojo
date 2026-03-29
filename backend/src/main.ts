@@ -10,7 +10,12 @@ async function bootstrap() {
   app.setGlobalPrefix('api/v1');
 
   // cau hinh validation global
-  app.useGlobalPipes(new ValidationPipe());
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+    }),
+  );
 
   // cau hinh swagger
   const config = new DocumentBuilder()

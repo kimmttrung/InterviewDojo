@@ -1,79 +1,82 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
-import { GetQuestionsFilterDto } from './dto/get-questions-filter.dto';
+import { GetQuestionsDto } from './dto/get-questions.dto';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
-  async findAll(filter: GetQuestionsFilterDto) {
-    const { categoryId, difficulty, companyId, targetRoleId, search } = filter;
+  async findAll(query: GetQuestionsDto) {
+    const {
+      keyword,
+      page = 1,
+      limit = 10,
+      sortBy = 'createdAt',
+      sortOrder = 'desc',
+      difficulty,
+      typeQuestion,
+    } = query;
 
-    return this.prisma.question.findMany({
-      where: {
-        isPublished: true, // Chỉ lấy những câu đã công khai
+    const skip = (page - 1) * limit;
 
-        // Lọc theo Difficulty (Enum)
-        difficulty: difficulty || undefined,
+    // Build query điều kiện
+    const where: Prisma.QuestionWhereInput = {
+      isPublished: true, // Mặc định chỉ lấy câu hỏi đã publish
+    };
 
-        // Lọc theo Category qua bảng trung gian category_question
-        categories: categoryId
-          ? {
-              some: {
-                categoryId: categoryId,
-              },
-            }
-          : undefined,
+    // 1. Xử lý Full-Text Search
+    if (keyword) {
+      // Postgres FTS yêu cầu định dạng: "word1 & word2"
+      const formattedKeyword = keyword.trim().split(/\s+/).join(' & ');
 
-        // Lọc theo Company qua bảng trung gian question_companies
-        companies: companyId
-          ? {
-              some: {
-                companyId: companyId,
-              },
-            }
-          : undefined,
+      where.OR = [
+        { title: { search: formattedKeyword } },
+        // Fallback dùng contains để bắt các chuỗi con không hoàn chỉnh (partial match)
+        { title: { contains: keyword, mode: 'insensitive' } },
+      ];
+    }
 
-        // Lọc theo Target Role qua bảng trung gian target_role_question
-        targetRoles: targetRoleId
-          ? {
-              some: {
-                targetRoleId: targetRoleId,
-              },
-            }
-          : undefined,
+    // 2. Xử lý Filters
+    if (difficulty) where.difficulty = difficulty;
+    if (typeQuestion) where.typeQuestion = typeQuestion;
 
-        // Tìm kiếm theo Title (Trong Schema của bạn là 'title', không phải 'content')
-        title: search
-          ? {
-              contains: search,
-              mode: 'insensitive',
-            }
-          : undefined,
-      },
-      include: {
-        // Lấy thông tin Category từ bảng trung gian
-        categories: {
-          include: {
-            category: true,
+    // 3. Thực thi Query song song để tối ưu hiệu năng
+    const [questions, total] = await Promise.all([
+      this.prisma.question.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: {
+          [sortBy]: sortOrder,
+        },
+        // Include thêm các bảng liên quan để trả về đầy đủ context
+        include: {
+          categories: {
+            include: { category: true },
+          },
+          companies: {
+            include: { company: true },
           },
         },
-        // Lấy thông tin Company từ bảng trung gian
-        companies: {
-          include: {
-            company: true,
-          },
-        },
-        // Lấy thông tin TargetRole từ bảng trung gian
-        targetRoles: {
-          include: {
-            targetRole: true,
-          },
-        },
+      }),
+      this.prisma.question.count({ where }),
+    ]);
+
+    // 4. Định dạng lại Response
+    return {
+      data: questions.map((q) => ({
+        ...q,
+        // Làm phẳng (flatten) mảng categories và companies cho FE dễ dùng
+        categories: q.categories.map((c) => c.category.name),
+        companies: q.companies.map((c) => c.company.name),
+      })),
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
       },
-      orderBy: {
-        createdAt: 'desc', // Mới nhất lên đầu
-      },
-    });
+    };
   }
 }

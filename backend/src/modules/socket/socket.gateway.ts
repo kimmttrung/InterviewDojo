@@ -29,7 +29,7 @@ export class SocketGateway
 
   // Xử lý khi có người kết nối
   handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId;
+    const userId = client.handshake.query.userId as string;
 
     if (userId && userId !== 'undefined') {
       // User tự động gia nhập vào room cá nhân: user_1, user_2...
