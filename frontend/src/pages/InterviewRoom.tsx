@@ -11,6 +11,7 @@ import {
 } from '@stream-io/video-react-sdk';
 import { ParticipantTracker } from '../../components/videocall/ParticipantTracker';
 import '@stream-io/video-react-sdk/dist/css/styles.css';
+import CodeEditor from './user/CodeEditor';
 
 export default function InterviewRoom() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -92,9 +93,25 @@ export default function InterviewRoom() {
             </div>
           </header>
 
-          <main className="flex-1 relative flex items-center justify-center bg-slate-950">
-            <SpeakerLayout />
-            <ParticipantTracker />
+          {/* Main Content: Chia đôi Editor và Video */}
+          <main className="flex-1 flex overflow-hidden">
+            {/* BÊN TRÁI: CODE EDITOR (NHIỆM VỤ CỦA TRUNG) */}
+            <div className="w-2/3 border-r border-gray-800 flex flex-col">
+              {/* Truyền roomId và userId vào để đồng bộ Socket */}
+              <CodeEditor roomId={roomId!} userId={userId} />
+            </div>
+
+            {/* BÊN PHẢI: VIDEO CALL (NHIỆM VỤ CỦA HÙNG) */}
+            <div className="w-1/3 flex flex-col bg-black relative">
+              <div className="flex-1 overflow-y-auto p-2">
+                <SpeakerLayout />
+              </div>
+              
+              {/* Control phía dưới Video */}
+              <div className="p-4 bg-slate-900 border-t border-gray-800 flex justify-center">
+                <CallControls onLeave={() => navigate('/dashboard')} />
+              </div>
+            </div>
           </main>
 
           <footer className="p-4 flex justify-center bg-slate-900 border-t border-gray-800">

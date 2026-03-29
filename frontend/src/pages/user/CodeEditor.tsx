@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import axios from 'axios';
+import { io, Socket } from 'socket.io-client';
 
-const CodeEditor = () => {
+const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
   const [code, setCode] = useState('// Viết code tại đây...');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -15,6 +16,25 @@ const CodeEditor = () => {
     { name: 'Python 3', value: '71', monaco: 'python' },
     { name: 'C++', value: '54', monaco: 'cpp' }
   ];
+  useEffect(() => {
+      const socket = io('http://localhost:3000', { query: { userId } });
+
+      // Khi vào phòng, báo cho server biết tôi ở phòng nào để đồng bộ code
+      socket.emit('join_room', roomId);
+
+      socket.on('receive_code', (newCode: string) => {
+        setCode(newCode);
+      });
+
+      return () => { socket.disconnect(); };
+    }, [roomId, userId]);
+
+    const handleEditorChange = (value: string | undefined) => {
+      const newCode = value || '';
+      setCode(newCode);
+      // Gửi code lên theo roomId
+      Socket.emit('send_code', { roomId, code: newCode });
+    };
 
   const runCode = async () => {
     setLoading(true);
@@ -38,6 +58,7 @@ const CodeEditor = () => {
       setLoading(false);
     }
   };
+  
 
   const currentMonacoLang = languages.find(l => l.value === selectedLang)?.monaco || 'javascript';
 

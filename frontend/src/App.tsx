@@ -75,7 +75,6 @@ export function App({ queryClient }: AppProps) {
                 path="/admin/dashboard"
                 element={<AdminDashboard />}
               />
-                <Route path="/pracite/code-editer" element={<ProtectedRoute element={<CodeEditor />} />} />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>
