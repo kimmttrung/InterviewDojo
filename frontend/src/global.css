@@ -119,3 +119,44 @@
     white-space: pre;
   }
 }
+/* src/global.css hoặc tương tự */
+.str-video__call-controls {
+  display: flex !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  background: rgba(15, 23, 42, 0.9) !important; /* Nền tối cho nổi nút */
+  padding: 10px !important;
+  border-radius: 9999px !important;
+}
+
+/* 2. Ép các ICON (SVG) bên trong nút phải hiện màu trắng */
+.str-video__call-controls button svg {
+  fill: white !important;
+  color: white !important;
+  width: 20px !important;
+  height: 20px !important;
+  display: block !important;
+}
+
+/* 3. Fix lỗi các nút bị vỡ giao diện do Tailwind */
+.str-video__composite-button__button {
+  background-color: rgba(255, 255, 255, 0.1) !important;
+  border: none !important;
+  margin: 0 4px !important;
+}
+
+.str-video__composite-button__button:hover {
+  background-color: rgba(255, 255, 255, 0.2) !important;
+}
+
+/* Ép các icon nút bấm hiện rõ màu trắng */
+.stream-mini-controls .str-video__composite-button__button {
+  color: white !important;
+}
+
+/* Style cho khung Video nhỏ */
+.str-video__speaker-layout {
+  height: 100% !important;
+  background-color: transparent !important;
+}
+

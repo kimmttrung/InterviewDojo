@@ -55,19 +55,25 @@ export class SocketGateway
     console.log(`User ${client.id} joined room: ${roomId}`);
   }
 
-  @SubscribeMessage('code_change')
+  @SubscribeMessage('send_code') // Sửa từ 'code_change' thành 'send_code'
   handleCodeChange(client: Socket, payload: { roomId: string; code: string }) {
-    // Gửi code mới cho người CÒN LẠI trong phòng (ngoại trừ người gửi)
-    client.to(payload.roomId).emit('code_updated', payload.code);
+    // Phát lại cho người kia với tên 'receive_code'
+    client.to(payload.roomId).emit('receive_code', payload.code);
   }
 
-  @SubscribeMessage('send_code')
-  handleCodeUpdate(
-    @MessageBody() data: { roomId: string; code: string },
+  @SubscribeMessage('send_run_result')
+  handleRunResult(
+    @MessageBody() data: { roomId: string; result: any },
     @ConnectedSocket() client: Socket,
   ) {
-    // Gửi code mới cho tất cả mọi người trong phòng TRỪ người vừa gửi (sender)
-    client.to(data.roomId).emit('receive_code', data.code);
-    // console.log(`Code updated in room ${data.roomId}`);
+    client.to(data.roomId).emit('receive_run_result', data.result);
+  }
+  @SubscribeMessage('send_language')
+  handleLanguageChange(
+    client: Socket,
+    payload: { roomId: string; languageId: string },
+  ) {
+    // Gửi cho người còn lại trong phòng biết ngôn ngữ đã đổi
+    client.to(payload.roomId).emit('receive_language', payload.languageId);
   }
 }
