@@ -9,6 +9,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 
 @Injectable()
 export class AuthService {
@@ -37,7 +38,12 @@ export class AuthService {
       },
     });
 
-    return this.generateTokens(user.id, user.email, user.role);
+    const data = await this.generateTokens(user.id, user.email, user.role);
+
+    return {
+      message: 'Register successful',
+      data,
+    };
   }
 
   async login(dto: LoginDto) {
@@ -55,7 +61,40 @@ export class AuthService {
       throw new UnauthorizedException('Sai email hoặc mật khẩu');
     }
 
-    return this.generateTokens(user.id, user.email, user.role);
+    const data = await this.generateTokens(user.id, user.email, user.role);
+
+    return {
+      message: 'Login successful',
+      data,
+    };
+  }
+
+  async refresh(dto: RefreshTokenDto) {
+    try {
+      const payload = await this.jwtService.verifyAsync<JwtPayload>(
+        dto.refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET as string,
+        },
+      );
+
+      const user = await this.prisma.user.findUnique({
+        where: { id: payload.sub },
+      });
+
+      if (!user) {
+        throw new UnauthorizedException('Refresh token không hợp lệ');
+      }
+
+      const data = await this.generateTokens(user.id, user.email, user.role);
+
+      return {
+        message: 'Refresh token successful',
+        data,
+      };
+    } catch {
+      throw new UnauthorizedException('Refresh token không hợp lệ hoặc đã hết hạn');
+    }
   }
 
   async validateUser(userId: number) {
