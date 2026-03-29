@@ -18,6 +18,7 @@ import Profile from './pages/user/Profile';
 import SelectTargetRole from './pages/user/SelectTargetRole';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewRoom from './pages/InterviewRoom';
+import CodeEditor from './pages/user/CodeEditor';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -72,9 +73,9 @@ export function App({ queryClient }: AppProps) {
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
               <Route
                 path="/admin/dashboard"
-                //
                 element={<AdminDashboard />}
               />
+                <Route path="/pracite/code-editer" element={<ProtectedRoute element={<CodeEditor />} />} />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>

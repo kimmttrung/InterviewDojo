@@ -1,74 +1,62 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearch"] // Hỗ trợ Full-text search đã bàn
+  previewFeatures = ["fullTextSearchPostgres"]
 }
 
 datasource db {
   provider = "postgresql"
 }
 
-// --- NGƯỜI DÙNG & VAI TRÒ ---
-
 model User {
-  id              Int            @id @default(autoincrement())
-  email           String         @unique
+  id              Int               @id @default(autoincrement())
+  email           String            @unique
   password        String
   name            String?
   bio             String?
-  role            Role           @default(CANDIDATE) // candidate | admin
-  status          String         @default("offline")
-  avatarUrl       String?        @map("avatar_url")
-  experienceYears Int            @default(0) @map("experience_years")
-  creditBalance   Float          @default(0.0) @map("credit_balance")
-  createdAt       DateTime       @default(now()) @map("created_at")
-
-  // Quan hệ với TargetRole (One-to-Many)
-  targetRoleId    Int?           @map("target_role_id")
-  targetRole      TargetRole?    @relation(fields: [targetRoleId], references: [id])
-
-  // Quan hệ khác
-  skills          UserSkill[]
-  savedQuestions  UserBookmark[]
-  feedbacksGotten Feedback[]     @relation("RevieweeFeedbacks")
-  feedbacksGiven  Feedback[]     @relation("ReviewerFeedbacks")
-  isInterviewed   MockSession[]  @relation("IntervieweeSessions")
-  interviews      MockSession[]  @relation("InterviewerSessions")
+  experienceYears Int               @default(0) @map("experience_years")
+  status          String            @default("offline")
+  avatarUrl       String?           @map("avatar_url")
+  creditBalance   Float             @default(0.0) @map("credit_balance")
+  createdAt       DateTime          @default(now()) @map("created_at")
+  targetRoleId    Int?              @map("target_role_id")
+  role            Role              @default(CANDIDATE)
+  feedbacksGotten Feedback[]        @relation("RevieweeFeedbacks")
+  feedbacksGiven  Feedback[]        @relation("ReviewerFeedbacks")
+  isInterviewed   MockSession[]     @relation("IntervieweeSessions")
+  interviews      MockSession[]     @relation("InterviewerSessions")
   attempts        QuestionAttempt[]
+  savedQuestions  UserBookmark[]
+  skills          UserSkill[]
+  targetRole      TargetRole?       @relation(fields: [targetRoleId], references: [id])
 
   @@map("users")
 }
 
 model TargetRole {
-  id          Int                  @id @default(autoincrement())
-  name        String               @unique
-  users       User[]
-  questions   TargetRoleQuestion[]
+  id        Int                  @id @default(autoincrement())
+  name      String               @unique
+  questions TargetRoleQuestion[]
+  users     User[]
 
   @@map("target_roles")
 }
 
-// --- CÂU HỎI & PHÂN LOẠI ---
-
 model Question {
-  id           Int          @id @default(autoincrement())
+  id           Int                  @id @default(autoincrement())
+  createdAt    DateTime             @default(now()) @map("created_at")
+  data         Json
+  isPublished  Boolean              @default(false) @map("is_published")
+  slug         String               @unique
   title        String
-  slug         String       @unique
-  difficulty   Difficulty   // Easy | Medium | Hard
-  isPublished  Boolean      @default(false) @map("is_published")
-  typeQuestion TypeQuestion @map("type_question")
-  data         Json         // Chứa content, snippets, hints, test_cases...
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
-
-  // Quan hệ Many-to-Many
+  typeQuestion TypeQuestion         @map("type_question")
+  updatedAt    DateTime             @updatedAt @map("updated_at")
+  difficulty   Difficulty
   categories   CategoryQuestion[]
-  targetRoles  TargetRoleQuestion[]
-  companies    QuestionCompany[]
-  
-  // Quan hệ khác
   sessions     MockSession[]
-  savedByUsers UserBookmark[]
   attempts     QuestionAttempt[]
+  companies    QuestionCompany[]
+  targetRoles  TargetRoleQuestion[]
+  savedByUsers UserBookmark[]
 
   @@map("questions")
 }
@@ -82,27 +70,23 @@ model Category {
   @@map("categories")
 }
 
-// --- BẢNG TRUNG GIAN (COMPOSITE KEYS) ---
-
 model CategoryQuestion {
-  questionId Int @map("question_id")
-  categoryId Int @map("category_id")
-
-  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  questionId Int      @map("question_id")
+  categoryId Int      @map("category_id")
   category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
-  @@id([questionId, categoryId]) // Composite Primary Key
+  @@id([questionId, categoryId])
   @@map("category_question")
 }
 
 model TargetRoleQuestion {
-  targetRoleId Int @map("target_role_id")
-  questionId   Int @map("question_id")
-
-  targetRole   TargetRole @relation(fields: [targetRoleId], references: [id], onDelete: Cascade)
+  targetRoleId Int        @map("target_role_id")
+  questionId   Int        @map("question_id")
   question     Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  targetRole   TargetRole @relation(fields: [targetRoleId], references: [id], onDelete: Cascade)
 
-  @@id([targetRoleId, questionId]) // Composite Primary Key
+  @@id([targetRoleId, questionId])
   @@map("target_role_question")
 }
 
@@ -110,32 +94,27 @@ model UserBookmark {
   userId     Int      @map("user_id")
   questionId Int      @map("question_id")
   savedAt    DateTime @default(now()) @map("saved_at")
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([userId, questionId]) // Composite Primary Key (ngăn save trùng)
+  @@id([userId, questionId])
   @@map("user_questions")
 }
 
 model QuestionAttempt {
-  id          Int      @id @default(autoincrement())
-  userId      Int      @map("user_id")
-  questionId  Int      @map("question_id")
-  
-  status      String   @default("completed") // started | completed | failed
-  score       Float?   @default(0)
-  userAnswer  Json?    @map("user_answer")   // Lưu code hoặc text mà user đã làm
-  duration    Int?     // Thời gian làm bài tính bằng giây
-  createdAt   DateTime @default(now()) @map("created_at")
-
-  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  question    Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  questionId Int      @map("question_id")
+  status     String   @default("completed")
+  score      Float?   @default(0)
+  userAnswer Json?    @map("user_answer")
+  duration   Int?
+  createdAt  DateTime @default(now()) @map("created_at")
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("question_attempts")
 }
-
-// --- CÔNG TY & KỸ NĂNG ---
 
 model Company {
   id        Int               @id @default(autoincrement())
@@ -147,9 +126,8 @@ model Company {
 }
 
 model QuestionCompany {
-  questionId Int @map("question_id")
-  companyId  Int @map("company_id")
-
+  questionId Int      @map("question_id")
+  companyId  Int      @map("company_id")
   company    Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
   question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
@@ -160,7 +138,7 @@ model QuestionCompany {
 model Skill {
   id       Int         @id @default(autoincrement())
   name     String      @unique
-  category String?     // Technical | Soft Skill
+  category String?
   users    UserSkill[]
 
   @@map("skills")
@@ -170,7 +148,6 @@ model UserSkill {
   userId  Int   @map("user_id")
   skillId Int   @map("skill_id")
   score   Float @default(0)
-
   skill   Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
   user    User  @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -178,19 +155,16 @@ model UserSkill {
   @@map("user_skills")
 }
 
-// --- PHỎNG VẤN & PHÂN TÍCH ---
-
 model MockSession {
-  id              Int      @id @default(autoincrement())
-  interviewerId   Int      @map("interviewer_id")
-  intervieweeId   Int      @map("interviewee_id")
-  questionId      Int      @map("question_id")
-  scheduledAt     DateTime @default(now()) @map("scheduled_at")
-  durationMinutes Int      @map("duration_minutes")
-  status          String   @default("scheduled") // scheduled | ongoing | completed | cancelled
-  recordingUrl    String?  @map("recording_url")
-  meetingLink     String?  @map("meeting_link")
-
+  id              Int         @id @default(autoincrement())
+  interviewerId   Int         @map("interviewer_id")
+  intervieweeId   Int         @map("interviewee_id")
+  questionId      Int         @map("question_id")
+  scheduledAt     DateTime    @default(now()) @map("scheduled_at")
+  durationMinutes Int         @map("duration_minutes")
+  status          String      @default("scheduled")
+  recordingUrl    String?     @map("recording_url")
+  meetingLink     String?     @map("meeting_link")
   aiAnalysis      AiAnalysis?
   feedbacks       Feedback[]
   interviewee     User        @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
@@ -201,16 +175,15 @@ model MockSession {
 }
 
 model Feedback {
-  id             Int      @id @default(autoincrement())
-  sessionId      Int      @map("session_id")
-  reviewerId     Int      @map("reviewer_id")
-  revieweeId     Int      @map("reviewee_id")
-  communication  Int      // 1-5
-  technical      Int      // 1-5
-  problemSolving Int      @map("problem_solving") // 1-5
+  id             Int         @id @default(autoincrement())
+  sessionId      Int         @map("session_id")
+  reviewerId     Int         @map("reviewer_id")
+  revieweeId     Int         @map("reviewee_id")
+  communication  Int
+  technical      Int
+  problemSolving Int         @map("problem_solving")
   comment        String?
-  createdAt      DateTime @default(now()) @map("created_at")
-
+  createdAt      DateTime    @default(now()) @map("created_at")
   reviewee       User        @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
   reviewer       User        @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
   session        MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
@@ -219,14 +192,14 @@ model Feedback {
 }
 
 model AiAnalysis {
-  id           Int      @id @default(autoincrement())
-  sessionId    Int      @unique @map("session_id")
+  id           Int         @id @default(autoincrement())
+  sessionId    Int         @unique @map("session_id")
   transcript   String?
-  strengths    Json?    // Array of strings
-  weaknesses   Json?    // Array of strings
-  suggestions  Json?    // Array of strings
-  overallScore Float    @map("overall_score")
-  processedAt  DateTime @default(now()) @map("processed_at")
+  strengths    Json?
+  weaknesses   Json?
+  suggestions  Json?
+  overallScore Float       @map("overall_score")
+  processedAt  DateTime    @default(now()) @map("processed_at")
   session      MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("ai_analyses")
@@ -244,9 +217,8 @@ enum Difficulty {
 }
 
 enum TypeQuestion {
-  CODE              // nhảy tới màn hình IDE
-  BEHAVIORAL        // phỏng vấn ứng xử
-  SYSTEM_DESIGN     // thiết kế hệ thống 
-  TECHNICAL         // Kiến thức lý thuyết nền tảng 
+  CODE
+  BEHAVIORAL
+  SYSTEM_DESIGN
+  TECHNICAL
 }
-
