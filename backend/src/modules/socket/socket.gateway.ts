@@ -5,6 +5,9 @@ import {
   OnGatewayInit,
   OnGatewayConnection,
   OnGatewayDisconnect,
+  SubscribeMessage,
+  MessageBody,
+  ConnectedSocket,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { SocketService } from './socket.service';
@@ -47,5 +50,33 @@ export class SocketGateway
   // Xử lý khi ngắt kết nối
   handleDisconnect(client: Socket) {
     console.log(`🔌 Client disconnected: ${client.id}`);
+  }
+
+  @SubscribeMessage('join_room')
+  handleJoinRoom(client: Socket, roomId: string) {
+    client.join(roomId); // Gia nhập phòng phỏng vấn chung
+    console.log(`User ${client.id} joined room: ${roomId}`);
+  }
+
+  @SubscribeMessage('send_code') // Sửa từ 'code_change' thành 'send_code'
+  handleCodeChange(client: Socket, payload: { roomId: string; code: string }) {
+    // Phát lại cho người kia với tên 'receive_code'
+    client.to(payload.roomId).emit('receive_code', payload.code);
+  }
+
+  @SubscribeMessage('send_run_result')
+  handleRunResult(
+    @MessageBody() data: { roomId: string; result: any },
+    @ConnectedSocket() client: Socket,
+  ) {
+    client.to(data.roomId).emit('receive_run_result', data.result);
+  }
+  @SubscribeMessage('send_language')
+  handleLanguageChange(
+    client: Socket,
+    payload: { roomId: string; languageId: string },
+  ) {
+    // Gửi cho người còn lại trong phòng biết ngôn ngữ đã đổi
+    client.to(payload.roomId).emit('receive_language', payload.languageId);
   }
 }

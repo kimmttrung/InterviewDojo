@@ -11,6 +11,7 @@ import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { StreamModule } from './modules/stream/stream.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { MatchingModule } from './modules/matching/matching.module';
+import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { MatchingModule } from './modules/matching/matching.module';
     StreamModule,
     SocketModule,
     MatchingModule,
+    CodeEngineModule,
   ],
   controllers: [AppController],
   providers: [AppService],
