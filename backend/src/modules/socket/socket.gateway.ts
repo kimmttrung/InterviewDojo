@@ -32,10 +32,13 @@ export class SocketGateway
 
   // Xử lý khi có người kết nối
   handleConnection(client: Socket) {
-    const userId = client.handshake.query.userId as string;
+    // Lấy dữ liệu thô
+    const queryUserId = client.handshake.query.userId;
+
+    // Ép nó về kiểu string duy nhất (Nếu là mảng thì lấy cái đầu tiên)
+    const userId = Array.isArray(queryUserId) ? queryUserId[0] : queryUserId;
 
     if (userId && userId !== 'undefined') {
-      // User tự động gia nhập vào room cá nhân: user_1, user_2...
       client.join(`user_${userId}`);
       console.log(`📡 User connected: ${userId} (SocketID: ${client.id})`);
     } else {

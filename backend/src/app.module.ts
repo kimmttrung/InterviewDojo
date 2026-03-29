@@ -7,6 +7,7 @@ import { PrismaModule } from './prisma/prisma.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { UserModule } from './modules/user/user.module';
+import { CloudinaryModule } from './modules/cloudinary/cloudinary.module';
 import { StreamModule } from './modules/stream/stream.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { MatchingModule } from './modules/matching/matching.module';
@@ -22,6 +23,7 @@ import { CodeEngineModule } from './modules/code-engine/code-engine.module';
     AuthModule,
     RedisModule,
     UserModule,
+    CloudinaryModule,
     StreamModule,
     SocketModule,
     MatchingModule,

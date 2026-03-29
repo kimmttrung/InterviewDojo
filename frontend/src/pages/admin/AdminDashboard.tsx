@@ -1,22 +1,21 @@
 // pages/admin/AdminDashboard.tsx
 
-import AdminLayout from "../../../components/admin/AdminLayout";
+import AdminLayout from '../../../components/admin/AdminLayout';
 
-import { Users, FileText, Activity, Code } from "lucide-react";
-import { Card } from "../../../components/ui/card";
+import { Users, FileText, Activity, Code } from 'lucide-react';
+import { Card } from '../../../components/ui/card';
 
 const stats = [
-  { label: "Users", value: 1240, icon: Users },
-  { label: "Questions", value: 320, icon: FileText },
-  { label: "Mock Sessions", value: 890, icon: Activity },
-  { label: "Code Runs", value: 5400, icon: Code },
+  { label: 'Users', value: 1240, icon: Users },
+  { label: 'Questions', value: 320, icon: FileText },
+  { label: 'Mock Sessions', value: 890, icon: Activity },
+  { label: 'Code Runs', value: 5400, icon: Code },
 ];
 
 export default function AdminDashboard() {
   return (
     <AdminLayout>
       <div className="space-y-6">
-
         {/* Title */}
         <h1 className="text-2xl font-bold">Admin Dashboard</h1>
 
@@ -45,7 +44,6 @@ export default function AdminDashboard() {
             <li>🟡 WebRTC: Slight delay</li>
           </ul>
         </Card>
-
       </div>
     </AdminLayout>
   );
