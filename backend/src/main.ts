@@ -2,6 +2,8 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
+import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -11,6 +13,10 @@ async function bootstrap() {
 
   // cau hinh validation global
   app.useGlobalPipes(new ValidationPipe());
+
+  app.useGlobalInterceptors(new TransformInterceptor());
+
+  app.useGlobalFilters(new AllExceptionsFilter());
 
   // cau hinh swagger
   const config = new DocumentBuilder()
