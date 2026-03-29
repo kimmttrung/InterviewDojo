@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
+import { CreateQuestionDto } from './dto/create-question.dto';
+import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -78,5 +80,59 @@ export class QuestionsService {
         totalPages: Math.ceil(total / limit),
       },
     };
+  }
+  async create(createDto: CreateQuestionDto) {
+    const { categoryIds, companyIds, ...questionData } = createDto;
+
+    return this.prisma.question.create({
+      data: {
+        ...questionData,
+        // Insert vào bảng trung gian CategoryQuestion
+        ...(categoryIds && {
+          categories: {
+            create: categoryIds.map((id) => ({ categoryId: id })),
+          },
+        }),
+        // Insert vào bảng trung gian QuestionCompany
+        ...(companyIds && {
+          companies: {
+            create: companyIds.map((id) => ({ companyId: id })),
+          },
+        }),
+      },
+    });
+  }
+
+  async update(id: number, updateDto: UpdateQuestionDto) {
+    const { categoryIds, companyIds, ...questionData } = updateDto;
+
+    return this.prisma.question.update({
+      where: { id },
+      data: {
+        ...questionData,
+        // Nếu có truyền categoryIds mới -> Xóa list cũ đi, nối list mới vào
+        ...(categoryIds && {
+          categories: {
+            deleteMany: {}, // Xóa các record trong bảng category_question có questionId này
+            create: categoryIds.map((id) => ({ categoryId: id })),
+          },
+        }),
+        // Tương tự cho companies
+        ...(companyIds && {
+          companies: {
+            deleteMany: {},
+            create: companyIds.map((id) => ({ companyId: id })),
+          },
+        }),
+      },
+    });
+  }
+
+  async remove(id: number) {
+    // Vì Schema bạn đã set onDelete: Cascade ở các bảng trung gian,
+    // nên chỉ cần xóa Question, Prisma/Postgres sẽ tự dọn dẹp các rác liên quan.
+    return this.prisma.question.delete({
+      where: { id },
+    });
   }
 }
