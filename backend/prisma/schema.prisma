@@ -29,6 +29,8 @@ model User {
   skills          UserSkill[]
   targetRole      TargetRole?       @relation(fields: [targetRoleId], references: [id])
 
+  soloRecordings  SoloRecording[]
+
   @@map("users")
 }
 
@@ -203,6 +205,19 @@ model AiAnalysis {
   session      MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@map("ai_analyses")
+}
+
+model SoloRecording {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  videoUrl   String   @map("video_url")
+  publicId   String   @map("public_id")
+  duration   Int?
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("solo_recordings")
 }
 
 enum Role {
