@@ -12,6 +12,7 @@ import { StreamModule } from './modules/stream/stream.module';
 import { SocketModule } from './modules/socket/socket.module';
 import { MatchingModule } from './modules/matching/matching.module';
 import { CodeEngineModule } from './modules/code-engine/code-engine.module';
+import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
 
 @Module({
   imports: [
@@ -28,6 +29,7 @@ import { CodeEngineModule } from './modules/code-engine/code-engine.module';
     SocketModule,
     MatchingModule,
     CodeEngineModule,
+    SoloRecordingModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -19,6 +19,7 @@ import SelectTargetRole from './pages/user/SelectTargetRole';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewRoom from './pages/InterviewRoom';
 import CodeEditor from './pages/user/CodeEditor';
+import SoloRecording from './pages/user/SoloRecording';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -66,6 +67,12 @@ export function App({ queryClient }: AppProps) {
                 path="/practice"
                 element={<ProtectedRoute element={<Practice />} roles={['CANDIDATE']} />}
               />
+
+              <Route
+                path="/solo-recording"
+                element={<ProtectedRoute element={<SoloRecording />} roles={['CANDIDATE']} />}
+              />
+
               <Route
                 path="/question-bank"
                 element={<ProtectedRoute element={<QuestionBank />} />}
@@ -76,6 +83,7 @@ export function App({ queryClient }: AppProps) {
                 element={<AdminDashboard />}
               />
             </Routes>
+
           </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>
