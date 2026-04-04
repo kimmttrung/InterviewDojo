@@ -22,7 +22,7 @@ export class SoloRecordingController {
     @UploadedFile() file: Express.Multer.File,
     @Body() dto: CreateSoloRecordingDto,
   ) {
-    return this.soloRecordingService.uploadVideo(file, dto);
+    return this.soloRecordingService.uploadAudio(file, dto);
   }
 
   @Get('user/:userId')

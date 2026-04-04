@@ -64,4 +64,27 @@ export class CloudinaryController {
     }
     return this.cloudinaryService.uploadVideo(file);
   }
+
+  @Post('upload-audio')
+  @ApiOperation({ summary: 'Upload Audio phỏng vấn' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: {
+          type: 'string',
+          format: 'binary',
+          description: 'Chọn file audio (webm, mp3, wav, m4a...)',
+        },
+      },
+    },
+  })
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadAudio(@UploadedFile() file: Express.Multer.File) {
+    if (!file) {
+      throw new BadRequestException('Vui lòng chọn một file audio!');
+    }
+    return this.cloudinaryService.uploadAudio(file);
+  }
 }

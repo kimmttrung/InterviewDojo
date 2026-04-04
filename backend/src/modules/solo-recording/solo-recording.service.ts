@@ -10,17 +10,17 @@ export class SoloRecordingService {
     private readonly cloudinaryService: CloudinaryService,
   ) {}
 
-  async uploadVideo(file: Express.Multer.File, dto: CreateSoloRecordingDto) {
+  async uploadAudio(file: Express.Multer.File, dto: CreateSoloRecordingDto) {
     if (!file) {
-      throw new BadRequestException('File video là bắt buộc');
+      throw new BadRequestException('File audio là bắt buộc');
     }
 
-    const uploaded = await this.cloudinaryService.uploadVideo(file);
+    const uploaded = await this.cloudinaryService.uploadAudio(file);
 
     return this.prisma.soloRecording.create({
       data: {
         userId: dto.userId,
-        videoUrl: uploaded.secure_url,
+        videoUrl: uploaded.secure_url, // tạm giữ field cũ nếu chưa muốn migrate DB
         publicId: uploaded.public_id,
         duration: dto.duration,
       },
