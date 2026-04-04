@@ -25,13 +25,28 @@ model User {
   isInterviewed   MockSession[]     @relation("IntervieweeSessions")
   interviews      MockSession[]     @relation("InterviewerSessions")
   attempts        QuestionAttempt[]
+  soloRecordings  SoloRecording[]
   savedQuestions  UserBookmark[]
   skills          UserSkill[]
   targetRole      TargetRole?       @relation(fields: [targetRoleId], references: [id])
 
-  soloRecordings  SoloRecording[]
+  mentorProfile MentorProfile?
 
   @@map("users")
+}
+
+model MentorProfile {
+  id             Int            @id @default(autoincrement())
+  userId         Int            @unique @map("user_id")
+  cvUrl          String?        @map("cv_url")
+  certificateUrl String?        @map("certificate_url")
+  approvalStatus ApprovalStatus @default(PENDING) @map("approval_status")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("mentor_profiles")
 }
 
 model TargetRole {
@@ -208,14 +223,13 @@ model AiAnalysis {
 }
 
 model SoloRecording {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  videoUrl   String   @map("video_url")
-  publicId   String   @map("public_id")
-  duration   Int?
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  videoUrl  String   @map("video_url")
+  publicId  String   @map("public_id")
+  duration  Int?
+  createdAt DateTime @default(now()) @map("created_at")
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("solo_recordings")
 }
@@ -223,6 +237,7 @@ model SoloRecording {
 enum Role {
   CANDIDATE
   ADMIN
+  MENTOR
 }
 
 enum Difficulty {
@@ -236,4 +251,10 @@ enum TypeQuestion {
   BEHAVIORAL
   SYSTEM_DESIGN
   TECHNICAL
+}
+
+enum ApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
 }
