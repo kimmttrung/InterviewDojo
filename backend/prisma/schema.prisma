@@ -209,8 +209,7 @@ model Feedback {
 }
 
 model AiAnalysis {
-  id Int @id @default(autoincrement())
-
+  id              Int  @id @default(autoincrement())
   sessionId       Int? @unique @map("session_id")
   soloRecordingId Int? @unique @map("solo_recording_id")
 
@@ -234,8 +233,8 @@ model SoloRecording {
   publicId  String   @map("public_id")
   duration  Int?
   createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   aiAnalysis AiAnalysis?
 
   @@map("solo_recordings")

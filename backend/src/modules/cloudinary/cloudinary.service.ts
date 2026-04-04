@@ -5,6 +5,7 @@ import {
   UploadApiOptions,
 } from 'cloudinary';
 import { Readable } from 'stream';
+import { UploadedFileType } from '../../common/types/uploaded-file.type';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -33,24 +34,25 @@ export class CloudinaryService {
     options: UploadApiOptions,
   ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
-      const uploadStream = cloudinary.uploader.upload_stream(
-        options,
-        (error, result) => {
-          if (error) {
-            return reject(new Error(error.message || 'Cloudinary upload failed'));
-          }
-          if (!result) {
-            return reject(new Error('Cloudinary returned no result'));
-          }
-          resolve(result);
-        },
-      );
+      const upload = cloudinary.uploader.upload_stream(options, (error, result) => {
+        if (error) {
+          return reject(new Error(error.message || 'Cloudinary upload failed'));
+        }
+        if (!result) {
+          return reject(new Error('Cloudinary returned no result'));
+        }
+        resolve(result);
+      });
 
-      Readable.from(buffer).pipe(uploadStream);
+      Readable.from(buffer).pipe(upload);
     });
   }
 
-  async uploadAvatar(file: Express.Multer.File): Promise<UploadApiResponse> {
+  async uploadAvatar(file: UploadedFileType): Promise<UploadApiResponse> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Avatar file is required');
+    }
+
     if (!ALLOWED_IMAGE_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
         `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
@@ -66,7 +68,11 @@ export class CloudinaryService {
     });
   }
 
-  async uploadVideo(file: Express.Multer.File): Promise<UploadApiResponse> {
+  async uploadVideo(file: UploadedFileType): Promise<UploadApiResponse> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Video file is required');
+    }
+
     if (!ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
         `Invalid video type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
@@ -80,7 +86,11 @@ export class CloudinaryService {
     });
   }
 
-  async uploadAudio(file: Express.Multer.File): Promise<UploadApiResponse> {
+  async uploadAudio(file: UploadedFileType): Promise<UploadApiResponse> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Audio file is required');
+    }
+
     if (!ALLOWED_AUDIO_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
         `Invalid audio type. Allowed: ${ALLOWED_AUDIO_TYPES.join(', ')}`,
