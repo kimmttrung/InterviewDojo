@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RegisterMentorDto } from './dto/register-mentor.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 
@@ -46,6 +47,47 @@ export class AuthService {
     };
   }
 
+  async registerMentor(dto: RegisterMentorDto) {
+    const existingUser = await this.prisma.user.findUnique({
+      where: { email: dto.email },
+    });
+
+    if (existingUser) {
+      throw new BadRequestException('Email đã tồn tại');
+    }
+
+    const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+    const user = await this.prisma.user.create({
+      data: {
+        email: dto.email,
+        password: hashedPassword,
+        name: dto.name,
+        role: 'MENTOR',
+        mentorProfile: {
+          create: {
+            cvUrl: dto.cvUrl,
+            certificateUrl: dto.certificateUrl,
+            approvalStatus: 'PENDING',
+          },
+        },
+      },
+      include: {
+        mentorProfile: true,
+      },
+    });
+
+    const data = await this.generateTokens(user.id, user.email, user.role);
+
+    return {
+      message: 'Register mentor successful',
+      data: {
+        ...data,
+        mentorProfile: user.mentorProfile,
+      },
+    };
+  }
+
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
@@ -71,12 +113,9 @@ export class AuthService {
 
   async refresh(dto: RefreshTokenDto) {
     try {
-      const payload = await this.jwtService.verifyAsync<JwtPayload>(
-        dto.refreshToken,
-        {
-          secret: process.env.JWT_REFRESH_SECRET as string,
-        },
-      );
+      const payload = await this.jwtService.verifyAsync(dto.refreshToken, {
+        secret: process.env.JWT_REFRESH_SECRET as string,
+      });
 
       const user = await this.prisma.user.findUnique({
         where: { id: payload.sub },
