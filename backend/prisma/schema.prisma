@@ -209,15 +209,19 @@ model Feedback {
 }
 
 model AiAnalysis {
-  id           Int         @id @default(autoincrement())
-  sessionId    Int         @unique @map("session_id")
+  id              Int  @id @default(autoincrement())
+  sessionId       Int? @unique @map("session_id")
+  soloRecordingId Int? @unique @map("solo_recording_id")
+
   transcript   String?
   strengths    Json?
   weaknesses   Json?
   suggestions  Json?
-  overallScore Float       @map("overall_score")
-  processedAt  DateTime    @default(now()) @map("processed_at")
-  session      MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  overallScore Float    @map("overall_score")
+  processedAt  DateTime @default(now()) @map("processed_at")
+
+  session       MockSession?   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  soloRecording SoloRecording? @relation(fields: [soloRecordingId], references: [id], onDelete: Cascade)
 
   @@map("ai_analyses")
 }
@@ -229,7 +233,9 @@ model SoloRecording {
   publicId  String   @map("public_id")
   duration  Int?
   createdAt DateTime @default(now()) @map("created_at")
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  aiAnalysis AiAnalysis?
 
   @@map("solo_recordings")
 }
