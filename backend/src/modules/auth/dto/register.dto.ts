@@ -18,6 +18,6 @@ export class RegisterDto {
   @IsString()
   name?: string;
 
-  @IsEnum(['CANDIDATE', 'MENTOR'])
-  role: 'CANDIDATE' | 'MENTOR';
+  @IsEnum(['CANDIDATE', 'MENTOR', 'STAFF'])
+  role: 'CANDIDATE' | 'MENTOR' | 'STAFF';
 }
