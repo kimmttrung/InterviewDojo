@@ -40,7 +40,7 @@ export class SocketGateway
 
     if (userId && userId !== 'undefined') {
       client.join(`user_${userId}`);
-      console.log(`📡 User connected: ${userId} (SocketID: ${client.id})`);
+      // console.log(`📡 User connected: ${userId} (SocketID: ${client.id})`);
     } else {
       console.log(`⚠️ Anonymous connection attempt (SocketID: ${client.id})`);
       client.disconnect();

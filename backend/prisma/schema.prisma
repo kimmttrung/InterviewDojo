@@ -244,6 +244,7 @@ enum Role {
   CANDIDATE
   ADMIN
   MENTOR
+  STAFF
 }
 
 enum Difficulty {

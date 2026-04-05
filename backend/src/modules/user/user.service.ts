@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
 
 @Injectable()
 export class UserService {
@@ -113,6 +114,77 @@ export class UserService {
       average_score: 85.5,
       streak_days: 5,
     };
+  }
+
+  async updateTargetRole(userId: number, dto: { target_role_id: number }) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    if (user.role !== 'CANDIDATE') {
+      throw new BadRequestException('CANIDATE mới được cập nhật target role');
+    }
+
+    const role = await this.prisma.targetRole.findUnique({
+      where: { id: dto.target_role_id },
+    });
+    if (!role) {
+      throw new BadRequestException('Target role không tồn tại');
+    }
+
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: {
+        targetRole: {
+          connect: { id: dto.target_role_id },
+        },
+      },
+      include: {
+        targetRole: true,
+      },
+    });
+
+    return {
+      message: 'Cập nhật target role thành công',
+      data: {
+        target_role: updatedUser.targetRole?.name,
+      },
+    };
+  }
+
+  async createMentorProfile(userId: number, dto: CreateMentorProfileDto) {
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (!user) {
+      throw new NotFoundException('User không tồn tại');
+    }
+
+    if (user.role !== 'MENTOR') {
+      throw new BadRequestException('Bạn không phải mentor');
+    }
+
+    const existing = await this.prisma.mentorProfile.findUnique({
+      where: { userId },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Mentor profile đã tồn tại');
+    }
+
+    return this.prisma.mentorProfile.create({
+      data: {
+        userId,
+        cvUrl: dto.cvUrl,
+        certificateUrl: dto.certificateUrl,
+        approvalStatus: 'PENDING',
+      },
+    });
   }
 
   private calculateLevel(years: number): string {

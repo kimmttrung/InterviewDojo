@@ -20,6 +20,8 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import InterviewRoom from './pages/InterviewRoom';
 import CodeEditor from './pages/user/CodeEditor';
 import SoloRecording from './pages/user/SoloRecording';
+import { role } from '@stream-io/video-react-sdk';
+import MentorSetup from './pages/user/MentorSetup';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -56,7 +58,11 @@ export function App({ queryClient }: AppProps) {
               <Route path="/unauthorized" element={<Unauthorized />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
-              <Route path="/select-target-role" element={<SelectRoleGuard />} />
+              <Route path="/candidate/setup" element={<SelectRoleGuard />} />
+              <Route
+                path="/mentor/setup"
+                element={<ProtectedRoute element={<MentorSetup />} roles={['MENTOR']} />}
+              />
               <Route
                 path="/interview/:roomId"
                 element={<ProtectedRoute element={<InterviewRoom />} />}
@@ -78,12 +84,8 @@ export function App({ queryClient }: AppProps) {
                 element={<ProtectedRoute element={<QuestionBank />} />}
               />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
-              <Route
-                path="/admin/dashboard"
-                element={<AdminDashboard />}
-              />
+              <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Routes>
-
           </TooltipProvider>
         </QueryClientProvider>
       </ThemeProvider>
