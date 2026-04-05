@@ -29,6 +29,7 @@ model User {
   savedQuestions  UserBookmark[]
   skills          UserSkill[]
   targetRole      TargetRole?       @relation(fields: [targetRoleId], references: [id])
+  bookings        Booking[]         @relation("CandidateBookings")
 
   mentorProfile MentorProfile?
 
@@ -44,7 +45,9 @@ model MentorProfile {
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  availabilities Availability[]
+  bookings       Booking[]      @relation("MentorBookings")
 
   @@map("mentor_profiles")
 }
@@ -240,6 +243,35 @@ model SoloRecording {
   @@map("solo_recordings")
 }
 
+model Availability {
+  id              Int      @id @default(autoincrement())
+  mentorProfileId Int      @map("mentor_profile_id")
+  startTime       DateTime @map("start_time")
+  endTime         DateTime @map("end_time")
+  isBooked        Boolean  @default(false) @map("is_booked")
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  mentor          MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
+
+  @@map("availabilities")
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  mentorId    Int           @map("mentor_id")
+  candidateId Int           @map("candidate_id")
+  startTime   DateTime      @map("start_time")
+  status      BookingStatus @default(PENDING)
+  price       Float         @default(0.0)
+  createdAt   DateTime      @default(now()) @map("created_at")
+  updatedAt   DateTime      @updatedAt @map("updated_at")
+
+  candidate   User          @relation("CandidateBookings", fields: [candidateId], references: [id])
+  mentor      MentorProfile @relation("MentorBookings", fields: [mentorId], references: [id])
+
+  @@map("bookings")
+}
+
 enum Role {
   CANDIDATE
   ADMIN
@@ -265,3 +297,12 @@ enum ApprovalStatus {
   APPROVED
   REJECTED
 }
+
+enum BookingStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
+  COMPLETED
+  CANCELLED
+}
+
