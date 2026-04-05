@@ -9,11 +9,7 @@ import { UploadedFileType } from '../../common/types/uploaded-file.type';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
-const ALLOWED_VIDEO_TYPES = [
-  'video/mp4',
-  'video/webm',
-  'video/quicktime',
-];
+const ALLOWED_VIDEO_TYPES = ['video/mp4', 'video/webm', 'video/quicktime'];
 
 const ALLOWED_AUDIO_TYPES = [
   'audio/webm',
@@ -34,15 +30,20 @@ export class CloudinaryService {
     options: UploadApiOptions,
   ): Promise<UploadApiResponse> {
     return new Promise((resolve, reject) => {
-      const upload = cloudinary.uploader.upload_stream(options, (error, result) => {
-        if (error) {
-          return reject(new Error(error.message || 'Cloudinary upload failed'));
-        }
-        if (!result) {
-          return reject(new Error('Cloudinary returned no result'));
-        }
-        resolve(result);
-      });
+      const upload = cloudinary.uploader.upload_stream(
+        options,
+        (error, result) => {
+          if (error) {
+            return reject(
+              new Error(error.message || 'Cloudinary upload failed'),
+            );
+          }
+          if (!result) {
+            return reject(new Error('Cloudinary returned no result'));
+          }
+          resolve(result);
+        },
+      );
 
       Readable.from(buffer).pipe(upload);
     });

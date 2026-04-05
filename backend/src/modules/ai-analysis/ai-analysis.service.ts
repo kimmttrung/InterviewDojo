@@ -50,10 +50,7 @@ export class AiAnalysisService {
     }
 
     const tmpDir = join(process.cwd(), 'tmp');
-    const tempFilePath = join(
-      tmpDir,
-      `${Date.now()}-${file.originalname}`,
-    );
+    const tempFilePath = join(tmpDir, `${Date.now()}-${file.originalname}`);
 
     try {
       await mkdir(tmpDir, { recursive: true });
@@ -82,7 +79,11 @@ export class AiAnalysisService {
 
   private runWhisperScript(audioPath: string): Promise<string> {
     return new Promise((resolve, reject) => {
-      const scriptPath = join(process.cwd(), 'scripts', 'transcribe_whisper.py');
+      const scriptPath = join(
+        process.cwd(),
+        'scripts',
+        'transcribe_whisper.py',
+      );
 
       const pythonProcess = spawn('python', [scriptPath, audioPath]);
 
@@ -109,7 +110,9 @@ export class AiAnalysisService {
           resolve(parsed.transcript || '');
         } catch (error) {
           reject(
-            new Error(`Cannot parse whisper output: ${stdout}\n${String(error)}`),
+            new Error(
+              `Cannot parse whisper output: ${stdout}\n${String(error)}`,
+            ),
           );
         }
       });
