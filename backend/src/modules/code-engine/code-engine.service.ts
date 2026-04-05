@@ -6,39 +6,55 @@ import axios from 'axios';
 export class CodeEngineService {
   async executeCode(sourceCode: string, languageId: string) {
     try {
-      // Ép kiểu Number để chắc chắn Judge0 nhận diện được
-      const langId = Number(languageId);
-
       const response = await axios.post(
         `${process.env.JUDGE0_URL}?base64_encoded=true&wait=true`,
         {
           source_code: Buffer.from(sourceCode).toString('base64'),
-          language_id: langId,
+          language_id: Number(languageId),
         },
         {
           headers: {
-            'content-type': 'application/json',
             'x-rapidapi-key': process.env.JUDGE0_KEY,
             'x-rapidapi-host': process.env.JUDGE0_HOST,
           },
         },
       );
 
-      const decode = (str: string) =>
-        str ? Buffer.from(str, 'base64').toString() : '';
+      // Ép kiểu dữ liệu để tránh 'any'
+      const data = response.data;
 
-      return {
-        stdout: decode(response.data.stdout),
-        stderr: decode(response.data.stderr),
-        compile_output: decode(response.data.compile_output),
-        status: response.data.status?.description,
+      const decode = (str: any): string => {
+        if (!str || typeof str !== 'string') return '';
+        try {
+          // Xử lý chuỗi Base64 có ký tự lạ (như \n)
+          const cleanStr = str.replace(/[^A-Za-z0-9+/=]/g, '');
+          return Buffer.from(cleanStr, 'base64').toString('utf-8');
+        } catch (e) {
+          console.log('check', e);
+          return 'Lỗi giải mã';
+        }
       };
+
+      // TRẢ VỀ OBJECT MỚI - Đảm bảo các trường không bị undefined
+      const result = {
+        stdout: decode(data.stdout),
+        stderr: decode(data.stderr),
+        compile_output: decode(data.compile_output),
+        message: decode(data.message),
+        // Lấy description từ object status lồng nhau
+        status:
+          data.status && data.status.description
+            ? data.status.description
+            : 'Unknown',
+        time: data.time || '0',
+        memory: data.memory || 0,
+      };
+
+      console.log('Kết quả sau khi xử lý:', result);
+      return result;
     } catch (error) {
-      console.error(
-        'Lỗi thực thi Judge0:',
-        error.response?.data || error.message,
-      );
-      throw new InternalServerErrorException('Lỗi hệ thống thực thi code');
+      console.error('Lỗi hệ thống:', error);
+      throw new InternalServerErrorException('Không thể kết nối Judge0');
     }
   }
 }

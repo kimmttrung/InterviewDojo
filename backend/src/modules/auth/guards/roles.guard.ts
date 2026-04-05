@@ -28,14 +28,15 @@ export class RolesGuard implements CanActivate {
       throw new ForbiddenException('Không có quyền truy cập');
     }
 
+    if (user.role === 'ADMIN') {
+      return true;
+    }
+
     const hasRole = requiredRoles.includes(user.role);
 
     if (!hasRole) {
-      throw new ForbiddenException(
-        'Bạn không có quyền truy cập tài nguyên này',
-      );
+      throw new ForbiddenException(`Cần role: ${requiredRoles.join(', ')}`);
     }
-
     return true;
   }
 }

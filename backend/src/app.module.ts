@@ -13,6 +13,7 @@ import { SocketModule } from './modules/socket/socket.module';
 import { MatchingModule } from './modules/matching/matching.module';
 import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
+import { TargetRoleModule } from './modules/target-role/target-role.module';
 
 @Module({
   imports: [
@@ -30,6 +31,7 @@ import { SoloRecordingModule } from './modules/solo-recording/solo-recording.mod
     MatchingModule,
     CodeEngineModule,
     SoloRecordingModule,
+    TargetRoleModule,
   ],
   controllers: [AppController],
   providers: [AppService],

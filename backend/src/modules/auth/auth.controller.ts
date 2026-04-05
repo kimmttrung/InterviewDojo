@@ -9,7 +9,6 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
-import { RegisterMentorDto } from './dto/register-mentor.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { CurrentUser } from './decorators/current-user.decorator';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
@@ -26,14 +25,6 @@ export class AuthController {
     dto: RegisterDto,
   ) {
     return this.authService.register(dto);
-  }
-
-  @Post('register-mentor')
-  registerMentor(
-    @Body(new ValidationPipe({ whitelist: true, transform: true }))
-    dto: RegisterMentorDto,
-  ) {
-    return this.authService.registerMentor(dto);
   }
 
   @Post('login')

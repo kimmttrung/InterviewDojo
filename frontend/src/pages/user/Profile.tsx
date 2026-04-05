@@ -41,31 +41,42 @@ import {
 } from 'lucide-react';
 import { userService } from '../../../services/user.service';
 import { showToast } from '../../../lib/toast';
+import { targetRoleService } from '../../../services/target-role.service';
 
-const TARGET_ROLES = [
-  { id: 'backend', name: 'Backend Development', icon: Database, color: 'text-blue-500' },
-  { id: 'frontend', name: 'Frontend Development', icon: Palette, color: 'text-purple-500' },
-  { id: 'fullstack', name: 'Full Stack Development', icon: Code2, color: 'text-green-500' },
-  { id: 'datascience', name: 'Data Science', icon: Cpu, color: 'text-orange-500' },
-  { id: 'devops', name: 'DevOps & Cloud', icon: Cloud, color: 'text-cyan-500' },
-  { id: 'security', name: 'Security Engineer', icon: Shield, color: 'text-red-500' },
-  { id: 'sde', name: 'Software Engineer', icon: Terminal, color: 'text-indigo-500' },
-  { id: 'embedded', name: 'Embedded Systems', icon: Zap, color: 'text-yellow-500' },
-];
+const ROLE_UI_MAP: any = {
+  'Backend Development': { icon: Database, color: 'text-blue-500' },
+  'Frontend Development': { icon: Palette, color: 'text-purple-500' },
+  'Full Stack Development': { icon: Code2, color: 'text-green-500' },
+  'Data Science': { icon: Cpu, color: 'text-orange-500' },
+  'DevOps & Cloud': { icon: Cloud, color: 'text-cyan-500' },
+  'Security Engineer': { icon: Shield, color: 'text-red-500' },
+  'Software Engineer': { icon: Terminal, color: 'text-indigo-500' },
+  'Embedded Systems': { icon: Zap, color: 'text-yellow-500' },
+  'AI Engineer': { icon: Cpu, color: 'text-pink-500' },
+};
 
 export default function Profile() {
   const [userData, setUserData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [targetRoles, setTargetRoles] = useState<any[]>([]);
 
   // State cho Form edit
   const [formData, setFormData] = useState({
     name: '',
     bio: '',
-    target_role: '',
+    target_role_id: null as number | null,
     experience_years: 0,
   });
+  const fetchTargetRoles = async () => {
+    try {
+      const res = await targetRoleService.getAll();
+      setTargetRoles(res.data.data);
+    } catch (err) {
+      showToast.error('Cannot load target roles');
+    }
+  };
 
   // 1. Lấy dữ liệu profile khi vào trang
   const fetchProfile = async () => {
@@ -80,7 +91,7 @@ export default function Profile() {
       setFormData({
         name: data.name || '',
         bio: data.bio || '',
-        target_role: data.target_role || '',
+        target_role_id: data.target_role_id || null,
         experience_years: Number(data.experience_years) || 0,
       });
     } catch (error) {
@@ -92,6 +103,7 @@ export default function Profile() {
 
   useEffect(() => {
     fetchProfile();
+    fetchTargetRoles();
   }, []);
 
   // 2. Xử lý cập nhật
@@ -131,7 +143,7 @@ export default function Profile() {
     );
   }
 
-  const currentRoleInfo = TARGET_ROLES.find((r) => r.name === userData?.target_role);
+  const currentRoleInfo = ROLE_UI_MAP[userData?.target_role];
 
   return (
     <Layout>
@@ -194,16 +206,19 @@ export default function Profile() {
                         Target Role
                       </Label>
                       <Select
-                        value={formData.target_role}
-                        onValueChange={(val) => setFormData({ ...formData, target_role: val })}
+                        value={formData.target_role_id?.toString()}
+                        onValueChange={(val) =>
+                          setFormData({ ...formData, target_role_id: Number(val) })
+                        }
                       >
                         <SelectTrigger className="w-full bg-white border-slate-200">
                           <SelectValue placeholder="Select target role" />
                         </SelectTrigger>
+
                         <SelectContent className="bg-white">
-                          {TARGET_ROLES.map((role) => (
-                            <SelectItem key={role.id} value={role.name}>
-                              <span className="font-medium">{role.name}</span>
+                          {targetRoles.map((role) => (
+                            <SelectItem key={role.id} value={role.id.toString()}>
+                              {role.name}
                             </SelectItem>
                           ))}
                         </SelectContent>
@@ -279,7 +294,7 @@ export default function Profile() {
               <div className="space-y-3">
                 <CareerItem
                   icon={currentRoleInfo?.icon || Target}
-                  label="Role"
+                  label="Target Role"
                   value={userData?.target_role || 'Not set'}
                   color={currentRoleInfo?.color || 'text-slate-400'}
                 />

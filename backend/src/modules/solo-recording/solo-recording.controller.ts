@@ -17,9 +17,7 @@ import { UploadedFileType } from '../../common/types/uploaded-file.type';
 @ApiTags('SoloRecording')
 @Controller('solo-recordings')
 export class SoloRecordingController {
-  constructor(
-    private readonly soloRecordingService: SoloRecordingService,
-  ) {}
+  constructor(private readonly soloRecordingService: SoloRecordingService) {}
 
   @Post('upload')
   @UseInterceptors(FileInterceptor('file'))

@@ -56,15 +56,14 @@ export class SoloRecordingService {
       question,
     });
 
-    const aiAnalysis =
-      await this.aiAnalysisService.saveSoloRecordingAnalysis({
-        soloRecordingId,
-        transcript,
-        overallScore: feedback.overallScore,
-        strengths: feedback.strengths,
-        weaknesses: feedback.weaknesses,
-        suggestions: feedback.suggestions,
-      });
+    const aiAnalysis = await this.aiAnalysisService.saveSoloRecordingAnalysis({
+      soloRecordingId,
+      transcript,
+      overallScore: feedback.overallScore,
+      strengths: feedback.strengths,
+      weaknesses: feedback.weaknesses,
+      suggestions: feedback.suggestions,
+    });
 
     return {
       transcript,

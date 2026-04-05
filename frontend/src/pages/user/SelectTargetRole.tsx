@@ -15,11 +15,15 @@ import {
 } from 'lucide-react';
 import { showToast } from '../../../lib/toast';
 import { userService } from '../../../services/user.service';
+import { useEffect, useState } from 'react';
+import { targetRoleService } from '../../../services/target-role.service';
 
-interface Role {
-  id: string;
+interface RoleFromAPI {
+  id: number;
   name: string;
-  description: string;
+}
+
+interface RoleUI extends RoleFromAPI {
   icon: React.ReactNode;
   color: string;
   bgColor: string;
@@ -29,75 +33,89 @@ export default function SelectTargetRole() {
   const { t } = useTranslation();
   const navigate = useNavigate();
 
-  const roles: Role[] = [
+  const roleUIMap = [
     {
-      id: 'backend',
-      name: 'Backend Development',
-      description: 'APIs, databases, server-side architecture',
       icon: <Database className="h-8 w-8" />,
-      color: 'text-blue-600 dark:text-blue-400',
+      color: 'text-blue-600',
       bgColor: 'bg-blue-500/10',
     },
     {
-      id: 'frontend',
-      name: 'Frontend Development',
-      description: 'React, Vue, Angular, UI/UX implementation',
       icon: <Palette className="h-8 w-8" />,
-      color: 'text-purple-600 dark:text-purple-400',
+      color: 'text-purple-600',
       bgColor: 'bg-purple-500/10',
     },
     {
-      id: 'fullstack',
-      name: 'Full Stack Development',
-      description: 'Both front and back-end technologies',
       icon: <Code2 className="h-8 w-8" />,
-      color: 'text-green-600 dark:text-green-400',
+      color: 'text-green-600',
       bgColor: 'bg-green-500/10',
     },
     {
-      id: 'datascience',
-      name: 'Data Science',
-      description: 'ML, data analysis, Python, statistics',
       icon: <Cpu className="h-8 w-8" />,
-      color: 'text-orange-600 dark:text-orange-400',
+      color: 'text-orange-600',
       bgColor: 'bg-orange-500/10',
     },
     {
-      id: 'devops',
-      name: 'DevOps & Cloud',
-      description: 'AWS, Kubernetes, CI/CD, infrastructure',
       icon: <Cloud className="h-8 w-8" />,
-      color: 'text-cyan-600 dark:text-cyan-400',
+      color: 'text-cyan-600',
       bgColor: 'bg-cyan-500/10',
     },
     {
-      id: 'security',
-      name: 'Security Engineer',
-      description: 'Cybersecurity, system security, penetration testing',
       icon: <Shield className="h-8 w-8" />,
-      color: 'text-red-600 dark:text-red-400',
+      color: 'text-red-600',
       bgColor: 'bg-red-500/10',
     },
     {
-      id: 'sde',
-      name: 'Software Engineer',
-      description: 'System design, algorithms, general SWE',
       icon: <Terminal className="h-8 w-8" />,
-      color: 'text-indigo-600 dark:text-indigo-400',
+      color: 'text-indigo-600',
       bgColor: 'bg-indigo-500/10',
     },
     {
-      id: 'embedded',
-      name: 'Embedded Systems',
-      description: 'IoT, C/C++, hardware programming',
       icon: <Zap className="h-8 w-8" />,
-      color: 'text-yellow-600 dark:text-yellow-400',
+      color: 'text-yellow-600',
       bgColor: 'bg-yellow-500/10',
     },
   ];
-  const handleRoleSelect = async (roleId: string) => {
-    const selectedRole = roles.find((r) => r.id === roleId);
-    if (!selectedRole) return;
+
+  const [roles, setRoles] = useState<RoleUI[]>([]);
+
+  useEffect(() => {
+    const fetchRoles = async () => {
+      try {
+        const res = await targetRoleService.getAll();
+        console.log('Check target role', res);
+        const data = res.data.data;
+
+        const mapped = data.map((role: RoleFromAPI, index: number) => {
+          const ui = roleUIMap[index % roleUIMap.length]; // random theo index
+
+          return {
+            ...role,
+            icon: ui.icon,
+            color: ui.color,
+            bgColor: ui.bgColor,
+          };
+        });
+
+        setRoles(mapped);
+      } catch (err) {
+        showToast.error('Failed to load roles');
+      }
+    };
+
+    fetchRoles();
+  }, []);
+
+  const handleRoleSelect = async (roleId: number) => {
+    try {
+      await userService.updateTargetRole({
+        target_role_id: roleId,
+      });
+
+      showToast.success('Cập nhật thành công');
+      navigate('/');
+    } catch (err: any) {
+      showToast.error(err?.response?.data?.message || 'Lỗi cập nhật');
+    }
   };
 
   return (
@@ -133,18 +151,16 @@ export default function SelectTargetRole() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
           {roles.map((role) => (
             <button key={role.id} onClick={() => handleRoleSelect(role.id)} className="group">
-              {/* Card: Nền trắng, viền xám nhạt, chữ đen */}
               <Card className="h-full p-6 cursor-pointer bg-white border-slate-200 transition-all hover:shadow-md hover:border-slate-900 hover:scale-105 text-left">
-                {/* Icon container - giữ lại màu sắc nhẹ nhàng của role nhưng tăng độ tương phản */}
                 <div
                   className={`${role.bgColor} ${role.color} w-12 h-12 rounded-lg flex items-center justify-center mb-4 group-hover:scale-110 transition-transform shadow-sm`}
                 >
                   {role.icon}
                 </div>
-                <h3 className="font-bold text-slate-900 mb-2 text-sm uppercase tracking-tight">
+
+                <h3 className="font-bold text-slate-900 text-sm uppercase tracking-tight">
                   {role.name}
                 </h3>
-                <p className="text-xs text-slate-500 leading-relaxed">{role.description}</p>
               </Card>
             </button>
           ))}
