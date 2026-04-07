@@ -32,7 +32,7 @@ export default function MentorSetup() {
       showToast.success('Profile submitted! Waiting for approval.');
 
       // 🎯 redirect về home
-      navigate('/');
+      navigate('/mentor/dashboard');
     } catch (error: any) {
       const msg = error.response?.data?.message;
       showToast.error(Array.isArray(msg) ? msg[0] : msg || 'Submit failed');
