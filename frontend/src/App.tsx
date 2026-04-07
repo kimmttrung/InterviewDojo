@@ -17,11 +17,15 @@ import Unauthorized from './pages/Unauthorized';
 import Profile from './pages/user/Profile';
 import SelectTargetRole from './pages/user/SelectTargetRole';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import InterviewRoom from './pages/InterviewRoom';
 import CodeEditor from './pages/user/CodeEditor';
 import SoloRecording from './pages/user/SoloRecording';
 import { role } from '@stream-io/video-react-sdk';
-import MentorSetup from './pages/user/MentorSetup';
+import MentorSetup from './pages/mentor/MentorSetup';
+import MentorDashboard from './pages/mentor/MentorDashboard';
+import InterviewRoom from './pages/user/InterviewRoom';
+import MentorBookings from './pages/mentor/MentorBookings';
+import MentorProfile from './pages/mentor/MentorProfile';
+import MentorSchedule from './pages/mentor/MentorSchedule';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -73,17 +77,31 @@ export function App({ queryClient }: AppProps) {
                 path="/practice"
                 element={<ProtectedRoute element={<Practice />} roles={['CANDIDATE']} />}
               />
-
               <Route
                 path="/solo-recording"
                 element={<ProtectedRoute element={<SoloRecording />} roles={['CANDIDATE']} />}
               />
-
               <Route
                 path="/question-bank"
                 element={<ProtectedRoute element={<QuestionBank />} />}
               />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
+              <Route
+                path="/mentor/dashboard"
+                element={<ProtectedRoute element={<MentorDashboard />} roles={['MENTOR']} />}
+              />
+              <Route
+                path="/mentor/bookings"
+                element={<ProtectedRoute element={<MentorBookings />} roles={['MENTOR']} />}
+              />
+              <Route
+                path="/mentor/schedule"
+                element={<ProtectedRoute element={<MentorSchedule />} roles={['MENTOR']} />}
+              />
+              <Route
+                path="/mentor/profile"
+                element={<ProtectedRoute element={<MentorProfile />} roles={['MENTOR']} />}
+              />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
             </Routes>
           </TooltipProvider>

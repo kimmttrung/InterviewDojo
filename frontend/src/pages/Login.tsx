@@ -44,11 +44,13 @@ export default function Login() {
       const userRole = response.data.user;
 
       // 🎯 redirect theo role
-      if (redirect && userRole.role !== 'ADMIN' && userRole.role !== 'STAFF') {
+      if (redirect) {
         navigate(redirect);
       } else if (userRole.role === 'ADMIN' || userRole.role === 'STAFF') {
         navigate('/admin');
-      } else {
+      } else if (userRole.role === 'MENTOR' && redirect === null) {
+        navigate('/mentor/dashboard');
+      } else if (userRole.role === 'CANIDATE' && redirect === null) {
         navigate('/');
       }
     } catch (error) {
