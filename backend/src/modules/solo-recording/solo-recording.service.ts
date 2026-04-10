@@ -13,12 +13,15 @@ export class SoloRecordingService {
     private readonly aiAnalysisService: AiAnalysisService,
   ) {}
 
-  async uploadAudio(file: UploadedFileType, dto: CreateSoloRecordingDto) {
+  async uploadVideo(file: UploadedFileType, dto: CreateSoloRecordingDto) {
+    console.log('--- BẮT ĐẦU UPLOAD VIDEO ---');
+
     if (!file) {
-      throw new BadRequestException('File audio là bắt buộc');
+      throw new BadRequestException('File video là bắt buộc');
     }
 
-    const uploaded = await this.cloudinaryService.uploadAudio(file);
+    // Gọi hàm uploadVideo thay vì uploadAudio
+    const uploaded = await this.cloudinaryService.uploadVideo(file);
 
     return this.prisma.soloRecording.create({
       data: {
@@ -37,8 +40,9 @@ export class SoloRecordingService {
   }) {
     const { soloRecordingId, file, question } = params;
 
+    // Kiểm tra xem file gửi lên có phải video không
     if (!file) {
-      throw new BadRequestException('File audio là bắt buộc');
+      throw new BadRequestException('File video để phân tích là bắt buộc');
     }
 
     const recording = await this.prisma.soloRecording.findUnique({
@@ -46,10 +50,12 @@ export class SoloRecordingService {
     });
 
     if (!recording) {
-      throw new BadRequestException('Không tìm thấy solo recording');
+      throw new BadRequestException('Không tìm thấy bản ghi');
     }
 
-    const transcript = await this.aiAnalysisService.transcribeFromFile(file);
+    // Whisper vẫn có thể trích xuất âm thanh trực tiếp từ file video (.webm/.mp4)
+    const transcript =
+      await this.aiAnalysisService.transcribeFromVideoFile(file);
 
     const feedback = await this.aiAnalysisService.generateFeedback({
       transcript,
@@ -67,12 +73,7 @@ export class SoloRecordingService {
 
     return {
       transcript,
-      analysis: {
-        overallScore: feedback.overallScore,
-        strengths: feedback.strengths,
-        weaknesses: feedback.weaknesses,
-        suggestions: feedback.suggestions,
-      },
+      analysis: feedback,
       analysisId: aiAnalysis.id,
       processedAt: aiAnalysis.processedAt,
     };
