@@ -46,7 +46,7 @@ export class SoloRecordingController {
     @UploadedFile() file: UploadedFileType,
     @Body() dto: CreateSoloRecordingDto,
   ) {
-    return this.soloRecordingService.uploadAudio(file, dto);
+    return this.soloRecordingService.uploadVideo(file, dto);
   }
 
   @Post(':id/analyze')

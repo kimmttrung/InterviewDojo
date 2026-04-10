@@ -8,7 +8,15 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../../../components/ui/accordion';
-import { Calendar, Users, MessageSquare, Loader2 } from 'lucide-react'; // Thêm Loader2 để làm hiệu ứng loading
+// Thêm các thành phần Dialog/Modal
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '../../../components/ui/dialog';
+import { Calendar, Users, MessageSquare, Loader2, Bot, Users2, GraduationCap } from 'lucide-react';
 import CodeEditer from '../../assets/img/CodeEditer.png';
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -17,71 +25,14 @@ import { io } from 'socket.io-client';
 export default function Practice() {
   const navigate = useNavigate();
   const [isSearching, setIsSearching] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false); // Trạng thái đóng mở bảng chọn
 
-  // Lấy thông tin user từ localStorage (đảm bảo bạn đã lưu khi login)
   const userStore = localStorage.getItem('user');
   const user = userStore ? JSON.parse(userStore) : null;
-
-  // --- LOGIC SOCKET LẮNG NGHE KẾT QUẢ MATCHING ---
-  useEffect(() => {
-    if (!user) return;
-
-    // Kết nối tới server Socket của bạn
-    const socket = io('http://localhost:3000', {
-      query: { userId: user.id },
-    });
-
-    // Khi Backend tìm thấy đối thủ, nó sẽ bắn sự kiện 'match_found'
-    socket.on('match_found', (data: { roomId: string; token: string }) => {
-      console.log('Ghép cặp thành công!', data);
-      setIsSearching(false);
-
-      // Tự động chuyển hướng sang phòng phỏng vấn kèm theo Token
-      navigate(`/interview/${data.roomId}?token=${data.token}`);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
-  }, [user, navigate]);
-
-  // --- HÀM GỌI API MATCHING ---
-  const handleStartMatching = async () => {
-    if (!user) {
-      alert('Vui lòng đăng nhập để bắt đầu matching!');
-      return;
-    }
-
-    setIsSearching(true);
-
-    try {
-      const response = await fetch('http://localhost:3000/api/v1/matching/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          userId: user.id,
-          level: 'Junior', // Có thể thay bằng user.level nếu có
-        }),
-      });
-
-      const result = await response.json();
-
-      // Nếu may mắn có người đợi sẵn, API trả về matched luôn
-      if (result.status === 'matched') {
-        navigate(`/interview/${result.roomId}?token=${result.token}`);
-      }
-      // Nếu chưa có ai, ta chỉ việc ngồi đợi Socket 'match_found' ở useEffect bên trên
-    } catch (error) {
-      console.error('Lỗi Matching:', error);
-      setIsSearching(false);
-      alert('Không thể kết nối tới server matching!');
-    }
-  };
 
   return (
     <Layout>
       <div className="min-h-screen bg-background">
-        {/* HERO SECTION - CHỈ SỬA NÚT BẤM TẠI ĐÂY */}
         <section className="py-20 px-8 max-w-7xl mx-auto grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <h1 className="text-5xl font-extrabold tracking-tight leading-tight">
@@ -89,55 +40,109 @@ export default function Practice() {
               <span className="text-primary">with peers and AI</span>
             </h1>
             <p className="text-xl text-muted-foreground">
-              Join thousands of tech candidates practicing interviews to land jobs. Practice real
-              questions over video chat in a collaborative environment with helpful AI feedback.
+              Join thousands of tech candidates practicing interviews to land jobs.
             </p>
+
             <div className="flex flex-wrap gap-4">
-              {/* NÚT BẤM MATCHING ĐÃ ĐƯỢC NÂNG CẤP */}
+              {/* NÚT MỞ MODAL */}
               <Button
                 size="lg"
                 className={`px-8 h-12 text-white transition-all ${isSearching ? 'bg-orange-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}
-                onClick={handleStartMatching}
+                onClick={() => setIsModalOpen(true)}
                 disabled={isSearching}
               >
                 {isSearching ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Đang tìm đối thủ...
+                    Đang tìm đối phương
                   </>
                 ) : (
-                  'Bắt đầu Matching ngay'
+                  'Chế độ luyện tập'
                 )}
               </Button>
 
-              <Button size="lg" variant="outline" className="px-8 h-12">
+              <Button
+                size="lg"
+                variant="outline"
+                className="px-8 h-12"
+                onClick={() => navigate('/solo-ai')}
+              >
                 Start an AI interview
               </Button>
             </div>
           </div>
+
           <div className="relative">
             <img
               src={CodeEditer}
-              alt="Platform Preview"
+              alt="Platform"
               className="rounded-xl shadow-2xl border bg-muted"
             />
           </div>
         </section>
 
-        {/* CÁC PHẦN DƯỚI GIỮ NGUYÊN HOÀN TOÀN */}
-        <section className="py-16 bg-muted/30 px-8">
-          <div className="max-w-3xl mx-auto text-center space-y-4">
-            <span className="text-indigo-600 font-semibold tracking-wide uppercase text-sm">
-              Who's using it
-            </span>
-            <h2 className="text-3xl font-bold">How everyone in tech prepares</h2>
-            <p className="text-muted-foreground text-lg">
-              Exponent Practice supports interview prep for everyone in tech. From product
-              management to software engineering and data roles, there are thousands of practice
-              questions to choose from.
-            </p>
-          </div>
-        </section>
+        {/* MODAL LỰA CHỌN CHẾ ĐỘ PHỎNG VẤN */}
+        <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle className="text-2xl font-bold text-center">
+                Chọn chế độ luyện tập
+              </DialogTitle>
+              <DialogDescription className="text-center">
+                Hãy chọn phương thức phù hợp nhất để nâng cao kỹ năng của bạn.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-4 py-4">
+              {/* Option 1: Solo AI */}
+              <div
+                onClick={() => navigate('/practice/solo-recording')}
+                className="flex items-center gap-4 p-4 rounded-xl border hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all group"
+              >
+                <div className="h-12 w-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 group-hover:bg-orange-200">
+                  <Bot size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold">Solo Interview với AI feedback</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Luyện tập cá nhân, nhận xét tức thì từ AI.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 2: Peer Matching (Giữ luồng cũ) */}
+              <div
+                onClick={() => navigate('/practice/matching')} // Chuyển hướng sang trang riêng
+                className="flex items-center gap-4 p-4 rounded-xl border hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all group"
+              >
+                <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200">
+                  <Users2 size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold">Peer Matching</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Chế độ ghép cặp trực tiếp với ứng viên khác.
+                  </p>
+                </div>
+              </div>
+
+              {/* Option 3: Mentor */}
+              <div
+                onClick={() => navigate('/mentors')}
+                className="flex items-center gap-4 p-4 rounded-xl border hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all group"
+              >
+                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-green-200">
+                  <GraduationCap size={24} />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold">Interview with Mentor</h4>
+                  <p className="text-sm text-muted-foreground">
+                    Phỏng vấn 1-1 và nhận lời khuyên từ chuyên gia.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
 
         {/* ... (Các phần HOW IT WORKS, TESTIMONIALS, FAQ GIỮ NGUYÊN) ... */}
         <section className="py-20 px-8 max-w-7xl mx-auto">
@@ -221,7 +226,6 @@ export default function Practice() {
             </AccordionItem>
           </Accordion>
         </section>
-
         <Footer />
       </div>
     </Layout>

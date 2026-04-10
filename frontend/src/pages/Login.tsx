@@ -52,6 +52,8 @@ export default function Login() {
         navigate('/mentor/dashboard');
       } else if (userRole.role === 'CANIDATE' && redirect === null) {
         navigate('/');
+      } else {
+        navigate('/');
       }
     } catch (error) {
       showToast.error('Something went wrong');

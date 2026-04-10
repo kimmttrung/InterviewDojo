@@ -40,6 +40,42 @@ export class AiAnalysisService {
     console.log('OpenRouter ready');
   }
 
+  async transcribeFromVideoFile(file: UploadedFileType): Promise<string> {
+    if (!file || !file.buffer) {
+      throw new BadRequestException('File video không hợp lệ');
+    }
+
+    const tmpDir = join(process.cwd(), 'tmp');
+    // Giữ nguyên extension từ file gốc (ví dụ .webm) để Python dễ xử lý
+    const tempFilePath = join(tmpDir, `${Date.now()}-${file.originalname}`);
+
+    try {
+      await mkdir(tmpDir, { recursive: true });
+      await writeFile(tempFilePath, file.buffer);
+
+      // runWhisperScript sẽ gọi python và python-whisper sẽ tự trích xuất audio từ video
+      const transcript = await this.runWhisperScript(tempFilePath);
+      console.log('check tráncript', transcript);
+
+      if (!transcript.trim()) {
+        throw new Error('AI không tìm thấy lời nói trong video');
+      }
+
+      return transcript;
+    } catch (error) {
+      console.error('Transcription error:', error);
+      throw new InternalServerErrorException(
+        'Không thể phân tích âm thanh từ video',
+      );
+    } finally {
+      try {
+        await unlink(tempFilePath);
+      } catch (error) {
+        console.log(error);
+      }
+    }
+  }
+
   async transcribeFromFile(file: UploadedFileType): Promise<string> {
     if (!file) {
       throw new BadRequestException('Thiếu file audio');
@@ -85,10 +121,22 @@ export class AiAnalysisService {
         'transcribe_whisper.py',
       );
 
-      const pythonProcess = spawn('python', [scriptPath, audioPath]);
+      // SỬA TẠI ĐÂY: Đảm bảo pythonExe luôn là string, không được là undefined
+      const pythonExe =
+        this.configService.get<string>('PYTHON_PATH') || 'python';
+
+      // Thực thi lệnh spawn
+      const pythonProcess = spawn(pythonExe, [scriptPath, audioPath]);
 
       let stdout = '';
       let stderr = '';
+
+      // Kiểm tra nếu pythonProcess tạo ra lỗi ngay lập tức (không khởi động được)
+      if (!pythonProcess.stdout || !pythonProcess.stderr) {
+        return reject(
+          new Error('Failed to start python process or capture streams.'),
+        );
+      }
 
       pythonProcess.stdout.on('data', (data) => {
         stdout += data.toString();
@@ -115,6 +163,11 @@ export class AiAnalysisService {
             ),
           );
         }
+      });
+
+      // Bổ sung lắng nghe lỗi hệ thống (ví dụ sai đường dẫn pythonExe)
+      pythonProcess.on('error', (err) => {
+        reject(new Error(`Failed to start child process: ${err.message}`));
       });
     });
   }

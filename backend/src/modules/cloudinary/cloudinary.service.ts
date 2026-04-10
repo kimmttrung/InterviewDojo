@@ -74,6 +74,7 @@ export class CloudinaryService {
       throw new BadRequestException('Video file is required');
     }
 
+    // Kiểm tra mimetype
     if (!ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
       throw new BadRequestException(
         `Invalid video type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
@@ -81,8 +82,8 @@ export class CloudinaryService {
     }
 
     return this.uploadStream(file.buffer, {
-      resource_type: 'video',
-      folder: 'interview_dojo/mock_sessions',
+      resource_type: 'video', // Bắt buộc là video để hỗ trợ .mp4, .webm
+      folder: 'interview_dojo/solo_recordings', // Đổi folder cho đồng bộ
       chunk_size: 6_000_000,
     });
   }
@@ -100,7 +101,7 @@ export class CloudinaryService {
 
     return this.uploadStream(file.buffer, {
       resource_type: 'video',
-      folder: 'interview_dojo/solo_recordings',
+      folder: 'interview_dojo/solo_recordings_audio',
       chunk_size: 6_000_000,
     });
   }

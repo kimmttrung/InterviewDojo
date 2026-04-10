@@ -26,6 +26,7 @@ import InterviewRoom from './pages/user/InterviewRoom';
 import MentorBookings from './pages/mentor/MentorBookings';
 import MentorProfile from './pages/mentor/MentorProfile';
 import MentorSchedule from './pages/mentor/MentorSchedule';
+import PeerMatchingPage from './pages/user/PeerMatchingPage';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -78,8 +79,12 @@ export function App({ queryClient }: AppProps) {
                 element={<ProtectedRoute element={<Practice />} roles={['CANDIDATE']} />}
               />
               <Route
-                path="/solo-recording"
+                path="/practice/solo-recording"
                 element={<ProtectedRoute element={<SoloRecording />} roles={['CANDIDATE']} />}
+              />
+              <Route
+                path="/practice/matching"
+                element={<ProtectedRoute element={<PeerMatchingPage />} roles={['CANDIDATE']} />}
               />
               <Route
                 path="/question-bank"
