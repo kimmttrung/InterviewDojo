@@ -47,7 +47,7 @@ export default function Login() {
       if (redirect) {
         navigate(redirect);
       } else if (userRole.role === 'ADMIN' || userRole.role === 'STAFF') {
-        navigate('/admin');
+        navigate('/admin/dashboard');
       } else if (userRole.role === 'MENTOR' && redirect === null) {
         navigate('/mentor/dashboard');
       } else if (userRole.role === 'CANIDATE' && redirect === null) {

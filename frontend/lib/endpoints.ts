@@ -19,4 +19,10 @@ export const API_ENPOINT = {
     CODE_ENGINE: {
         RUN: '/code-engine/run',
     },
+    QUESTIONS: {
+        GET_ALL: '/questions',
+        CREATE: '/questions',
+        UPDATE: (id: number) => `/questions/${id}`,
+        DELETE: (id: number) => `/questions/${id}`,
+    }
 }

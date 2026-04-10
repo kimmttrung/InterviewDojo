@@ -27,6 +27,7 @@ import MentorBookings from './pages/mentor/MentorBookings';
 import MentorProfile from './pages/mentor/MentorProfile';
 import MentorSchedule from './pages/mentor/MentorSchedule';
 import PeerMatchingPage from './pages/user/PeerMatchingPage';
+import QuestionsPage from './pages/admin/QuestionsPage';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -108,6 +109,7 @@ export function App({ queryClient }: AppProps) {
                 element={<ProtectedRoute element={<MentorProfile />} roles={['MENTOR']} />}
               />
               <Route path="/admin/dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/questions" element={<QuestionsPage />} />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>
