@@ -3,9 +3,10 @@ import { SoloRecordingController } from './solo-recording.controller';
 import { SoloRecordingService } from './solo-recording.service';
 import { CloudinaryModule } from '../cloudinary/cloudinary.module';
 import { AiAnalysisModule } from '../ai-analysis/ai-analysis.module';
+import { PrismaModule } from '../../prisma/prisma.module';
 
 @Module({
-  imports: [CloudinaryModule, AiAnalysisModule],
+  imports: [PrismaModule, CloudinaryModule, AiAnalysisModule],
   controllers: [SoloRecordingController],
   providers: [SoloRecordingService],
 })
