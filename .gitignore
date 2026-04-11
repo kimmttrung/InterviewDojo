@@ -34,3 +34,9 @@ db
 *.njsproj
 
 .docker/
+
+allure-results/
+allure-report/
+test-results/
+playwright-report/
+blob-report/
