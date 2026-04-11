@@ -13,17 +13,17 @@ export class SoloRecordingService {
     private readonly aiAnalysisService: AiAnalysisService,
   ) {}
 
-  async uploadVideo(file: UploadedFileType, dto: CreateSoloRecordingDto) {
-    console.log('--- BẮT ĐẦU UPLOAD VIDEO ---');
-
+  async uploadAndAnalyze(file: UploadedFileType, dto: CreateSoloRecordingDto) {
     if (!file) {
-      throw new BadRequestException('File video là bắt buộc');
+      throw new BadRequestException('File audio/video là bắt buộc');
     }
 
-    // Gọi hàm uploadVideo thay vì uploadAudio
-    const uploaded = await this.cloudinaryService.uploadVideo(file);
+    const isAudio = file.mimetype?.startsWith('audio/');
+    const uploaded = isAudio
+      ? await this.cloudinaryService.uploadAudio(file)
+      : await this.cloudinaryService.uploadVideo(file);
 
-    return this.prisma.soloRecording.create({
+    const recording = await this.prisma.soloRecording.create({
       data: {
         userId: Number(dto.userId),
         videoUrl: uploaded.secure_url,
@@ -31,39 +31,18 @@ export class SoloRecordingService {
         duration: dto.duration ? Number(dto.duration) : null,
       },
     });
-  }
 
-  async analyzeRecording(params: {
-    soloRecordingId: number;
-    file: UploadedFileType;
-    question?: string;
-  }) {
-    const { soloRecordingId, file, question } = params;
-
-    // Kiểm tra xem file gửi lên có phải video không
-    if (!file) {
-      throw new BadRequestException('File video để phân tích là bắt buộc');
-    }
-
-    const recording = await this.prisma.soloRecording.findUnique({
-      where: { id: soloRecordingId },
-    });
-
-    if (!recording) {
-      throw new BadRequestException('Không tìm thấy bản ghi');
-    }
-
-    // Whisper vẫn có thể trích xuất âm thanh trực tiếp từ file video (.webm/.mp4)
-    const transcript =
-      await this.aiAnalysisService.transcribeFromVideoFile(file);
+    const transcript = await this.aiAnalysisService.transcribeFromAudioUrl(
+      uploaded.secure_url,
+    );
 
     const feedback = await this.aiAnalysisService.generateFeedback({
       transcript,
-      question,
+      question: dto.question,
     });
 
     const aiAnalysis = await this.aiAnalysisService.saveSoloRecordingAnalysis({
-      soloRecordingId,
+      soloRecordingId: recording.id,
       transcript,
       overallScore: feedback.overallScore,
       strengths: feedback.strengths,
@@ -72,6 +51,8 @@ export class SoloRecordingService {
     });
 
     return {
+      recordingId: recording.id,
+      fileUrl: uploaded.secure_url,
       transcript,
       analysis: feedback,
       analysisId: aiAnalysis.id,
@@ -83,9 +64,7 @@ export class SoloRecordingService {
     return this.prisma.soloRecording.findMany({
       where: { userId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        aiAnalysis: true,
-      },
+      include: { aiAnalysis: true },
     });
   }
 }
