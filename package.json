@@ -29,9 +29,9 @@
     "prepare": "husky",
     "report:allure": "allure serve allure-results",
     "neon:manage": "node --loader ts-node/esm scripts/manage-neon.ts",
-    "test:sync-env": "cp .env backend/.env",
-    "test:e2e": "npm run test:sync-env && playwright test",
-    "test:local": "ts-node scripts/manage-neon.ts create test-branch && npm run test:sync-env && playwright test"
+    "test:e2e": "npx playwright test",
+    "test:codegen": "npx playwright codegen http://localhost:5173",
+    "test:ui": "npx playwright test --ui"
   },
   "lint-staged": {
     "backend/src/**/*.ts": [

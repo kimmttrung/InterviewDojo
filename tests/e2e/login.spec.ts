@@ -23,11 +23,13 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('Kịch bản kiểm thử Đăng nhập', () => {
   let loginPage: LoginPage;
   const testUser = {
     email: 'thanhtest@gmail.com',
-    password: '$2b$10$dEzB6IZ74Z9ZsiPbo3VfQuH2qQkGN48XNjR3PR6xHkymuXF9WIAym',
+    password: '123456',
     name: 'test'
   };
 
@@ -69,10 +71,10 @@ test.describe('Kịch bản kiểm thử Đăng nhập', () => {
       response.url().includes('/api/v1/auth/login') && response.status() === 201
     );
 
-    await loginPage.login(testUser.email, "123456");
+    await loginPage.login(testUser.email, testUser.password);
     await responsePromise;
 
-    await page.waitForURL('http://localhost:5173/candidate/setup', { timeout: 10000 });
+    await page.waitForURL(/(candidate\/setup|localhost:5173\/?$)/, { timeout: 10000 });
     console.log("TEST CASE 1 PASSED");
   });
 

@@ -23,6 +23,8 @@ const pool = new Pool({
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+test.use({ storageState: { cookies: [], origins: [] } });
+
 test.describe('Tính năng Đăng ký tài khoản (Register)', () => {
     let registerPage: RegisterPage;
 

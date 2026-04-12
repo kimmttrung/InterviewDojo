@@ -15,7 +15,6 @@ export class RegisterPage {
   constructor(page: Page) {
     this.page = page;
     
-    // CẬP NHẬT THEO CODEGEN: Sử dụng getByRole chuẩn xác 100% với Frontend
     this.nameInput = page.getByRole('textbox', { name: 'Name' });
     this.emailInput = page.getByRole('textbox', { name: 'Email' });
     this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });
@@ -24,7 +23,6 @@ export class RegisterPage {
     this.candidateRoleBtn = page.getByRole('button', { name: 'CANDIDATE' });
     this.mentorRoleBtn = page.getByRole('button', { name: 'MENTOR' });
     
-    // Các nút bấm mặc định
     this.submitBtn = page.getByRole('button', { name: 'Register Now' });
     this.backBtn = page.locator('text=Back'); 
     this.loginLink = page.locator('text=Login here');
@@ -34,7 +32,6 @@ export class RegisterPage {
     await this.page.goto('/register');
   }
 
-  // Hàm điền form đã được tối ưu, mô phỏng giống người dùng thật (click rồi mới fill)
   async fillForm(name: string, email: string, pass: string, confirmPass: string) {
     if (name) {
       await this.nameInput.click();
