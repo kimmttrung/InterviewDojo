@@ -1,21 +1,37 @@
 {
+  "name": "interview-dojo",
+  "version": "1.0.0",
+  "type": "module",
   "dependencies": {
-    "@nestjs/mapped-types": "*"
+    "@neondatabase/api-client": "^2.7.1",
+    "@nestjs/mapped-types": "*",
+    "@prisma/adapter-pg": "^7.7.0",
+    "dotenv": "^17.4.1",
+    "pg": "^8.20.0"
   },
   "devDependencies": {
     "@commitlint/cli": "^20.5.0",
     "@commitlint/config-conventional": "^20.5.0",
     "@playwright/test": "^1.59.1",
+    "@prisma/client": "^7.7.0",
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
     "allure-commandline": "^2.38.1",
     "allure-playwright": "^3.7.1",
     "husky": "^9.1.7",
     "lint-staged": "^16.4.0",
-    "prettier": "^3.8.1"
+    "prettier": "^3.8.1",
+    "prisma": "^7.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
   },
   "scripts": {
     "prepare": "husky",
-    "test:e2e": "playwright test",
-    "report:allure": "allure serve allure-results"
+    "report:allure": "allure serve allure-results",
+    "neon:manage": "node --loader ts-node/esm scripts/manage-neon.ts",
+    "test:sync-env": "cp .env backend/.env",
+    "test:e2e": "npm run test:sync-env && playwright test",
+    "test:local": "ts-node scripts/manage-neon.ts create test-branch && npm run test:sync-env && playwright test"
   },
   "lint-staged": {
     "backend/src/**/*.ts": [
