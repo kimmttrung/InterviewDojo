@@ -14,6 +14,8 @@ import { MatchingModule } from './modules/matching/matching.module';
 import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
 import { TargetRoleModule } from './modules/target-role/target-role.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CompaniesModule } from './modules/companies/companies.module';
 
 @Module({
   imports: [
@@ -32,6 +34,8 @@ import { TargetRoleModule } from './modules/target-role/target-role.module';
     CodeEngineModule,
     SoloRecordingModule,
     TargetRoleModule,
+    CategoriesModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
