@@ -20,7 +20,7 @@ import { CreateMultipleTargetRoleDto } from './dto/create-multiple-target-role.d
 
 @Controller('target-roles')
 export class TargetRoleController {
-  constructor(private service: TargetRoleService) {}
+  constructor(private service: TargetRoleService) { }
 
   @Roles(Role.ADMIN, Role.STAFF)
   @Post()

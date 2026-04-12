@@ -24,7 +24,7 @@ import { Role } from 'src/common/enums/role.enum';
 @Controller('users')
 @UseGuards(JwtAuthGuard)
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(private readonly userService: UserService) { }
 
   @ApiBearerAuth()
   @Get('me')

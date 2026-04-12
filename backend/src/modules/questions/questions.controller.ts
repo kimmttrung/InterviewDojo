@@ -29,7 +29,7 @@ import { Role } from '@prisma/client';
 @Controller('questions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class QuestionsController {
-  constructor(private readonly questionsService: QuestionsService) {}
+  constructor(private readonly questionsService: QuestionsService) { }
 
   @Get()
   @HttpCode(HttpStatus.OK)

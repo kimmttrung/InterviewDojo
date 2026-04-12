@@ -9,8 +9,9 @@
     "target": "ES2021",
     "sourceMap": true,
     "outDir": "./dist",
+    "types": ["node"],
 
-    "baseUrl": ".",        
+    "baseUrl": ".",
     "paths": {
       "src/*": ["src/*"]
     },
@@ -21,6 +22,6 @@
     "forceConsistentCasingInFileNames": true,
     "esModuleInterop": true
   },
-  "include": ["src/**/*", "test/**/*"],
+  "include": ["src/**/*", "test/**/*", "prisma/**/*"],
   "exclude": ["node_modules", "dist"]
 }
