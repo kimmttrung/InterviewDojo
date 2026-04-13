@@ -1,0 +1,14 @@
+export const CodeforcesVerdicts: Record<string, string> = {
+  FAILED: 'Failed',
+  OK: 'Accepted',
+  PARTIAL: 'Partial',
+  COMPILATION_ERROR: 'Compilation error',
+  RUNTIME_ERROR: 'Runtime error',
+  WRONG_ANSWER: 'Wrong answer',
+  PRESENTATION_ERROR: 'Presentation error',
+  TIME_LIMIT_EXCEEDED: 'Time limit exceeded',
+  MEMORY_LIMIT_EXCEEDED: 'Memory limit exceeded',
+  IDLENESS_LIMIT_EXCEEDED: 'Idleness limit exceeded',
+  TESTING: 'Running on tests',
+  REJECTED: 'Rejected',
+};

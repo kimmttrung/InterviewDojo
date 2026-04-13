@@ -14,6 +14,7 @@ import { MatchingModule } from './modules/matching/matching.module';
 import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
 import { TargetRoleModule } from './modules/target-role/target-role.module';
+import { CodeforcesModule } from './modules/codeforces/codeforces.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { TargetRoleModule } from './modules/target-role/target-role.module';
     CodeEngineModule,
     SoloRecordingModule,
     TargetRoleModule,
+    CodeforcesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
