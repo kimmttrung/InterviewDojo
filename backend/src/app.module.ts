@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { QuestionsModule } from './modules/questions/questions.module';
@@ -14,6 +14,9 @@ import { MatchingModule } from './modules/matching/matching.module';
 import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
 import { TargetRoleModule } from './modules/target-role/target-role.module';
+import { CodingModule } from './modules/coding/coding.module';
+import { BullModule } from '@nestjs/bullmq';
+import { bullConfig } from './config/bull.config';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 
@@ -22,6 +25,21 @@ import { CompaniesModule } from './modules/companies/companies.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
+    // setup BullMQ
+    BullModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: bullConfig,
+    }),
+
+    // đăng ký queue sẽ dùng
+    BullModule.registerQueue(
+      { name: 'code-execution' },     // cho submit code
+      { name: 'ai-analysis' },        // cho AI phân tích
+      { name: 'notification' },       // cho gửi thông báo sau này
+      { name: 'email' },              // cho gửi email
+    ),
+
     PrismaModule,
     QuestionsModule,
     AuthModule,
@@ -34,10 +52,11 @@ import { CompaniesModule } from './modules/companies/companies.module';
     CodeEngineModule,
     SoloRecordingModule,
     TargetRoleModule,
+    CodingModule,
     CategoriesModule,
     CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
 })
-export class AppModule {}
+export class AppModule { }
