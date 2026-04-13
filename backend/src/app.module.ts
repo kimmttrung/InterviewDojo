@@ -15,6 +15,8 @@ import { CodeEngineModule } from './modules/code-engine/code-engine.module';
 import { SoloRecordingModule } from './modules/solo-recording/solo-recording.module';
 import { TargetRoleModule } from './modules/target-role/target-role.module';
 import { CodeforcesModule } from './modules/codeforces/codeforces.module';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CompaniesModule } from './modules/companies/companies.module';
 
 @Module({
   imports: [
@@ -34,6 +36,8 @@ import { CodeforcesModule } from './modules/codeforces/codeforces.module';
     SoloRecordingModule,
     TargetRoleModule,
     CodeforcesModule,
+    CategoriesModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],

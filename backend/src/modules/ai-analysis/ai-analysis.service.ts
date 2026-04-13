@@ -4,12 +4,18 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import { PrismaService } from '../../prisma/prisma.service';
-import { mkdir, writeFile, unlink } from 'fs/promises';
-import { join } from 'path';
-import { spawn } from 'child_process';
-import { UploadedFileType } from '../../common/types/uploaded-file.type';
+import axios from 'axios';
+import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
+import { promisify } from 'util';
+import { execFile } from 'child_process';
+import ffmpegPath from 'ffmpeg-static';
+import OpenAI from 'openai';
+
+const execFileAsync = promisify(execFile);
 
 type FeedbackResult = {
   overallScore: number;
@@ -27,7 +33,6 @@ export class AiAnalysisService {
     private readonly prisma: PrismaService,
   ) {
     const apiKey = this.configService.get<string>('OPENROUTER_API_KEY');
-
     if (!apiKey) {
       throw new Error('Missing OPENROUTER_API_KEY');
     }
@@ -36,140 +41,124 @@ export class AiAnalysisService {
       apiKey,
       baseURL: 'https://openrouter.ai/api/v1',
     });
-
-    console.log('OpenRouter ready');
   }
 
-  async transcribeFromVideoFile(file: UploadedFileType): Promise<string> {
-    if (!file || !file.buffer) {
-      throw new BadRequestException('File video không hợp lệ');
-    }
-
-    const tmpDir = join(process.cwd(), 'tmp');
-    // Giữ nguyên extension từ file gốc (ví dụ .webm) để Python dễ xử lý
-    const tempFilePath = join(tmpDir, `${Date.now()}-${file.originalname}`);
-
-    try {
-      await mkdir(tmpDir, { recursive: true });
-      await writeFile(tempFilePath, file.buffer);
-
-      // runWhisperScript sẽ gọi python và python-whisper sẽ tự trích xuất audio từ video
-      const transcript = await this.runWhisperScript(tempFilePath);
-      console.log('check tráncript', transcript);
-
-      if (!transcript.trim()) {
-        throw new Error('AI không tìm thấy lời nói trong video');
-      }
-
-      return transcript;
-    } catch (error) {
-      console.error('Transcription error:', error);
-      throw new InternalServerErrorException(
-        'Không thể phân tích âm thanh từ video',
-      );
-    } finally {
-      try {
-        await unlink(tempFilePath);
-      } catch (error) {
-        console.log(error);
-      }
-    }
+  private getExtensionFromUrl(url: string): string {
+    const cleanUrl = url.split('?')[0];
+    const ext = path.extname(cleanUrl).replace('.', '').toLowerCase();
+    return ext || 'webm';
   }
 
-  async transcribeFromFile(file: UploadedFileType): Promise<string> {
-    if (!file) {
-      throw new BadRequestException('Thiếu file audio');
-    }
+  private async downloadAudioToTempFile(audioUrl: string): Promise<string> {
+    const ext = this.getExtensionFromUrl(audioUrl);
+    const inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
 
-    if (!file.buffer) {
-      throw new BadRequestException('File upload không có buffer');
-    }
-
-    const tmpDir = join(process.cwd(), 'tmp');
-    const tempFilePath = join(tmpDir, `${Date.now()}-${file.originalname}`);
-
-    try {
-      await mkdir(tmpDir, { recursive: true });
-      await writeFile(tempFilePath, file.buffer);
-
-      const transcript = await this.runWhisperScript(tempFilePath);
-
-      if (!transcript.trim()) {
-        throw new Error('Transcript rỗng');
-      }
-
-      return transcript;
-    } catch (error) {
-      console.error('Local whisper transcription error:', error);
-      throw new InternalServerErrorException(
-        'Không thể chuyển audio thành văn bản',
-      );
-    } finally {
-      try {
-        await unlink(tempFilePath);
-      } catch {
-        // bỏ qua lỗi xóa file tạm
-      }
-    }
-  }
-
-  private runWhisperScript(audioPath: string): Promise<string> {
-    return new Promise((resolve, reject) => {
-      const scriptPath = join(
-        process.cwd(),
-        'scripts',
-        'transcribe_whisper.py',
-      );
-
-      // SỬA TẠI ĐÂY: Đảm bảo pythonExe luôn là string, không được là undefined
-      const pythonExe =
-        this.configService.get<string>('PYTHON_PATH') || 'python';
-
-      // Thực thi lệnh spawn
-      const pythonProcess = spawn(pythonExe, [scriptPath, audioPath]);
-
-      let stdout = '';
-      let stderr = '';
-
-      // Kiểm tra nếu pythonProcess tạo ra lỗi ngay lập tức (không khởi động được)
-      if (!pythonProcess.stdout || !pythonProcess.stderr) {
-        return reject(
-          new Error('Failed to start python process or capture streams.'),
-        );
-      }
-
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
-
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
-
-      pythonProcess.on('close', (code) => {
-        if (code !== 0) {
-          return reject(
-            new Error(`Whisper script failed. Code=${code}. Error=${stderr}`),
-          );
-        }
-
-        try {
-          const parsed = JSON.parse(stdout) as { transcript?: string };
-          resolve(parsed.transcript || '');
-        } catch (error) {
-          reject(
-            new Error(
-              `Cannot parse whisper output: ${stdout}\n${String(error)}`,
-            ),
-          );
-        }
-      });
-
-      // Bổ sung lắng nghe lỗi hệ thống (ví dụ sai đường dẫn pythonExe)
-      pythonProcess.on('error', (err) => {
-        reject(new Error(`Failed to start child process: ${err.message}`));
-      });
+    const response = await axios.get<ArrayBuffer>(audioUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
     });
+
+    fs.writeFileSync(inputPath, Buffer.from(response.data));
+    return inputPath;
+  }
+
+  private async convertToWav(inputPath: string): Promise<string> {
+    if (!ffmpegPath) {
+      throw new InternalServerErrorException('Không tìm thấy ffmpeg-static');
+    }
+
+    const outputPath = path.join(os.tmpdir(), `solo-output-${Date.now()}.wav`);
+
+    await execFileAsync(ffmpegPath, [
+      '-y',
+      '-i',
+      inputPath,
+      '-ac',
+      '1',
+      '-ar',
+      '16000',
+      '-sample_fmt',
+      's16',
+      outputPath,
+    ]);
+
+    return outputPath;
+  }
+
+  async transcribeFromAudioUrl(audioUrl: string): Promise<string> {
+    const speechKey = this.configService.get<string>('AZURE_SPEECH_KEY');
+    const speechRegion = this.configService.get<string>('AZURE_SPEECH_REGION');
+
+    if (!speechKey || !speechRegion) {
+      throw new InternalServerErrorException(
+        'Thiếu AZURE_SPEECH_KEY hoặc AZURE_SPEECH_REGION trong .env',
+      );
+    }
+
+    let inputPath: string | null = null;
+    let wavPath: string | null = null;
+
+    try {
+      inputPath = await this.downloadAudioToTempFile(audioUrl);
+      wavPath = await this.convertToWav(inputPath);
+
+      const wavBuffer = fs.readFileSync(wavPath);
+
+      const speechConfig = sdk.SpeechConfig.fromSubscription(
+        speechKey,
+        speechRegion,
+      );
+
+      speechConfig.speechRecognitionLanguage = 'vi-VN';
+
+      const audioConfig = sdk.AudioConfig.fromWavFileInput(wavBuffer);
+      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
+
+      const result = await new Promise<sdk.SpeechRecognitionResult>(
+        (resolve, reject) => {
+          recognizer.recognizeOnceAsync(
+            (res: sdk.SpeechRecognitionResult) => {
+              recognizer.close();
+              resolve(res);
+            },
+            (err: string) => {
+              recognizer.close();
+              reject(new Error(err));
+            },
+          );
+        },
+      );
+
+      if (result.reason === sdk.ResultReason.RecognizedSpeech) {
+        const transcript = result.text?.trim() ?? '';
+        if (!transcript) {
+          throw new BadRequestException('Transcript rỗng');
+        }
+        return transcript;
+      }
+
+      if (result.reason === sdk.ResultReason.NoMatch) {
+        throw new BadRequestException('Không nhận diện được giọng nói');
+      }
+
+      throw new InternalServerErrorException(
+        `Azure Speech thất bại, reason=${String(result.reason)}`,
+      );
+    } catch (error) {
+      console.error('Azure STT error:', error);
+      if (
+        error instanceof BadRequestException ||
+        error instanceof InternalServerErrorException
+      ) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        'Không thể chuyển audio sang text bằng Azure Speech',
+      );
+    } finally {
+      if (inputPath && fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
+      if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+    }
   }
 
   async generateFeedback(params: {
@@ -185,8 +174,11 @@ export class AiAnalysisService {
     const prompt = `
 You are an interview evaluator.
 
-Question: ${question || 'Tell me about yourself'}
-Answer: ${transcript}
+Question:
+${question || 'Tell me about yourself'}
+
+Answer:
+${transcript}
 
 Return ONLY valid JSON in this format:
 {
@@ -195,7 +187,7 @@ Return ONLY valid JSON in this format:
   "weaknesses": string[],
   "suggestions": string[]
 }
-`;
+`.trim();
 
     try {
       const model =
@@ -203,21 +195,13 @@ Return ONLY valid JSON in this format:
 
       const response = await this.openai.chat.completions.create({
         model,
-        messages: [
-          {
-            role: 'user',
-            content: prompt,
-          },
-        ],
+        messages: [{ role: 'user', content: prompt }],
       });
 
       const text = response.choices[0]?.message?.content ?? '';
 
-      console.log('AI RAW RESPONSE:', text);
-
       try {
         const parsed = JSON.parse(text) as FeedbackResult;
-
         return {
           overallScore: Number(parsed.overallScore ?? 7),
           strengths: Array.isArray(parsed.strengths)
@@ -240,7 +224,6 @@ Return ONLY valid JSON in this format:
       }
     } catch (error) {
       console.error('AI analyze error:', error);
-
       return {
         overallScore: 6,
         strengths: ['Basic answer'],
@@ -268,9 +251,7 @@ Return ONLY valid JSON in this format:
     } = params;
 
     return this.prisma.aiAnalysis.upsert({
-      where: {
-        soloRecordingId,
-      },
+      where: { soloRecordingId },
       update: {
         transcript,
         overallScore,

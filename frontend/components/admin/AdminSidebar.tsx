@@ -1,10 +1,12 @@
-import { NavLink } from "react-router-dom";
-import { LayoutDashboard, FileText, Users } from "lucide-react";
+import { NavLink } from 'react-router-dom';
+import { LayoutDashboard, FileText, Users, Tags, Building2 } from 'lucide-react';
 
 const menu = [
-  { name: "Dashboard", path: "/admin/dashboard", icon: LayoutDashboard },
-  { name: "Questions", path: "/admin/questions", icon: FileText },
-  { name: "Users", path: "/admin/users", icon: Users },
+  { name: 'Dashboard', path: '/admin/dashboard', icon: LayoutDashboard },
+  { name: 'Questions', path: '/admin/questions', icon: FileText },
+  { name: 'Categories', path: '/admin/categories', icon: Tags },
+  { name: 'Companies', path: '/admin/companies', icon: Building2 },
+  { name: 'Users', path: '/admin/users', icon: Users },
 ];
 
 export default function AdminSidebar() {
@@ -21,7 +23,7 @@ export default function AdminSidebar() {
               to={item.path}
               className={({ isActive }) =>
                 `flex items-center gap-3 p-3 rounded-lg ${
-                  isActive ? "bg-primary text-white" : "hover:bg-muted"
+                  isActive ? 'bg-primary text-white' : 'hover:bg-muted'
                 }`
               }
             >
