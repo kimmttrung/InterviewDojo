@@ -15,7 +15,7 @@ import { UpdateTargetRoleDto } from './dto/update-target-role.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { Role } from 'src/common/enums/role.enum';
+import { Role } from '@/common/enums/role.enum';
 import { CreateMultipleTargetRoleDto } from './dto/create-multiple-target-role.dto';
 
 @Controller('target-roles')

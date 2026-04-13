@@ -1,7 +1,7 @@
 // src/modules/coding/processors/code-execution.processor.ts
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { CodeEngineService } from '../../code-engine/code-engine.service';
 import { SubmissionStatus } from '@prisma/client';
 
