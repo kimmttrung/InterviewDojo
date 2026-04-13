@@ -4,7 +4,7 @@ import { CodingService } from './coding.service';
 import { CodingController } from './coding.controller';
 import { CodeExecutionProcessor } from './processors/code-execution.processor';
 import { CodeEngineService } from '../code-engine/code-engine.service';
-import { PrismaModule } from 'src/prisma/prisma.module';
+import { PrismaModule } from '@/prisma/prisma.module';
 import { CodeEngineModule } from '../code-engine/code-engine.module';
 @Module({
   imports: [
@@ -21,4 +21,4 @@ import { CodeEngineModule } from '../code-engine/code-engine.module';
   ],
   exports: [CodingService],
 })
-export class CodingModule {}
+export class CodingModule { }

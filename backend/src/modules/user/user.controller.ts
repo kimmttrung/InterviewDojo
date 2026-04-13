@@ -18,7 +18,7 @@ import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
 import { Post } from '@nestjs/common';
-import { Role } from 'src/common/enums/role.enum';
+import { Role } from '@/common/enums/role.enum';
 
 @ApiTags('Users')
 @Controller('users')
