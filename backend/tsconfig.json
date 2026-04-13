@@ -10,7 +10,7 @@
     "sourceMap": true,
     "outDir": "./dist",
     "types": ["node"],
-
+    "ignoreDeprecations": "6.0",
     "baseUrl": ".",
     "paths": {
       "src/*": ["src/*"]

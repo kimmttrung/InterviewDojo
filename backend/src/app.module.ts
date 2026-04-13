@@ -17,6 +17,9 @@ import { TargetRoleModule } from './modules/target-role/target-role.module';
 import { CodingModule } from './modules/coding/coding.module';
 import { BullModule } from '@nestjs/bullmq';
 import { bullConfig } from './config/bull.config';
+import { CategoriesModule } from './modules/categories/categories.module';
+import { CompaniesModule } from './modules/companies/companies.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -50,6 +53,8 @@ import { bullConfig } from './config/bull.config';
     SoloRecordingModule,
     TargetRoleModule,
     CodingModule,
+    CategoriesModule,
+    CompaniesModule,
   ],
   controllers: [AppController],
   providers: [AppService],
