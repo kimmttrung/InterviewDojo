@@ -1,10 +1,37 @@
 {
+  "name": "interview-dojo",
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "@neondatabase/api-client": "^2.7.1",
+    "@nestjs/mapped-types": "*",
+    "@prisma/adapter-pg": "^7.7.0",
+    "dotenv": "^17.4.1",
+    "pg": "^8.20.0"
+  },
   "devDependencies": {
+    "@commitlint/cli": "^20.5.0",
+    "@commitlint/config-conventional": "^20.5.0",
+    "@playwright/test": "^1.59.1",
+    "@prisma/client": "^7.7.0",
+    "@types/node": "^25.6.0",
+    "@types/pg": "^8.20.0",
+    "allure-commandline": "^2.38.1",
+    "allure-playwright": "^3.7.1",
     "husky": "^9.1.7",
-    "lint-staged": "^16.4.0"
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.8.1",
+    "prisma": "^7.7.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^6.0.2"
   },
   "scripts": {
-    "prepare": "husky"
+    "prepare": "husky",
+    "report:allure": "allure serve allure-results",
+    "neon:manage": "node --loader ts-node/esm scripts/manage-neon.ts",
+    "test:e2e": "npx playwright test",
+    "test:codegen": "npx playwright codegen http://localhost:5173",
+    "test:ui": "npx playwright test --ui"
   },
   "lint-staged": {
     "backend/src/**/*.ts": [

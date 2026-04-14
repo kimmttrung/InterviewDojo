@@ -18,5 +18,14 @@ export const userService = {
     getMe: async () => {
         const res = await api.get(API_ENPOINT.USER.GET_ME);
         return res.data;
+    },
+    updateTargetRole: (data: { target_role_id: number }) => {
+        return api.patch(API_ENPOINT.USER.UPDATE_TARGET_ROLE, data)
+    },
+    createMentorProfile: (data: {
+        cvUrl?: string;
+        certificateUrl?: string;
+        }) => {
+        return api.post(API_ENPOINT.MENTOR.UPDATE_ME, data);
     }
 }
