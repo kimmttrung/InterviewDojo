@@ -30,7 +30,7 @@ export default function Home() {
         {/* HEADER */}
 
         <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome back, Mai!</h1>
+          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
 
           <p className="text-muted-foreground">
             Continue learning with our recommendations based on your career goals and recent
