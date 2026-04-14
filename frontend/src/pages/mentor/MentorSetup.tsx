@@ -98,7 +98,7 @@ export default function MentorSetup() {
             <div className="pt-4 flex justify-between items-center">
               <button
                 type="button"
-                onClick={() => navigate('/')}
+                onClick={() => navigate('/mentor/dashboard')}
                 className="text-sm text-slate-500 hover:text-slate-900 flex items-center gap-1"
               >
                 Skip for now <ArrowRight className="w-4 h-4" />

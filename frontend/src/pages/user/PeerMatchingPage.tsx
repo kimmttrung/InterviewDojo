@@ -13,19 +13,19 @@ export default function PeerMatchingPage() {
   const userStore = localStorage.getItem('user');
   const user = userStore ? JSON.parse(userStore) : null;
 
-  // Logic đếm thời gian chờ
+  // Wait timer logic
   useEffect(() => {
     let interval: any;
     if (isSearching) {
       interval = setInterval(() => setTimer((prev) => prev + 1), 1000);
     } else {
       setTimer(0);
-      clearInterval(interval);
+      if (interval) clearInterval(interval);
     }
     return () => clearInterval(interval);
   }, [isSearching]);
 
-  // Logic Socket lắng nghe kết quả
+  // Socket logic for listening to match results
   useEffect(() => {
     if (!user) return;
     const socket = io('http://localhost:3000', { query: { userId: user.id } });
@@ -41,7 +41,7 @@ export default function PeerMatchingPage() {
   }, [user, navigate]);
 
   const handleStartMatching = async () => {
-    if (!user) return alert('Vui lòng đăng nhập!');
+    if (!user) return alert('Please log in to continue!');
     setIsSearching(true);
 
     try {
@@ -57,49 +57,50 @@ export default function PeerMatchingPage() {
     } catch (error) {
       console.error(error);
       setIsSearching(false);
-      alert('Lỗi kết nối server!');
+      alert('Server connection error!');
     }
   };
 
   return (
     <Layout>
       <div className="min-h-[80vh] flex flex-col items-center justify-center bg-slate-50 px-4">
-        {/* Nút quay lại */}
+        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="absolute top-24 left-8 flex items-center text-muted-foreground hover:text-primary transition-colors"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" /> Quay lại
+          <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
         </button>
 
         <div className="max-w-2xl w-full text-center space-y-8">
           <div className="space-y-4">
             <h1 className="text-4xl font-extrabold tracking-tight">Peer-to-Peer Matching</h1>
             <p className="text-lg text-muted-foreground">
-              Hệ thống sẽ kết nối bạn với một ứng viên có cùng trình độ để thực hiện phỏng vấn chéo.
+              Our system will connect you with a candidate of a similar level for a cross-interview
+              session.
             </p>
           </div>
 
           <div className="grid md:grid-cols-3 gap-6 text-left">
             <div className="p-4 bg-white rounded-xl border shadow-sm">
               <Zap className="text-yellow-500 mb-2" size={20} />
-              <h4 className="font-bold text-sm">Kết nối nhanh</h4>
+              <h4 className="font-bold text-sm">Fast Connection</h4>
               <p className="text-xs text-muted-foreground">
-                Thường mất chưa đầy 2 phút để tìm thấy đối thủ.
+                It usually takes less than 2 minutes to find a match.
               </p>
             </div>
             <div className="p-4 bg-white rounded-xl border shadow-sm">
               <Users className="text-blue-500 mb-2" size={20} />
-              <h4 className="font-bold text-sm">Cùng trình độ</h4>
+              <h4 className="font-bold text-sm">Similar Level</h4>
               <p className="text-xs text-muted-foreground">
-                Matching dựa trên kỹ năng và kinh nghiệm.
+                Matching is based on your specific skills and experience.
               </p>
             </div>
             <div className="p-4 bg-white rounded-xl border shadow-sm">
               <ShieldCheck className="text-green-500 mb-2" size={20} />
-              <h4 className="font-bold text-sm">Môi trường an toàn</h4>
+              <h4 className="font-bold text-sm">Safe Environment</h4>
               <p className="text-xs text-muted-foreground">
-                Cộng đồng văn minh, hỗ trợ lẫn nhau cùng tiến bộ.
+                A professional community supporting each other's growth.
               </p>
             </div>
           </div>
@@ -111,7 +112,7 @@ export default function PeerMatchingPage() {
                 className="h-16 px-12 text-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 transition-all"
                 onClick={handleStartMatching}
               >
-                Bắt đầu tìm kiếm đối thủ ngay
+                Find a Partner Now
               </Button>
             ) : (
               <div className="flex flex-col items-center space-y-6">
@@ -123,16 +124,16 @@ export default function PeerMatchingPage() {
                 </div>
                 <div className="text-center">
                   <h2 className="text-2xl font-bold text-indigo-600">
-                    Đang tìm ứng viên phù hợp...
+                    Finding the right candidate...
                   </h2>
-                  <p className="text-muted-foreground">Thời gian chờ: {timer} giây</p>
+                  <p className="text-muted-foreground">Waiting time: {timer} seconds</p>
                 </div>
                 <Button
                   variant="ghost"
                   className="text-red-500 hover:bg-red-50"
                   onClick={() => setIsSearching(false)}
                 >
-                  Hủy tìm kiếm
+                  Cancel Search
                 </Button>
               </div>
             )}

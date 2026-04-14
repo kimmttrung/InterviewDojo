@@ -6,6 +6,13 @@ import {
   IsEnum,
 } from 'class-validator';
 
+export enum UserRole {
+  CANDIDATE = 'CANDIDATE',
+  MENTOR = 'MENTOR',
+  STAFF = 'STAFF',
+  ADMIN = 'ADMIN',
+}
+
 export class RegisterDto {
   @IsEmail()
   email: string;
@@ -18,6 +25,6 @@ export class RegisterDto {
   @IsString()
   name?: string;
 
-  @IsEnum(['CANDIDATE', 'MENTOR', 'STAFF'])
-  role: 'CANDIDATE' | 'MENTOR' | 'STAFF';
+  @IsEnum(UserRole)
+  role: UserRole;
 }

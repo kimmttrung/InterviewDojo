@@ -8,7 +8,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '../../../components/ui/accordion';
-// Thêm các thành phần Dialog/Modal
 import {
   Dialog,
   DialogContent,
@@ -16,16 +15,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from '../../../components/ui/dialog';
-import { Calendar, Users, MessageSquare, Loader2, Bot, Users2, GraduationCap } from 'lucide-react';
+import { Calendar, Users, MessageSquare, Loader2, Bot, Users2 } from 'lucide-react';
 import CodeEditer from '../../assets/img/CodeEditer.png';
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 
 export default function Practice() {
   const navigate = useNavigate();
   const [isSearching, setIsSearching] = useState(false);
-  const [isModalOpen, setIsModalOpen] = useState(false); // Trạng thái đóng mở bảng chọn
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const userStore = localStorage.getItem('user');
   const user = userStore ? JSON.parse(userStore) : null;
@@ -44,7 +42,6 @@ export default function Practice() {
             </p>
 
             <div className="flex flex-wrap gap-4">
-              {/* NÚT MỞ MODAL */}
               <Button
                 size="lg"
                 className={`px-8 h-12 text-white transition-all ${isSearching ? 'bg-orange-500' : 'bg-indigo-600 hover:bg-indigo-700'}`}
@@ -54,10 +51,10 @@ export default function Practice() {
                 {isSearching ? (
                   <>
                     <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                    Đang tìm đối phương
+                    Finding partner...
                   </>
                 ) : (
-                  'Chế độ luyện tập'
+                  'Practice Mode'
                 )}
               </Button>
 
@@ -67,7 +64,7 @@ export default function Practice() {
                 className="px-8 h-12"
                 onClick={() => navigate('/solo-ai')}
               >
-                Start an AI interview
+                Schedule with Mentor
               </Button>
             </div>
           </div>
@@ -81,15 +78,15 @@ export default function Practice() {
           </div>
         </section>
 
-        {/* MODAL LỰA CHỌN CHẾ ĐỘ PHỎNG VẤN */}
+        {/* INTERVIEW MODE SELECTION MODAL */}
         <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle className="text-2xl font-bold text-center">
-                Chọn chế độ luyện tập
+                Select Practice Mode
               </DialogTitle>
               <DialogDescription className="text-center">
-                Hãy chọn phương thức phù hợp nhất để nâng cao kỹ năng của bạn.
+                Choose the best method to sharpen your interview skills.
               </DialogDescription>
             </DialogHeader>
             <div className="grid gap-4 py-4">
@@ -102,16 +99,16 @@ export default function Practice() {
                   <Bot size={24} />
                 </div>
                 <div className="flex-1">
-                  <h4 className="font-bold">Solo Interview với AI feedback</h4>
+                  <h4 className="font-bold">Solo Interview with AI Feedback</h4>
                   <p className="text-sm text-muted-foreground">
-                    Luyện tập cá nhân, nhận xét tức thì từ AI.
+                    Practice individually and receive instant feedback from AI.
                   </p>
                 </div>
               </div>
 
-              {/* Option 2: Peer Matching (Giữ luồng cũ) */}
+              {/* Option 2: Peer Matching */}
               <div
-                onClick={() => navigate('/practice/matching')} // Chuyển hướng sang trang riêng
+                onClick={() => navigate('/practice/matching')}
                 className="flex items-center gap-4 p-4 rounded-xl border hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all group"
               >
                 <div className="h-12 w-12 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 group-hover:bg-indigo-200">
@@ -120,23 +117,7 @@ export default function Practice() {
                 <div className="flex-1">
                   <h4 className="font-bold">Peer Matching</h4>
                   <p className="text-sm text-muted-foreground">
-                    Chế độ ghép cặp trực tiếp với ứng viên khác.
-                  </p>
-                </div>
-              </div>
-
-              {/* Option 3: Mentor */}
-              <div
-                onClick={() => navigate('/mentors')}
-                className="flex items-center gap-4 p-4 rounded-xl border hover:border-indigo-500 hover:bg-indigo-50 cursor-pointer transition-all group"
-              >
-                <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center text-green-600 group-hover:bg-green-200">
-                  <GraduationCap size={24} />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold">Interview with Mentor</h4>
-                  <p className="text-sm text-muted-foreground">
-                    Phỏng vấn 1-1 và nhận lời khuyên từ chuyên gia.
+                    Get matched directly with other candidates for a live session.
                   </p>
                 </div>
               </div>
@@ -144,10 +125,10 @@ export default function Practice() {
           </DialogContent>
         </Dialog>
 
-        {/* ... (Các phần HOW IT WORKS, TESTIMONIALS, FAQ GIỮ NGUYÊN) ... */}
+        {/* HOW IT WORKS */}
         <section className="py-20 px-8 max-w-7xl mx-auto">
           <h2 className="text-center text-3xl font-bold mb-16">How it works</h2>
-          <div className="grid md:cols-3 gap-12">
+          <div className="grid md:grid-cols-3 gap-12">
             {[
               {
                 title: 'Schedule a time',
@@ -176,6 +157,7 @@ export default function Practice() {
           </div>
         </section>
 
+        {/* TESTIMONIALS */}
         <section className="py-20 bg-indigo-600 text-white px-8 text-center">
           <div className="max-w-4xl mx-auto space-y-8">
             <h2 className="text-3xl font-bold">Join thousands of candidates landing dream jobs</h2>
@@ -207,6 +189,7 @@ export default function Practice() {
           </div>
         </section>
 
+        {/* FAQ */}
         <section className="py-20 px-8 max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold mb-8">Frequently asked questions</h2>
           <Accordion type="single" collapsible className="w-full">
