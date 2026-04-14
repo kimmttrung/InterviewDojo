@@ -20,18 +20,21 @@ const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
   ];
 
   useEffect(() => {
-    // 1. Khởi tạo socket
-    socketRef.current = io('http://localhost:3000', { query: { userId } });
+    if (!userId) return;
+
+    // 1. Khởi tạo socket từ env
+    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
+      query: { userId },
+    });
 
     // 2. Vào phòng
     socketRef.current.emit('join_room', roomId);
 
-    // Lắng nghe ĐÚNG tên sự kiện từ Backend gửi về
+    // 3. Listen events
     socketRef.current.on('receive_code', (newCode: string) => {
       setCode(newCode);
     });
 
-    // 1. Lắng nghe sự kiện đổi ngôn ngữ từ đối phương
     socketRef.current.on('receive_language', (langId: string) => {
       setSelectedLang(langId);
     });
