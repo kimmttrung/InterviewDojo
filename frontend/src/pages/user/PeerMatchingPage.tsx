@@ -4,6 +4,7 @@ import { io } from 'socket.io-client';
 import { Layout } from '../../../components/Layout';
 import { Button } from '../../../components/ui/button';
 import { Loader2, Users, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
+import { matchingService } from '../../../services/matching.service';
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();
@@ -28,7 +29,10 @@ export default function PeerMatchingPage() {
   // Socket logic for listening to match results
   useEffect(() => {
     if (!user) return;
-    const socket = io('http://localhost:3000', { query: { userId: user.id } });
+
+    const socket = io(import.meta.env.VITE_SOCKET_URL, {
+      query: { userId: user.id },
+    });
 
     socket.on('match_found', (data: { roomId: string; token: string }) => {
       setIsSearching(false);
@@ -45,19 +49,18 @@ export default function PeerMatchingPage() {
     setIsSearching(true);
 
     try {
-      const response = await fetch('http://localhost:3000/api/v1/matching/join', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId: user.id, level: 'Junior' }),
+      const { data } = await matchingService.join({
+        userId: user.id,
+        level: 'Junior',
       });
-      const result = await response.json();
-      if (result.status === 'matched') {
-        navigate(`/interview/${result.roomId}?token=${result.token}`);
+
+      if (data.status === 'matched') {
+        navigate(`/interview/${data.roomId}?token=${data.token}`);
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setIsSearching(false);
-      alert('Server connection error!');
+      alert(error?.response?.data?.message || 'Server error');
     }
   };
 
