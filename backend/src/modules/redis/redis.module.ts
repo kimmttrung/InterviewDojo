@@ -7,9 +7,9 @@ import Redis from 'ioredis';
     {
       provide: 'REDIS_CLIENT',
       useFactory: () => {
-        return new Redis({
-          host: process.env.REDIS_HOST || 'localhost',
-          port: Number(process.env.REDIS_PORT) || 6379,
+        return new Redis(process.env.REDIS_URL as string, {
+          tls: {},
+          maxRetriesPerRequest: null,
         });
       },
     },
@@ -17,8 +17,7 @@ import Redis from 'ioredis';
   exports: ['REDIS_CLIENT'],
 })
 export class RedisModule implements OnModuleDestroy {
-  constructor() {}
   onModuleDestroy() {
-    // Tắt kết nối Redis khi app tắt
+    // optional: đóng connection nếu muốn
   }
 }
