@@ -13,7 +13,7 @@ import * as path from 'path';
 import { promisify } from 'util';
 import { execFile } from 'child_process';
 import ffmpegPath from 'ffmpeg-static';
-import OpenAI from 'openai';
+import Groq from 'groq-sdk';
 
 const execFileAsync = promisify(execFile);
 
@@ -26,20 +26,19 @@ type FeedbackResult = {
 
 @Injectable()
 export class AiAnalysisService {
-  private readonly openai: OpenAI;
+  private readonly groq: Groq;
 
   constructor(
     private readonly configService: ConfigService,
     private readonly prisma: PrismaService,
   ) {
-    const apiKey = this.configService.get<string>('OPENROUTER_API_KEY');
+    const apiKey = this.configService.get<string>('GROQ_API_KEY');
     if (!apiKey) {
-      throw new Error('Missing OPENROUTER_API_KEY');
+      throw new Error('Missing GROQ_API_KEY');
     }
 
-    this.openai = new OpenAI({
+    this.groq = new Groq({
       apiKey,
-      baseURL: 'https://openrouter.ai/api/v1',
     });
   }
 
@@ -110,8 +109,21 @@ export class AiAnalysisService {
     let wavPath: string | null = null;
 
     try {
+      console.log('audioUrl:', audioUrl);
+
       inputPath = await this.downloadAudioToTempFile(audioUrl);
+      console.log('inputPath:', inputPath);
+      console.log(
+        'input size:',
+        inputPath && fs.existsSync(inputPath) ? fs.statSync(inputPath).size : 0,
+      );
+
       wavPath = await this.convertToWav(inputPath);
+      console.log('wavPath:', wavPath);
+      console.log(
+        'wav size:',
+        wavPath && fs.existsSync(wavPath) ? fs.statSync(wavPath).size : 0,
+      );
 
       const wavBuffer = fs.readFileSync(wavPath);
 
@@ -140,6 +152,10 @@ export class AiAnalysisService {
         },
       );
 
+      console.log('Azure result reason:', result.reason);
+      console.log('Azure result text:', result.text);
+      console.log('Azure result errorDetails:', result.errorDetails);
+
       if (result.reason === sdk.ResultReason.RecognizedSpeech) {
         const transcript = result.text?.trim() ?? '';
         if (!transcript) {
@@ -149,11 +165,16 @@ export class AiAnalysisService {
       }
 
       if (result.reason === sdk.ResultReason.NoMatch) {
+        console.error('Azure NoMatch:', {
+          reason: result.reason,
+          text: result.text,
+          errorDetails: result.errorDetails,
+        });
         throw new BadRequestException('Không nhận diện được giọng nói');
       }
 
       throw new InternalServerErrorException(
-        `Azure Speech thất bại, reason=${String(result.reason)}`,
+        `Azure Speech thất bại, reason=${String(result.reason)}, errorDetails=${result.errorDetails ?? 'N/A'}`,
       );
     } catch (error) {
       console.error('Azure STT error:', error);
@@ -183,63 +204,157 @@ export class AiAnalysisService {
     }
 
     const prompt = `
-You are an interview evaluator.
+  Bạn là một Senior Software Engineer có hơn 10 năm kinh nghiệm phỏng vấn kỹ thuật, đánh giá ứng viên và hướng dẫn người mới.
 
-Question:
-${question || 'Tell me about yourself'}
+  Nhiệm vụ của bạn:
+  - Đánh giá câu trả lời của ứng viên như một interviewer giàu kinh nghiệm.
+  - Nhận xét phải thực tế, sắc bén, có chiều sâu và mang tính hướng dẫn.
+  - Không nhận xét chung chung, không khen cho có, không chấm điểm dễ dãi.
+  - Mỗi nhận xét phải bám sát nội dung câu trả lời của ứng viên.
 
-Answer:
-${transcript}
+  Câu hỏi phỏng vấn:
+  ${question || 'Hãy giới thiệu về bản thân'}
 
-Return ONLY valid JSON in this format:
-{
-  "overallScore": number,
-  "strengths": string[],
-  "weaknesses": string[],
-  "suggestions": string[]
-}
-`.trim();
+  Câu trả lời của ứng viên:
+  ${transcript}
+
+  Tiêu chí đánh giá:
+  1. Mức độ trả lời đúng trọng tâm câu hỏi
+  2. Độ rõ ràng, mạch lạc và logic
+  3. Khả năng diễn đạt và thuyết phục
+  4. Mức độ cụ thể, có ví dụ hay không
+  5. Tư duy kỹ thuật hoặc tư duy giải quyết vấn đề (nếu có)
+
+  Chấm điểm overallScore theo thang 0 đến 10, chia thành đúng 4 mức:
+  - Mức 1 (0 đến 2): Rất yếu — câu trả lời lạc đề, rời rạc, rất khó hiểu hoặc gần như không trả lời được câu hỏi
+  - Mức 2 (3 đến 5): Trung bình yếu — có ý liên quan nhưng trả lời còn mơ hồ, thiếu logic, thiếu ví dụ, chưa đủ thuyết phục
+  - Mức 3 (6 đến 8): Khá tốt — trả lời tương đối rõ, có logic, có nội dung phù hợp, nhưng vẫn còn điểm cần cải thiện
+  - Mức 4 (9 đến 10): Rất tốt — trả lời rõ ràng, chặt chẽ, có chiều sâu, có ví dụ phù hợp, thể hiện tư duy tốt và sự chuyên nghiệp
+
+  Yêu cầu đầu ra:
+  - strengths: từ 3 đến 5 ý
+  - weaknesses: từ 3 đến 5 ý
+  - suggestions: từ 3 đến 5 ý
+  - Mỗi ý phải cụ thể, không được quá chung chung
+  - Phải viết hoàn toàn bằng tiếng Việt
+  - Không dùng các câu kiểu như "Cần cải thiện giao tiếp" nếu không nói rõ cần cải thiện như thế nào
+  - Nếu câu trả lời ngắn, mơ hồ, thiếu ví dụ thì không được chấm điểm cao
+  - Nếu transcript có dấu hiệu nhận dạng giọng nói sai hoặc nội dung không rõ, phải nêu rõ điều đó trong phần weaknesses hoặc suggestions
+  - overallScore phải là số nguyên từ 0 đến 10
+
+  Chỉ trả về DUY NHẤT JSON hợp lệ theo đúng format sau:
+  {
+    "overallScore": number,
+    "strengths": string[],
+    "weaknesses": string[],
+    "suggestions": string[]
+  }
+  `.trim();
 
     try {
-      const model =
-        this.configService.get<string>('OPENROUTER_MODEL') || 'openrouter/free';
+      const model = 'llama3-70b-8192';
 
-      const response = await this.openai.chat.completions.create({
-        model,
-        messages: [{ role: 'user', content: prompt }],
+      const response = await this.groq.chat.completions.create({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          {
+            role: 'system',
+            content:
+              'Bạn là một Senior Software Engineer có nhiều năm kinh nghiệm phỏng vấn kỹ thuật. Luôn trả lời bằng tiếng Việt. Luôn đánh giá thẳng thắn, cụ thể, thực tế, có chiều sâu và mang tính hướng dẫn. Luôn trả về JSON hợp lệ đúng format mà người dùng yêu cầu.',
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
       });
 
       const text = response.choices[0]?.message?.content ?? '';
+      console.log('AI raw response:', text);
 
       try {
         const parsed = JSON.parse(text) as FeedbackResult;
-        return {
-          overallScore: Number(parsed.overallScore ?? 7),
-          strengths: Array.isArray(parsed.strengths)
-            ? parsed.strengths
-            : ['Good communication'],
-          weaknesses: Array.isArray(parsed.weaknesses)
-            ? parsed.weaknesses
-            : ['Need more detail'],
-          suggestions: Array.isArray(parsed.suggestions)
-            ? parsed.suggestions
-            : ['Expand your answer more clearly'],
+
+        const rawScore = Number(parsed.overallScore ?? 5);
+        const score = Math.round(Math.max(0, Math.min(10, rawScore)));
+
+        const normalizeItems = (
+          items: unknown,
+          fallback: string[],
+        ): string[] => {
+          if (!Array.isArray(items)) return fallback;
+
+          const cleaned = items
+            .filter((item): item is string => typeof item === 'string')
+            .map((item) => item.trim())
+            .filter((item) => item.length > 0)
+            .slice(0, 5);
+
+          if (cleaned.length >= 3) return cleaned;
+
+          return fallback;
         };
-      } catch {
+
         return {
-          overallScore: 7,
-          strengths: ['Good communication'],
-          weaknesses: ['Need more detail'],
-          suggestions: ['Expand your answer more clearly'],
+          overallScore: score,
+          strengths: normalizeItems(parsed.strengths, [
+            'Câu trả lời có liên quan đến nội dung của câu hỏi.',
+            'Ứng viên thể hiện được một vài điểm mạnh cá nhân tương đối rõ.',
+            'Cách trả lời cho thấy có nhận thức nhất định về bản thân và công việc.',
+          ]),
+          weaknesses: normalizeItems(parsed.weaknesses, [
+            'Câu trả lời vẫn còn thiếu chiều sâu ở một số ý quan trọng.',
+            'Cách diễn đạt chưa thật sự chặt chẽ và mạch lạc ở toàn bộ câu trả lời.',
+            'Chưa đưa ra đủ ví dụ cụ thể để tăng độ thuyết phục.',
+          ]),
+          suggestions: normalizeItems(parsed.suggestions, [
+            'Nên trả lời theo cấu trúc rõ ràng hơn, ví dụ mở ý, triển khai ý và chốt ý.',
+            'Nên bổ sung ví dụ thực tế từ dự án, công việc hoặc trải nghiệm cá nhân.',
+            'Nên diễn đạt ngắn gọn hơn ở từng ý nhưng làm rõ được trọng tâm.',
+          ]),
+        };
+      } catch (parseError) {
+        console.error('Parse AI JSON failed:', parseError);
+
+        return {
+          overallScore: 5,
+          strengths: [
+            'Câu trả lời có liên quan đến câu hỏi được đặt ra.',
+            'Ứng viên đã cố gắng trình bày quan điểm cá nhân.',
+            'Nội dung có thể hiện một số ý phù hợp với bối cảnh phỏng vấn.',
+          ],
+          weaknesses: [
+            'Kết quả phản hồi từ AI chưa được chuẩn hóa hoàn toàn về định dạng.',
+            'Nội dung phân tích chưa được trích xuất đầy đủ do lỗi parse JSON.',
+            'Một số nhận xét chi tiết có thể đã bị mất trong quá trình xử lý kết quả.',
+          ],
+          suggestions: [
+            'Nên thử lại để hệ thống sinh phản hồi ổn định và đầy đủ hơn.',
+            'Có thể ghi âm rõ ràng hơn để tăng chất lượng transcript đầu vào.',
+            'Nên tiếp tục trả lời theo cấu trúc rõ ràng và có ví dụ minh họa cụ thể.',
+          ],
         };
       }
     } catch (error) {
       console.error('AI analyze error:', error);
+
       return {
-        overallScore: 6,
-        strengths: ['Basic answer'],
-        weaknesses: ['Lack of detail'],
-        suggestions: ['Expand your ideas with more examples'],
+        overallScore: 4,
+        strengths: [
+          'Ứng viên đã đưa ra câu trả lời thay vì bỏ trống.',
+          'Nội dung vẫn có một phần liên quan đến câu hỏi.',
+          'Có cơ sở để tiếp tục cải thiện chất lượng câu trả lời ở lần sau.',
+        ],
+        weaknesses: [
+          'Hệ thống AI chưa phân tích sâu được câu trả lời trong lần này.',
+          'Kết quả hiện tại có thể chưa phản ánh đầy đủ chất lượng thực tế của ứng viên.',
+          'Phản hồi chi tiết bị giới hạn do lỗi trong quá trình gọi mô hình.',
+        ],
+        suggestions: [
+          'Hãy thử lại với câu trả lời rõ ràng, mạch lạc và chậm hơn.',
+          'Nên bổ sung ví dụ thực tế để tăng tính thuyết phục cho câu trả lời.',
+          'Nên kiểm tra chất lượng âm thanh để transcript chính xác hơn.',
+        ],
       };
     }
   }
