@@ -17,7 +17,7 @@ import { Messages } from '@/common/constants/messages.constant';
 @Controller('coding')
 @UseGuards(JwtAuthGuard)
 export class CodingController {
-  constructor(private readonly codingService: CodingService) {}
+  constructor(private readonly codingService: CodingService) { }
 
   @Post('submit')
   @ResponseMessage(Messages.CODING.SUBMIT_SUCCESS)
@@ -57,5 +57,11 @@ export class CodingController {
   @ResponseMessage(Messages.CODING.TESTCASE_ADDED)
   async addTestCase(@Param('id') id: string, @Body() dto: CreateTestCaseDto) {
     return this.codingService.addTestCase(+id, dto);
+  }
+
+  @Get('questions')
+  @ResponseMessage(Messages.CODING.QUESTION_FETCHED) // Hoặc tạo message mới: Messages.CODING.ALL_QUESTIONS_FETCHED
+  async getAllQuestions() {
+    return this.codingService.getAllQuestions();
   }
 }

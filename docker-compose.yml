@@ -1,9 +1,12 @@
-version: '3.8'
+# version: '3.8'
+# services:
+#   redis:
+#     image: redis:alpine
+#     container_name: interview_dojo_redis
+#     ports:
+#       - "6379:6379"
+#     restart: always
 
+# Hoặc giữ file trống nếu chỉ dùng Redis cloud
+version: '3.8'
 services:
-  redis:
-    image: redis:alpine
-    container_name: interview_dojo_redis
-    ports:
-      - "6379:6379" # Cổng trên máy bạn : Cổng trong Docker
-    restart: always
