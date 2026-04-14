@@ -19,7 +19,8 @@ import { BullModule } from '@nestjs/bullmq';
 import { bullConfig } from './config/bull.config';
 import { CategoriesModule } from './modules/categories/categories.module';
 import { CompaniesModule } from './modules/companies/companies.module';
-
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -57,6 +58,9 @@ import { CompaniesModule } from './modules/companies/companies.module';
     CompaniesModule,
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [AppService, {
+      provide: APP_INTERCEPTOR,
+      useClass: TransformInterceptor, // NestJS tự inject Reflector
+    }],
 })
 export class AppModule { }
