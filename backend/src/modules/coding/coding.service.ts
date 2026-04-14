@@ -13,7 +13,12 @@ export class CodingService {
     @InjectQueue('code-execution') private executionQueue: Queue,
   ) { }
 
-  async submitCode(userId: number, codingQuestionId: number, languageId: string, sourceCode: string) {
+  async submitCode(
+    userId: number,
+    codingQuestionId: number,
+    languageId: string,
+    sourceCode: string,
+  ) {
     const question = await this.prisma.codingQuestion.findUnique({
       where: { id: codingQuestionId },
       include: { testCases: true },
@@ -40,7 +45,7 @@ export class CodingService {
       submissionId: submission.id,
       languageId: Number(languageId),
       sourceCode,
-      testCases: question.testCases.map(tc => ({
+      testCases: question.testCases.map((tc) => ({
         id: tc.id,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
@@ -70,7 +75,7 @@ export class CodingService {
             orderBy: { submittedAt: 'desc' },
             take: 5,
           }
-          : false,   // không lấy submissions nếu không có userId
+          : false, // không lấy submissions nếu không có userId
       },
     });
   }
@@ -113,6 +118,18 @@ export class CodingService {
         order: dto.order ?? 0,
         explanation: dto.explanation,
       },
+    });
+  }
+
+  async getAllQuestions() {
+    return this.prisma.codingQuestion.findMany({
+      where: { isPublished: true }, // Chỉ lấy các câu hỏi đã public
+      include: {
+        testCases: {
+          orderBy: { order: 'asc' },
+        },
+      },
+      orderBy: { createdAt: 'desc' }, // Sắp xếp mới nhất lên đầu
     });
   }
 }
