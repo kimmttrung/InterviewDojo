@@ -3,6 +3,8 @@ import { PrismaService } from '@/prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { SubmissionStatus } from '@prisma/client';
+import { CreateCodingQuestionDto } from './dto/create-coding-question.dto';
+import { CreateTestCaseDto } from './dto/create-test-case.dto';
 
 @Injectable()
 export class CodingService {
@@ -80,5 +82,37 @@ export class CodingService {
       '63': 'javascript',
     };
     return map[id] || 'unknown';
+  }
+
+  async createCodingQuestion(dto: CreateCodingQuestionDto) {
+    return this.prisma.codingQuestion.create({
+      data: {
+        title: dto.title,
+        slug: dto.slug,
+        description: dto.description,
+        difficulty: dto.difficulty,
+        tags: dto.tags || [],
+        constraints: dto.constraints,
+        hints: dto.hints || [],
+        timeLimit: dto.timeLimit || 2000,
+        memoryLimit: dto.memoryLimit || 256000,
+        isPublished: true,
+      },
+    });
+  }
+
+  async addTestCase(codingQuestionId: number, dto: CreateTestCaseDto) {
+    return this.prisma.testCase.create({
+      data: {
+        codingQuestionId,
+        input: dto.input,
+        expectedOutput: dto.expectedOutput,
+        isSample: dto.isSample ?? false,
+        isHidden: dto.isHidden ?? false,
+        points: dto.points ?? 1,
+        order: dto.order ?? 0,
+        explanation: dto.explanation,
+      },
+    });
   }
 }
