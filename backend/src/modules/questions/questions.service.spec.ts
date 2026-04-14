@@ -8,6 +8,7 @@ import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Difficulty, TypeQuestion } from '@prisma/client';
 
 /* eslint-disable @typescript-eslint/unbound-method */
+/* eslint-disable prettier/prettier */
 
 describe('QuestionsService', () => {
   let service: QuestionsService;

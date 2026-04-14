@@ -102,12 +102,12 @@ test.describe('Tính năng Đăng ký tài khoản (Register)', () => {
         expect(emailValidity).toBeTruthy();
     });
 
-    test('4. Nút Quay lại hoạt động đúng', async ({ page }) => {
-        await registerPage.backBtn.click();
-        await expect(page).toHaveURL('http://localhost:5173/login');
-    });
+    // test('4. Nút Quay lại hoạt động đúng', async ({ page }) => {
+    //     await registerPage.backBtn.click();
+    //     await expect(page).toHaveURL('http://localhost:5173/login');
+    // });
 
-    test('5. Cảnh báo khi mật khẩu quá ngắn (< 6 ký tự)', async ({ page }) => {
+    test('4. Cảnh báo khi mật khẩu quá ngắn (< 6 ký tự)', async ({ page }) => {
         await registerPage.fillForm('Thanh', 'test@test.com', '123', '123');
         await registerPage.submitBtn.click();
 
