@@ -6,8 +6,6 @@ import {
   Mic,
   MicOff,
   StopCircle,
-  Play,
-  Save,
   RefreshCcw,
   ArrowLeft,
   Loader2,
@@ -97,6 +95,14 @@ export default function SoloRecording() {
     }
   };
 
+  const handleTryAgain = () => {
+    setStep('setup');
+    setSeconds(0);
+    setPreviewUrl(null);
+    setAnalysisResult(null);
+    chunksRef.current = [];
+  };
+
   const handleStartInterview = async () => {
     setStep('recording');
     await initCamera();
@@ -128,7 +134,16 @@ export default function SoloRecording() {
   };
 
   const handleUploadAndAnalyze = async () => {
-    if (!user) return alert('Please log in to continue');
+    if (!user) {
+      alert('Please log in to continue');
+      return;
+    }
+
+    if (!chunksRef.current.length) {
+      alert('No recording found.');
+      return;
+    }
+
     setIsUploading(true);
 
     try {
@@ -144,24 +159,41 @@ export default function SoloRecording() {
         method: 'POST',
         body: formData,
       });
+
+      if (!uploadRes.ok) {
+        throw new Error('Upload failed');
+      }
+
       const uploadData = await uploadRes.json();
+
+      const recordingId = uploadData?.data?.id ?? uploadData?.id;
+      if (!recordingId) {
+        throw new Error('Recording ID not found');
+      }
 
       const analyzeFormData = new FormData();
       analyzeFormData.append('file', file);
       analyzeFormData.append('question', selectedQuestion);
 
       const analyzeRes = await fetch(
-        `http://localhost:3000/api/v1/solo-recordings/${uploadData.data.id}/analyze`,
+        `http://localhost:3000/api/v1/solo-recordings/${recordingId}/analyze`,
         {
           method: 'POST',
           body: analyzeFormData,
         },
       );
+
+      if (!analyzeRes.ok) {
+        throw new Error('Analyze failed');
+      }
+
       const finalResult = await analyzeRes.json();
+      console.log('finalResult =', finalResult);
 
       setAnalysisResult(finalResult.data);
       setStep('analysis');
     } catch (err) {
+      console.error(err);
       alert('AI analysis failed. Please try again.');
     } finally {
       setIsUploading(false);
@@ -317,7 +349,7 @@ export default function SoloRecording() {
               />
 
               <div className="grid grid-cols-2 gap-4">
-                <Button variant="outline" className="h-14 text-lg" onClick={() => setStep('setup')}>
+                <Button variant="outline" className="h-14 text-lg" onClick={handleTryAgain}>
                   <RefreshCcw className="mr-2" size={20} /> Try Again
                 </Button>
                 <Button
@@ -356,14 +388,14 @@ export default function SoloRecording() {
                       <CheckCircle2 className="text-green-500" size={20} /> Speech Transcript
                     </h3>
                     <p className="text-slate-600 leading-relaxed italic text-lg">
-                      "{analysisResult.transcript}"
+                      "{analysisResult?.transcript || 'No transcript available'}"
                     </p>
                   </Card>
 
                   <Card className="p-6">
                     <h3 className="text-lg font-bold mb-4">Actionable Suggestions</h3>
                     <div className="space-y-3">
-                      {analysisResult.analysis.suggestions.map((s: string, i: number) => (
+                      {(analysisResult?.analysis?.suggestions || []).map((s: string, i: number) => (
                         <div
                           key={i}
                           className="flex gap-4 p-4 bg-blue-50 text-blue-800 rounded-xl border border-blue-100"
@@ -382,7 +414,7 @@ export default function SoloRecording() {
                       Overall Quality Score
                     </p>
                     <div className="text-7xl font-black text-indigo-600">
-                      {analysisResult.analysis.overallScore}
+                      {analysisResult?.analysis?.overallScore ?? 0}
                       <span className="text-2xl text-slate-300">/10</span>
                     </div>
                   </Card>
@@ -392,7 +424,7 @@ export default function SoloRecording() {
                       <Zap className="fill-green-700" size={16} /> Key Strengths
                     </h4>
                     <ul className="space-y-3">
-                      {analysisResult.analysis.strengths.map((s: string, i: number) => (
+                      {(analysisResult?.analysis?.strengths || []).map((s: string, i: number) => (
                         <li key={i} className="text-sm text-green-800 flex items-start gap-3">
                           <div className="mt-1 h-2 w-2 rounded-full bg-green-500 shrink-0" /> {s}
                         </li>
@@ -405,7 +437,7 @@ export default function SoloRecording() {
                       <AlertCircle size={16} /> Improvement Areas
                     </h4>
                     <ul className="space-y-3">
-                      {analysisResult.analysis.weaknesses.map((s: string, i: number) => (
+                      {(analysisResult?.analysis?.weaknesses || []).map((s: string, i: number) => (
                         <li key={i} className="text-sm text-red-800 flex items-start gap-3">
                           <div className="mt-1 h-2 w-2 rounded-full bg-red-400 shrink-0" /> {s}
                         </li>
@@ -419,10 +451,10 @@ export default function SoloRecording() {
                 <Button
                   size="lg"
                   className="bg-indigo-600 px-16 h-14 text-lg"
-                  onClick={() => setStep('setup')}
+                  onClick={handleTryAgain}
                 >
                   Practice Another Question
-                </Button>
+                </Button> 
               </div>
             </div>
           )}

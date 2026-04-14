@@ -85,6 +85,17 @@ export class AiAnalysisService {
     return outputPath;
   }
 
+  async getSoloRecordingAnalysis(recordingId: number) {
+    return this.prisma.aiAnalysis.findUnique({
+      where: {
+        soloRecordingId: recordingId,
+      },
+      include: {
+        soloRecording: true,
+      },
+    });
+  }
+
   async transcribeFromAudioUrl(audioUrl: string): Promise<string> {
     const speechKey = this.configService.get<string>('AZURE_SPEECH_KEY');
     const speechRegion = this.configService.get<string>('AZURE_SPEECH_REGION');
