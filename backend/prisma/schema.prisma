@@ -119,7 +119,7 @@ model Question {
   categories   CategoryQuestion[]
   targetRoles  TargetRoleQuestion[]
   companies    QuestionCompany[]
-  sessions     MockSession[]
+  mockSessions MockSessionQuestion[]
   attempts     QuestionAttempt[]
   savedByUsers UserBookmark[]
 
@@ -256,13 +256,36 @@ model MockSession {
   recordingUrl    String?  @map("recording_url")
   meetingLink     String?  @map("meeting_link")
 
-  interviewee User        @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
-  interviewer User        @relation("InterviewerSessions", fields: [interviewerId], references: [id])
-  aiAnalysis  AiAnalysis?
-  feedbacks   Feedback[]
-  questions   Question[]
+  interviewee            User                        @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
+  interviewer            User                        @relation("InterviewerSessions", fields: [interviewerId], references: [id])
+  aiAnalysis             AiAnalysis?
+  feedbacks              Feedback[]
+  sessionQuestions       MockSessionQuestion[]
+  sessionCodingQuestions MockSessionCodingQuestion[]
 
   @@map("mock_sessions")
+}
+
+model MockSessionQuestion {
+  mockSessionId Int @map("mock_session_id")
+  questionId    Int @map("question_id")
+
+  mockSession MockSession @relation(fields: [mockSessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([mockSessionId, questionId])
+  @@map("mock_session_questions")
+}
+
+model MockSessionCodingQuestion {
+  mockSessionId    Int @map("mock_session_id")
+  codingQuestionId Int @map("coding_question_id")
+
+  mockSession    MockSession    @relation(fields: [mockSessionId], references: [id], onDelete: Cascade)
+  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
+
+  @@id([mockSessionId, codingQuestionId])
+  @@map("mock_session_coding_questions")
 }
 
 model Feedback {
@@ -355,6 +378,9 @@ model CodingQuestion {
   slug           String     @unique
   description    String
   difficulty     Difficulty
+  tags           String[] // ["array", "dp", "two-pointers"]
+  constraints    String?
+  hints          String[]
   timeLimit      Int        @default(2000) @map("time_limit") // ms
   memoryLimit    Int        @default(256000) @map("memory_limit") // KB
   codeforcesLink String?    @map("codeforces_link")
@@ -368,6 +394,7 @@ model CodingQuestion {
   targetRoles  CodingTargetRoleQuestion[]
   companies    CodingQuestionCompany[]
   savedByUsers CodingQuestionBookmark[]
+  mockSessions MockSessionCodingQuestion[]
 
   @@map("coding_questions")
 }
@@ -377,9 +404,11 @@ model TestCase {
   codingQuestionId Int     @map("coding_question_id")
   input            String
   expectedOutput   String  @map("expected_output")
-  isSample         Boolean @default(false) @map("is_sample") // true = hiển thị cho user
+  isSample         Boolean @default(false) @map("is_sample")
+  isHidden         Boolean @default(false) // test ẩn hoàn toàn
   points           Float   @default(1)
   order            Int     @default(0)
+  explanation      String? // giải thích khi sai
 
   codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
 
