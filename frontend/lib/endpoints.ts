@@ -38,5 +38,8 @@ export const API_ENPOINT = {
         CREATE: '/companies',
         UPDATE: (id: number) => `/companies/${id}`,
         DELETE: (id: number) => `/companies/${id}`,
-    }
+    },
+    MATCHING: {
+        JOIN: '/matching/join',
+    },
 }

@@ -18,6 +18,7 @@ import {
 import { Button } from '../../../components/ui/button';
 import { Card } from '../../../components/ui/card';
 import { Layout } from '../../../components/Layout';
+import { soloRecordingService } from '../../../services/solo-recording.service';
 
 const MOCK_QUESTIONS = [
   'Tell me about yourself',
@@ -140,28 +141,21 @@ export default function SoloRecording() {
       formData.append('userId', String(user.id));
       formData.append('duration', String(seconds));
 
-      const uploadRes = await fetch('http://localhost:3000/api/v1/solo-recordings/upload', {
-        method: 'POST',
-        body: formData,
-      });
-      const uploadData = await uploadRes.json();
+      // ✅ upload
+      const uploadRes = await soloRecordingService.upload(formData);
+      const uploadData = uploadRes.data;
 
+      // ✅ analyze
       const analyzeFormData = new FormData();
       analyzeFormData.append('file', file);
       analyzeFormData.append('question', selectedQuestion);
 
-      const analyzeRes = await fetch(
-        `http://localhost:3000/api/v1/solo-recordings/${uploadData.data.id}/analyze`,
-        {
-          method: 'POST',
-          body: analyzeFormData,
-        },
-      );
-      const finalResult = await analyzeRes.json();
+      const analyzeRes = await soloRecordingService.analyze(uploadData.data.id, analyzeFormData);
 
-      setAnalysisResult(finalResult.data);
+      setAnalysisResult(analyzeRes.data.data);
       setStep('analysis');
     } catch (err) {
+      console.error(err);
       alert('AI analysis failed. Please try again.');
     } finally {
       setIsUploading(false);
