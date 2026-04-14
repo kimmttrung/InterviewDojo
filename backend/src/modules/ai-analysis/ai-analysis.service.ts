@@ -273,7 +273,19 @@ export class AiAnalysisService {
       console.log('AI raw response:', text);
 
       try {
-        const parsed = JSON.parse(text) as FeedbackResult;
+        const cleanText = text.replace(/```json|```/gi, '').trim();
+
+        const start = cleanText.indexOf('{');
+        const end = cleanText.lastIndexOf('}');
+
+        if (start === -1 || end === -1 || end <= start) {
+          throw new Error('Không tìm thấy JSON hợp lệ trong phản hồi của AI');
+        }
+
+        const jsonText = cleanText.slice(start, end + 1);
+        console.log('AI cleaned JSON:', jsonText);
+
+        const parsed = JSON.parse(jsonText) as FeedbackResult;
 
         const rawScore = Number(parsed.overallScore ?? 5);
         const score = Math.round(Math.max(0, Math.min(10, rawScore)));
