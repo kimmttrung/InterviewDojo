@@ -1,5 +1,4 @@
   import { useEffect, useRef, useState } from 'react';
-  import { useNavigate } from 'react-router-dom';
   import {
     Camera,
     CameraOff,
@@ -17,16 +16,16 @@
   import { Card } from '../../../components/ui/card';
   import { Layout } from '../../../components/Layout';
 
+
   const MOCK_QUESTIONS = [
-    'Tell me about yourself',
-    'What are your strengths and weaknesses?',
-    'Why do you want to work at this company?',
-    'Describe a difficult technical challenge you faced.',
-    'Where do you see yourself in 5 years?',
+    'Giới thiệu về bản thân bạn.',
+    'Điểm yếu và mạnh của bạn là gì?',
+    'Tại sao bạn muốn làm việc tại công ty này?',
+    'Mô tả một thách thức kỹ thuật khó khăn mà bạn đã đối mặt.',
+    'Trong 5 năm tới, bạn sẽ phát triển như thế nào?',
   ];
 
   export default function SoloRecording() {
-    const navigate = useNavigate();
     const [step, setStep] = useState<'setup' | 'recording' | 'preview' | 'analysis'>('setup');
 
     // Refs & Media
