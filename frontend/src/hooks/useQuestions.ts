@@ -2,6 +2,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Question, QuestionAPI, TheoryQuestion } from '../types/interview';
 import { api } from '../../lib/api';
+import { codingService } from '../../services/coding.service';
 
 const THEORY_QUESTIONS: TheoryQuestion[] = [
   {
@@ -37,9 +38,9 @@ export function useQuestions() {
 
   const fetchQuestions = useCallback(async () => {
     try {
-      const response = await api.get('/coding/questions');
-      const questions = response.data.data || response.data;
-      console.log('check quess', questions);
+      const response = await codingService.getAllQuestions();   // ← sửa dòng này
+      const questions = response.data || response;
+      console.log('check questions', questions);
       setCodingQuestions(questions);
     } catch (error) {
       console.error('Lỗi tải danh sách câu hỏi:', error);
