@@ -125,6 +125,7 @@
       (window as any).recordingTimer = timer;
     };
 
+
     const handleStopRecording = () => {
       mediaRecorderRef.current?.stop();
       clearInterval((window as any).recordingTimer);
