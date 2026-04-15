@@ -1,16 +1,21 @@
 // src/pages/user/CodeEditor.tsx
 import React, { useEffect, useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
-import axios from 'axios';
 import { io, Socket } from 'socket.io-client';
-import { codeEngineService } from '../../../services/code-engine.service';
-const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
+import { api } from '../../../lib/api';   // dùng api instance của bạn
+
+interface CodeEditorProps {
+  roomId: string;
+  userId: string;
+  currentQuestion: any;        // Question từ useQuestions
+}
+
+const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
   const [code, setCode] = useState('// Viết code tại đây...');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState('63');
 
-  // Sử dụng useRef để giữ instance của socket không bị khởi tạo lại khi re-render
   const socketRef = useRef<Socket | null>(null);
 
   const languages = [
@@ -19,29 +24,16 @@ const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
     { name: 'C++', value: '54', monaco: 'cpp' },
   ];
 
+  // ====================== SOCKET ======================
   useEffect(() => {
     if (!userId) return;
 
-    // 1. Khởi tạo socket từ env
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
-      query: { userId },
-    });
-
-    // 2. Vào phòng
+    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, { query: { userId } });
     socketRef.current.emit('join_room', roomId);
 
-    // 3. Listen events
-    socketRef.current.on('receive_code', (newCode: string) => {
-      setCode(newCode);
-    });
-
-    socketRef.current.on('receive_language', (langId: string) => {
-      setSelectedLang(langId);
-    });
-
-    socketRef.current.on('receive_run_result', (result: any) => {
-      setOutput(result);
-    });
+    socketRef.current.on('receive_code', (newCode: string) => setCode(newCode));
+    socketRef.current.on('receive_language', (langId: string) => setSelectedLang(langId));
+    socketRef.current.on('receive_run_result', (result: string) => setOutput(result));
 
     return () => {
       socketRef.current?.disconnect();
@@ -51,89 +43,103 @@ const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
   const handleEditorChange = (value: string | undefined) => {
     const newCode = value || '';
     setCode(newCode);
-
-    if (socketRef.current) {
-      // Gửi ĐÚNG tên sự kiện mà Backend đang đợi (@SubscribeMessage)
-      socketRef.current.emit('send_code', { roomId, code: newCode });
-    }
+    socketRef.current?.emit('send_code', { roomId, code: newCode });
   };
-  // 2. Tạo hàm xử lý khi chính mình đổi ngôn ngữ
+
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLangId = e.target.value;
     setSelectedLang(newLangId);
-
-    // Gửi lên server để đồng bộ cho đối phương
-    if (socketRef.current) {
-      socketRef.current.emit('send_language', {
-        roomId,
-        languageId: newLangId,
-      });
-    }
+    socketRef.current?.emit('send_language', { roomId, languageId: newLangId });
   };
 
-  const runCode = async () => {
-    if (!code.trim()) return;
+  // ====================== SUBMIT CODE ======================
+  const submitCode = async () => {
+    if (!code.trim() || !currentQuestion) {
+      setOutput('❌ Vui lòng chọn câu hỏi và viết code trước');
+      return;
+    }
 
     setLoading(true);
-    setOutput('🚀 Đang thực thi mã...');
+    setOutput('📤 Đang nộp bài...');
 
     try {
-      const response = await codeEngineService.runCode({
-        code,
+      const payload = {
+        codingQuestionId: currentQuestion.id,
         languageId: selectedLang,
-      });
+        sourceCode: code,
+      };
 
-      const res = response.data.data;
-      console.log('check res', res);
+      const response = await api.post('/coding/submit', payload);
+      const submission = response.data.data || response.data;
 
-      let finalDisplay = '';
+      setOutput(`✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`);
 
-      // 1. Kiểm tra lỗi biên dịch trước (Nếu có nội dung)
-      if (res.compile_output && res.compile_output.trim() !== '') {
-        finalDisplay = `❌ COMPILE ERROR:\n${res.compile_output}`;
-      }
-      // 2. Kiểm tra lỗi Runtime (Nếu có nội dung)
-      else if (res.stderr && res.stderr.trim() !== '') {
-        finalDisplay = `⚠️ RUNTIME ERROR:\n${res.stderr}`;
-      }
-      // 3. Nếu không lỗi thì hiển thị stdout (Kể cả khi stdout là chuỗi rỗng)
-      else {
-        finalDisplay = res.stdout || '(No output)';
-      }
+      // Bắt đầu polling kết quả
+      pollSubmission(submission.id);
 
-      // 4. Luôn đính kèm thông số hiệu năng bên dưới cho chuyên nghiệp
-      const meta = `\n\n------------------\n✨ Status: ${res.status} | ⏱️ ${res.time}s | 💾 ${res.memory}KB`;
-      console.log('check finalDisplay', finalDisplay);
-      const outputWithMeta = finalDisplay + meta;
-      console.log('check outputWithMeta', outputWithMeta);
-      // Cập nhật UI
-      setOutput(outputWithMeta);
-      console.log('check', output);
-
-      // Gửi kết quả cho đối phương qua Socket
-      socketRef.current?.emit('send_run_result', {
-        roomId,
-        result: outputWithMeta,
-      });
     } catch (err: any) {
-      const errorMsg = `❌ System Error: ${err.response?.data?.message || err.message}`;
-      setOutput(errorMsg);
-      socketRef.current?.emit('send_run_result', { roomId, result: errorMsg });
+      const msg = err.response?.data?.message || err.message || 'Lỗi không xác định';
+      setOutput(`❌ Nộp bài thất bại: ${msg}`);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Polling lấy kết quả submission
+  const pollSubmission = (submissionId: number) => {
+    let attempts = 0;
+    const maxAttempts = 25;
+
+    const interval = setInterval(async () => {
+      attempts++;
+      try {
+        const res = await api.get(`/coding/submission/${submissionId}`);
+        const data = res.data.data || res.data;
+
+        let text = `Submission #${submissionId}\n`;
+        text += `Trạng thái: ${data.status}\n`;
+        text += `Điểm: ${data.score || 0}%\n`;
+        text += `Passed: ${data.passedTestCases || 0} / ${data.totalTestCases || '?'}\n`;
+        text += `Thời gian: ${data.executionTime || 0}ms | Memory: ${data.memoryUsed || 0}KB\n`;
+
+        if (data.errorMessage) {
+          text += `\n❌ Error: ${data.errorMessage}`;
+        }
+
+        setOutput(text);
+
+        // Kết thúc polling khi có kết quả cuối
+        if (['ACCEPTED', 'WRONG_ANSWER', 'RUNTIME_ERROR', 'COMPILE_ERROR',
+             'TIME_LIMIT_EXCEEDED', 'MEMORY_LIMIT_EXCEEDED'].includes(data.status)) {
+          clearInterval(interval);
+
+          if (data.status === 'ACCEPTED') {
+            setOutput(prev => prev + '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.');
+          } else {
+            setOutput(prev => prev + `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`);
+          }
+        }
+
+        if (attempts >= maxAttempts) {
+          clearInterval(interval);
+          setOutput(prev => prev + '\n\n⏰ Quá thời gian chờ kết quả.');
+        }
+      } catch (err) {
+        console.error('Poll submission error:', err);
+      }
+    }, 1800); // poll mỗi 1.8 giây
   };
 
   const currentMonacoLang = languages.find((l) => l.value === selectedLang)?.monaco || 'javascript';
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] text-white overflow-hidden">
-      {/* 1. Toolbar giữ nguyên */}
-      <div className="p-2 flex justify-between items-center bg-[#2d2d2d] border-b border-gray-700 z-10">
+      {/* Toolbar */}
+      <div className="p-3 flex gap-3 items-center bg-[#2d2d2d] border-b border-gray-700 z-10">
         <select
-          className="bg-[#3c3c3c] p-1 px-2 rounded border border-gray-600 text-xs outline-none"
+          className="bg-[#3c3c3c] px-3 py-1.5 rounded border border-gray-600 text-sm outline-none"
           value={selectedLang}
-          onChange={handleLanguageChange} // 3. Sử dụng hàm mới ở đây
+          onChange={handleLanguageChange}
         >
           {languages.map((lang) => (
             <option key={lang.value} value={lang.value}>
@@ -141,49 +147,45 @@ const CodeEditor = ({ roomId, userId }: { roomId: string; userId: string }) => {
             </option>
           ))}
         </select>
-        <button onClick={runCode} className="bg-[#28a745] px-4 py-1 rounded text-xs font-bold">
-          {loading ? 'RUNNING...' : '▶ RUN CODE'}
+
+        <button
+          onClick={submitCode}
+          disabled={loading || !currentQuestion}
+          className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 px-6 py-1.5 rounded text-sm font-semibold flex-1"
+        >
+          {loading ? 'ĐANG CHẤM BÀI...' : '🚀 SUBMIT CODE'}
         </button>
       </div>
 
-      {/* 2. VÙNG CHÍNH */}
-      <div className="flex-1 flex flex-col overflow-hidden relative">
-        {/* PHẦN CODE: Tự động co giãn theo khoảng trống còn lại */}
-        <div className="flex-1 min-h-[100px]">
-          <Editor
-            height="100%"
-            theme="vs-dark"
-            language={currentMonacoLang}
-            value={code}
-            onChange={handleEditorChange}
-            options={{ fontSize: 14, minimap: { enabled: false }, automaticLayout: true }}
-          />
-        </div>
-
-        {/* 3. PHẦN CONSOLE: CÓ THỂ KÉO (RESIZE) */}
-        <div
-          className="bg-black border-t-2 border-gray-700 flex flex-col overflow-hidden"
-          style={{
-            height: '30%', // Chiều cao mặc định
-            minHeight: '40px', // Không cho kéo mất tiêu
-            maxHeight: '80%', // Không cho kéo che hết code
-            resize: 'vertical', // ĐÂY LÀ PHÉP MÀU: Cho phép kéo dọc
-            direction: 'ltr', // Đảm bảo thanh kéo nằm bên phải/dưới
+      {/* Editor */}
+      <div className="flex-1 min-h-[200px]">
+        <Editor
+          height="100%"
+          theme="vs-dark"
+          language={currentMonacoLang}
+          value={code}
+          onChange={handleEditorChange}
+          options={{
+            fontSize: 14,
+            minimap: { enabled: false },
+            automaticLayout: true,
+            wordWrap: 'on',
           }}
-        >
-          {/* Thanh tiêu đề Console nhỏ gọn */}
-          <div className="bg-[#252526] px-4 py-1 text-[10px] font-bold text-gray-500 uppercase flex justify-between items-center sticky top-0">
-            <span>Console Output</span>
-            <span className="text-[9px] lowercase opacity-50 italic">
-              (Kéo mép trên để chỉnh độ cao)
-            </span>
-          </div>
+        />
+      </div>
 
-          {/* Nội dung kết quả */}
-          <pre className="p-3 font-mono text-green-500 whitespace-pre-wrap flex-1 overflow-y-auto text-xs italic">
-            {output || '> Waiting for execution...'}
-          </pre>
+      {/* Console Output */}
+      <div
+        className="bg-black border-t-2 border-gray-700 flex flex-col overflow-hidden"
+        style={{ height: '35%', minHeight: '120px', resize: 'vertical' }}
+      >
+        <div className="bg-[#252526] px-4 py-2 text-xs font-bold text-gray-400 flex justify-between">
+          <span>CONSOLE / KẾT QUẢ CHẤM BÀI</span>
+          <span className="opacity-50">(kéo để thay đổi chiều cao)</span>
         </div>
+        <pre className="p-4 font-mono text-sm whitespace-pre-wrap flex-1 overflow-y-auto text-green-400 leading-relaxed">
+          {output || '> Nhấn SUBMIT CODE để nộp bài và xem kết quả...'}
+        </pre>
       </div>
     </div>
   );

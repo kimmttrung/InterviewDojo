@@ -39,7 +39,13 @@ export function WorkspaceTabs({
       </div>
 
       <div className="flex-1 relative overflow-hidden">
-        {workMode === 'code' && <CodeEditor roomId={roomId} userId={userId} />}
+        {workMode === 'code' && (
+          <CodeEditor
+            roomId={roomId}
+            userId={userId}
+            currentQuestion={currentQuestion} // ← Truyền vào đây
+          />
+        )}
         {workMode === 'theory' && (
           <div className="h-full overflow-y-auto p-8 flex justify-center bg-[#fcfcfc]">
             {currentQuestion ? (
