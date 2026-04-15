@@ -140,19 +140,21 @@ export default function SoloRecording() {
       formData.append('file', file);
       formData.append('userId', String(user.id));
       formData.append('duration', String(seconds));
-
+      formData.append('question', selectedQuestion);
+      console.log(formData);
       // ✅ upload
       const uploadRes = await soloRecordingService.upload(formData);
       const uploadData = uploadRes.data;
 
+      console.log(uploadRes);
+      console.log(uploadData);
       // ✅ analyze
       const analyzeFormData = new FormData();
       analyzeFormData.append('file', file);
       analyzeFormData.append('question', selectedQuestion);
+      console.log(uploadRes);
 
-      const analyzeRes = await soloRecordingService.analyze(uploadData.data.id, analyzeFormData);
-
-      setAnalysisResult(analyzeRes.data.data);
+      setAnalysisResult(uploadRes.data.data);
       setStep('analysis');
     } catch (err) {
       console.error(err);
