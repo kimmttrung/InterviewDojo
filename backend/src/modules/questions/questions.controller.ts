@@ -46,6 +46,14 @@ export class QuestionsController {
     };
   }
 
+  @Get(':id')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lấy 1 câu hỏi' })
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.questionsService.findOne(id);
+  }
+
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create new question' })

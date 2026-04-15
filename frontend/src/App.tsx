@@ -30,6 +30,7 @@ import PeerMatchingPage from './pages/user/PeerMatchingPage';
 import QuestionsPage from './pages/admin/QuestionsPage';
 import CategoriesPage from './pages/admin/CategoriesPage';
 import CompaniesPage from './pages/admin/CompaniesPage';
+import QuestionBankDetail from './pages/user/QuestionBankDetail';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -92,6 +93,10 @@ export function App({ queryClient }: AppProps) {
               <Route
                 path="/question-bank"
                 element={<ProtectedRoute element={<QuestionBank />} />}
+              />
+              <Route
+                path="/questions/:id/:slug"
+                element={<ProtectedRoute element={<QuestionBankDetail />} />}
               />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
               <Route
