@@ -144,7 +144,6 @@ export function VideoCallSection() {
   return (
     <div className="bg-black border-b border-slate-200 relative group">
       {/* Video Debug Info */}
-      <VideoDebugInfo />
 
       {/* Loading indicator */}
       {isEnablingDevices && (
