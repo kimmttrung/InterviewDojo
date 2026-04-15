@@ -41,3 +41,6 @@ test-results/
 playwright-report/
 blob-report/
 .auth/
+
+*.secrets
+*event.json

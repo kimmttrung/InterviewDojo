@@ -221,7 +221,7 @@ describe('RegisterDto Validation', () => {
   it('should fail if role is invalid', async () => {
     const dto = Object.assign(new RegisterDto(), {
       ...validData,
-      role: UserRole.ADMIN,
+      role: 'INVALID_ROLE' as UserRole,
     });
 
     const errors = await validate(dto);

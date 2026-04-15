@@ -1,0 +1,130 @@
+name: InterviewDojo CI/CD Pipeline
+
+on:
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  test-and-report:
+    runs-on: ubuntu-latest
+
+    services:
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: 'npm'
+
+      # --- 1. CHUẨN BỊ DATABASE (NEON) ---
+      - name: Create Neon Branch
+        id: create-db-branch
+        uses: neondatabase/create-branch-action@v5
+        with:
+          project_id: ${{ secrets.NEON_PROJECT_ID }}
+          parent_id: main
+          branch_name: test-branch-${{ github.event.pull_request.number || 'local' }}
+          api_key: ${{ secrets.NEON_API_KEY }}
+
+      # --- 2. BACKEND ---
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
+
+      - name: Generate Prisma Client
+        run: |
+          cd backend
+          npx prisma generate
+        env:
+          DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}
+
+      - name: Run Prisma Migrate
+        run: |
+          cd backend
+          npx prisma migrate deploy
+        env:
+          DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}
+
+      - name: Run Backend Unit Tests
+        run: |
+          cd backend
+          npm run test
+        env:
+          DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}
+          REDIS_HOST: localhost
+          REDIS_PORT: 6379
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      # - name: Build Backend
+      #   run: |
+      #     cd backend
+      #     npm run build
+
+      # - name: Start Backend
+      #   run: |
+      #     cd backend
+      #     npm run start:prod &
+      #     sleep 15 # Tăng thêm một chút để chắc chắn server đã lên
+      #   env:
+      #     DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}
+      #     REDIS_HOST: localhost
+      #     REDIS_PORT: 6379
+      #     JWT_SECRET: ${{ secrets.JWT_SECRET }}
+
+      # # Run Frontend
+      # - name: Install Frontend Dependencies
+      #   run: |
+      #     cd frontend
+      #     npm install
+
+      # - name: Start Frontend
+      #   run: |
+      #     cd frontend
+      #     npm run dev &
+      #     npx wait-on http://127.0.0.1:5173 --timeout 60000
+
+      # # --- 3. E2E (PLAYWRIGHT) ---
+      # - name: Install Root Dependencies (Playwright)
+      #   run: npm install
+
+      # - name: Install Playwright Browsers
+      #   run: npx playwright install --with-deps
+
+      # - name: Run E2E Tests
+      #   run: npx playwright test
+      #   continue-on-error: true
+      #   env:
+      #     DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}
+      #     BACKEND_URL: http://localhost:3000
+
+      - name: Delete Neon Branch
+        if: always() 
+        run: |
+          npm install -g neonctl@2
+          BRANCH_NAME="test-branch-${{ github.event.pull_request.number || 'local' }}"
+          neon branch delete --project-id ${{ secrets.NEON_PROJECT_ID }} "$BRANCH_NAME" --api-key ${{ secrets.NEON_API_KEY }} || echo "Cleaned"
+
+      # # --- 5. REPORTING ---
+      # - name: Build Allure Report
+      #   uses: simple-elf/allure-report-action@master
+      #   if: always()
+      #   with:
+      #     allure_results: allure-results
+      #     allure_history: allure-history
+      #     keep_reports: 20
+
+      # - name: Deploy Allure Report to GitHub Pages
+      #   if: always() && env.ACT != 'true'
+      #   uses: peaceiris/actions-gh-pages@v3
+      #   with:
+      #     github_token: ${{ secrets.GITHUB_TOKEN }}
+      #     publish_dir: allure-history
