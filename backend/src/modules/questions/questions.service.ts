@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException  } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
@@ -81,6 +81,37 @@ export class QuestionsService {
       },
     };
   }
+
+  async findOne(id: number) {
+    const question = await this.prisma.question.findUnique({
+      where: {
+        id,
+        isPublished: true, // đảm bảo chỉ lấy câu đã publish
+      },
+      include: {
+        categories: {
+          include: { category: true },
+        },
+        companies: {
+          include: { company: true },
+        },
+        // nếu có answers thì thêm luôn
+        // answers: true,
+      },
+    });
+
+    if (!question) {
+      throw new NotFoundException('Question not found');
+    }
+
+    // format lại giống findAll cho FE dễ dùng
+    return {
+      ...question,
+      categories: question.categories.map((c) => c.category.name),
+      companies: question.companies.map((c) => c.company.name),
+    };
+  }
+
   async create(createDto: CreateQuestionDto) {
     const { categoryIds, companyIds, ...questionData } = createDto;
 

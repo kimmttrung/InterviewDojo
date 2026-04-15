@@ -6,6 +6,7 @@ import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
+import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,6 +38,7 @@ interface Question {
   data?: any;
   categories?: string[];
   companies?: string[];
+  slug?: string;
 }
 
 interface PaginationMeta {
@@ -179,13 +181,15 @@ export default function QuestionBank() {
                   {questions.map((q) => (
                     <QuestionCard
                       key={q.id}
+                      id={q.id} // Bổ sung truyền id
                       title={q.title}
-                      askedAt={q.createdAt || 'Unknown'}
+                      askedAt={q.companies?.[0] || 'Unknown'} // Có thể lấy công ty đầu tiên nếu có
                       timeAgo={q.createdAt ? new Date(q.createdAt).toLocaleDateString() : 'Unknown'}
                       tags={[q.typeQuestion, q.difficulty].filter(Boolean)}
                       answers={q.answersCount || 0}
                       hasVideo={false}
                       codeSnippet={q.data || ''}
+                      slug={q.slug}
                     />
                   ))}
                 </div>
@@ -281,9 +285,14 @@ function FeaturedSmallCard({
   );
 }
 
-function QuestionCard({ askedAt, timeAgo, title, tags, answers, hasVideo, codeSnippet }: any) {
+function QuestionCard({ id, askedAt, timeAgo, title, tags, answers, hasVideo, codeSnippet, slug }: any) {
+  const navigate = useNavigate();
+
   return (
-    <Card className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all rounded-2xl group cursor-pointer relative overflow-hidden">
+    <Card
+      onClick={() => navigate(`/questions/${id}/${slug}`)}
+      className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all rounded-2xl group cursor-pointer relative overflow-hidden"
+    >
       <div className="flex justify-between gap-6">
         <div className="space-y-4 flex-1">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-widest">
