@@ -11,7 +11,7 @@ export class SoloRecordingService {
     private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly aiAnalysisService: AiAnalysisService,
-  ) {}
+  ) { }
 
   async uploadAndAnalyze(file: UploadedFileType, dto: CreateSoloRecordingDto) {
     if (!file) {
@@ -32,32 +32,54 @@ export class SoloRecordingService {
       },
     });
 
-    const transcript = await this.aiAnalysisService.transcribeFromAudioUrl(
-      uploaded.secure_url,
-    );
+    try {
+      const transcript = await this.aiAnalysisService.transcribeFromAudioUrl(
+        uploaded.secure_url,
+      );
 
-    const feedback = await this.aiAnalysisService.generateFeedback({
-      transcript,
-      question: dto.question,
-    });
+      const feedback = await this.aiAnalysisService.generateFeedback({
+        transcript,
+        question: dto.question,
+      });
 
-    const aiAnalysis = await this.aiAnalysisService.saveSoloRecordingAnalysis({
-      soloRecordingId: recording.id,
-      transcript,
-      overallScore: feedback.overallScore,
-      strengths: feedback.strengths,
-      weaknesses: feedback.weaknesses,
-      suggestions: feedback.suggestions,
-    });
+      const aiAnalysis = await this.aiAnalysisService.saveSoloRecordingAnalysis({
+        soloRecordingId: recording.id,
+        transcript,
+        overallScore: feedback.overallScore,
+        strengths: feedback.strengths,
+        weaknesses: feedback.weaknesses,
+        suggestions: feedback.suggestions,
+      });
 
-    return {
-      recordingId: recording.id,
-      fileUrl: uploaded.secure_url,
-      transcript,
-      analysis: feedback,
-      analysisId: aiAnalysis.id,
-      processedAt: aiAnalysis.processedAt,
-    };
+      return {
+        success: true,
+        recordingId: recording.id,
+        fileUrl: uploaded.secure_url,
+        transcript,
+        analysis: feedback,
+        analysisId: aiAnalysis.id,
+        processedAt: aiAnalysis.processedAt,
+      };
+    } catch (error) {
+      console.error('uploadAndAnalyze error:', error);
+
+      return {
+        success: false,
+        recordingId: recording.id,
+        fileUrl: uploaded.secure_url,
+        transcript: '',
+        analysis: {
+          overallScore: 0,
+          strengths: [],
+          weaknesses: [],
+          suggestions: [],
+        },
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Không thể phân tích bài nói',
+      };
+    }
   }
 
   async findByUser(userId: number) {
