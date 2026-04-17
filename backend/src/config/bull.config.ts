@@ -2,9 +2,7 @@ import { ConfigService } from '@nestjs/config';
 import { BullRootModuleOptions } from '@nestjs/bullmq';
 import Redis from 'ioredis';
 
-export const bullConfig = (
-  config: ConfigService,
-): BullRootModuleOptions => {
+export const bullConfig = (config: ConfigService): BullRootModuleOptions => {
   const redisUrl = config.get<string>('REDIS_URL');
 
   if (!redisUrl) {
@@ -13,7 +11,7 @@ export const bullConfig = (
 
   return {
     connection: new Redis(redisUrl, {
-      tls: {},
+      //tls: {},
       maxRetriesPerRequest: null,
     }),
     defaultJobOptions: {

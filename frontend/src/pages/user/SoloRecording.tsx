@@ -128,38 +128,487 @@ export default function SoloRecording() {
     setStep('preview');
   };
 
+  const handleUploadVideo = async (videoFile: File): Promise<string> => {
+    const videoFormData = new FormData();
+    videoFormData.append('file', videoFile);
+
+    const videoRes = await soloRecordingService.uploadVideo(videoFormData);
+    return videoRes.data.data.videoUrl;
+  };
+
+  const handleAnalyzeAudio = async (audioFile: File, videoUrl: string) => {
+    const analyzeFormData = new FormData();
+    analyzeFormData.append('file', audioFile);
+    analyzeFormData.append('userId', String(user.id));
+    analyzeFormData.append('duration', String(seconds));
+    analyzeFormData.append('question', selectedQuestion);
+    analyzeFormData.append('videoUrl', videoUrl);
+
+    const analyzeRes = await soloRecordingService.uploadAudioAndAnalyze(analyzeFormData);
+    return analyzeRes.data.data;
+  };
+
+  // Hàm tách audio từ video blob một cách đúng chuẩn (sử dụng Web Audio API)
+  const extractAudioFromVideoBlob = async (videoBlob: Blob): Promise<Blob> => {
+    return new Promise((resolve, reject) => {
+      const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+
+      const reader = new FileReader();
+      reader.onload = async () => {
+        try {
+          const arrayBuffer = reader.result as ArrayBuffer;
+
+          // Decode video blob thành AudioBuffer (chỉ lấy phần audio)
+          const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
+
+          // Tạo OfflineAudioContext để render lại audio
+          const offlineContext = new OfflineAudioContext(
+            audioBuffer.numberOfChannels,
+            audioBuffer.length,
+            audioBuffer.sampleRate,
+          );
+
+          const source = offlineContext.createBufferSource();
+          source.buffer = audioBuffer;
+          source.connect(offlineContext.destination);
+          source.start(0);
+
+          const renderedBuffer = await offlineContext.startRendering();
+
+          // Convert AudioBuffer thành WAV (dễ upload và Azure Speech xử lý tốt)
+          const wavBlob = audioBufferToWav(renderedBuffer);
+          resolve(wavBlob);
+        } catch (err) {
+          console.error('Extract audio failed:', err);
+          // Fallback: thử gửi video blob với type audio/webm
+          resolve(new Blob([videoBlob], { type: 'audio/webm' }));
+        }
+      };
+      reader.onerror = reject;
+      reader.readAsArrayBuffer(videoBlob);
+    });
+  };
+
+  // Helper: Convert AudioBuffer → WAV Blob (rất cần cho Azure Speech)
+  const audioBufferToWav = (buffer: AudioBuffer): Blob => {
+    const numChannels = buffer.numberOfChannels;
+    const sampleRate = buffer.sampleRate;
+    const format = 1; // PCM
+    const bitDepth = 16;
+
+    const bytesPerSample = bitDepth / 8;
+    const blockAlign = numChannels * bytesPerSample;
+    const dataSize = buffer.length * blockAlign;
+    const bufferSize = 44 + dataSize; // WAV header 44 bytes
+
+    const arrayBuffer = new ArrayBuffer(bufferSize);
+    const view = new DataView(arrayBuffer);
+
+    // RIFF header
+    writeString(view, 0, 'RIFF');
+    view.setUint32(4, 36 + dataSize, true);
+    writeString(view, 8, 'WAVE');
+
+    // fmt subchunk
+    writeString(view, 12, 'fmt ');
+    view.setUint32(16, 16, true);
+    view.setUint16(20, format, true);
+    view.setUint16(22, numChannels, true);
+    view.setUint32(24, sampleRate, true);
+    view.setUint32(28, sampleRate * blockAlign, true);
+    view.setUint16(32, blockAlign, true);
+    view.setUint16(34, bitDepth, true);
+
+    // data subchunk
+    writeString(view, 36, 'data');
+    view.setUint32(40, dataSize, true);
+
+    // Write PCM samples
+    let offset = 44;
+    for (let i = 0; i < buffer.length; i++) {
+      for (let channel = 0; channel < numChannels; channel++) {
+        const sample = Math.max(-1, Math.min(1, buffer.getChannelData(channel)[i]));
+        view.setInt16(offset, sample < 0 ? sample * 0x8000 : sample * 0x7fff, true);
+        offset += 2;
+      }
+    }
+
+    return new Blob([arrayBuffer], { type: 'audio/wav' });
+  };
+
+  const writeString = (view: DataView, offset: number, string: string) => {
+    for (let i = 0; i < string.length; i++) {
+      view.setUint8(offset + i, string.charCodeAt(i));
+    }
+  };
+
+  // ==========================================
+  // HÀM CHÍNH: ĐIỀU PHỐI LUỒNG CHẠY
+  // Ver1: video and audio
+  // const handleUploadAndAnalyze = async () => {
+  //   if (!user) return alert('Please log in to continue');
+  //   setIsUploading(true);
+
+  //   try {
+  //     // TẠO 2 BẢN SAO FILE VỚI 2 NHÃN MÁC KHÁC NHAU ĐỂ BACKEND KHÔNG BẮT BẺ
+
+  //     // 1. File dành cho Upload Video (Gắn nhãn video/webm)
+  //     const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+  //     const videoFile = new File([videoBlob], `solo-video-${Date.now()}.webm`, {
+  //       type: 'video/webm',
+  //     });
+
+  //     // 2. File dành cho Phân tích AI (Gắn nhãn audio/webm)
+  //     const audioBlob = new Blob(chunksRef.current, { type: 'audio/webm' });
+  //     const audioFile = new File([audioBlob], `solo-audio-${Date.now()}.webm`, {
+  //       type: 'audio/webm',
+  //     });
+
+  //     // --- CHẠY LUỒNG ---
+
+  //     // Bước 1: Gửi Video lấy URL
+  //     const videoUrl = await handleUploadVideo(videoFile);
+  //     console.log('Upload video thành công, URL:', videoUrl);
+
+  //     // Bước 2: Gửi Audio (kèm videoUrl) để nhờ AI phân tích
+  //     const analysisData = await handleAnalyzeAudio(audioFile, videoUrl);
+  //     console.log('Phân tích AI thành công:', analysisData);
+
+  //     // Bước 3: Lưu kết quả và chuyển màn hình
+  //     setAnalysisResult(analysisData);
+  //     setStep('analysis');
+  //   } catch (err: any) {
+  //     console.error('Lỗi API chi tiết:', err.response?.data || err.message);
+  //     alert('Có lỗi xảy ra trong quá trình upload và phân tích. Vui lòng xem Console!');
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+  // Ver 3: không tuần tự
+  // const handleUploadAndAnalyze = async () => {
+  //   if (!user) return alert('Please log in to continue');
+  //   setIsUploading(true);
+
+  //   try {
+  //     // 1. Chuẩn bị dữ liệu (Video và Audio)
+  //     const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+  //     const videoFile = new File([videoBlob], `solo-video-${Date.now()}.webm`, {
+  //       type: 'video/webm',
+  //     });
+
+  //     console.log('Bắt đầu tách audio từ video...');
+  //     const audioBlob = await extractAudioFromVideoBlob(videoBlob);
+  //     const audioFile = new File([audioBlob], `solo-audio-${Date.now()}.wav`, {
+  //       type: 'audio/wav',
+  //     });
+
+  //     console.log(
+  //       'Tách audio thành công, kích thước audio:',
+  //       (audioBlob.size / 1024 / 1024).toFixed(2),
+  //       'MB',
+  //     );
+
+  //     console.group('--- KIỂM TRA ĐỊNH DẠNG FILE TRƯỚC KHI UPLOAD ---');
+  //     console.log('VIDEO FILE:', {
+  //       name: videoFile.name,
+  //       size: (videoFile.size / 1024).toFixed(2) + ' KB',
+  //       type: videoFile.type, // Đây là định dạng trình duyệt gán cho file
+  //     });
+  //     console.log('AUDIO FILE:', {
+  //       name: audioFile.name,
+  //       size: (audioFile.size / 1024).toFixed(2) + ' KB',
+  //       type: audioFile.type, // Đây là định dạng sau khi tách
+  //     });
+  //     console.groupEnd();
+
+  //     let videoUrl = null;
+
+  //     // 2. BƯỚC 1: Tách riêng Upload Video (Không để lỗi này chặn luồng AI)
+  //     try {
+  //       const videoFormData = new FormData();
+  //       videoFormData.append('file', videoFile);
+
+  //       console.log('Đang upload video lên Cloudinary...');
+  //       const videoRes = await soloRecordingService.uploadVideo(videoFormData);
+  //       videoUrl = videoRes.data.data.videoUrl;
+  //       console.log('Upload video thành công:', videoUrl);
+  //     } catch (videoErr: any) {
+  //       // Nếu lỗi upload video, chỉ log lại và gán videoUrl = null để AI tiếp tục
+  //       console.error(
+  //         'Lỗi upload video (Bỏ qua để phân tích AI):',
+  //         videoErr.response?.data || videoErr,
+  //       );
+  //       videoUrl = null;
+  //     }
+
+  //     // 3. BƯỚC 2: Upload Audio + Analyze (Luôn chạy bất kể video có lỗi hay không)
+  //     console.log('Bắt đầu gửi audio để AI phân tích...');
+  //     const analyzeFormData = new FormData();
+  //     analyzeFormData.append('file', audioFile);
+  //     analyzeFormData.append('userId', String(user.id));
+  //     analyzeFormData.append('duration', String(seconds));
+  //     analyzeFormData.append('question', selectedQuestion);
+
+  //     // Gửi videoUrl (có thể là string hoặc null)
+  //     if (videoUrl) {
+  //       analyzeFormData.append('videoUrl', videoUrl);
+  //     }
+
+  //     const analyzeRes = await soloRecordingService.uploadAudioAndAnalyze(analyzeFormData);
+  //     const analysisData = analyzeRes.data.data;
+
+  //     console.log('Phân tích AI hoàn tất!');
+  //     setAnalysisResult(analysisData);
+  //     setStep('analysis');
+  //   } catch (err: any) {
+  //     // Lỗi ở đây thường là do tách Audio thất bại hoặc API AI gặp sự cố
+  //     console.error('Lỗi nghiêm trọng trong luồng phân tích:', err.response?.data || err);
+  //     alert('Không thể thực hiện phân tích AI. Vui lòng kiểm tra console!');
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+  // Ver 4
+  // const handleUploadAndAnalyze = async () => {
+  //   if (!user) return alert('Please log in to continue');
+  //   setIsUploading(true);
+
+  //   try {
+  //     // 1. Chuẩn bị dữ liệu (Video và Audio)
+  //     // SỬA: Dùng tên file cố định ('video.webm') thay vì Date.now() để tránh ký tự lạ
+  //     const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+  //     const videoFile = new File([videoBlob], 'video.webm', {
+  //       type: 'video/webm',
+  //     });
+
+  //     console.log('Bắt đầu tách audio từ video...');
+  //     const audioBlob = await extractAudioFromVideoBlob(videoBlob);
+  //     // SỬA: Dùng tên file cố định ('audio.wav')
+  //     const audioFile = new File([audioBlob], 'audio.wav', {
+  //       type: 'audio/wav',
+  //     });
+
+  //     console.log(
+  //       'Tách audio thành công, kích thước audio:',
+  //       (audioBlob.size / 1024 / 1024).toFixed(2),
+  //       'MB',
+  //     );
+
+  //     console.group('--- KIỂM TRA ĐỊNH DẠNG FILE TRƯỚC KHI UPLOAD ---');
+  //     console.log('VIDEO FILE:', {
+  //       name: videoFile.name,
+  //       size: (videoFile.size / 1024).toFixed(2) + ' KB',
+  //       type: videoFile.type,
+  //     });
+  //     console.log('AUDIO FILE:', {
+  //       name: audioFile.name,
+  //       size: (audioFile.size / 1024).toFixed(2) + ' KB',
+  //       type: audioFile.type,
+  //     });
+  //     console.groupEnd();
+
+  //     let videoUrl = null;
+
+  //     // 2. BƯỚC 1: Tách riêng Upload Video
+  //     try {
+  //       const videoFormData = new FormData();
+  //       // SỬA: Đảm bảo append đúng tên tĩnh
+  //       videoFormData.append('file', videoFile, 'video.webm');
+
+  //       console.log('Đang upload video lên Cloudinary...');
+  //       const videoRes = await soloRecordingService.uploadVideo(videoFormData);
+
+  //       console.log('Toàn bộ Response Video:', videoRes);
+
+  //       // SỬA QUAN TRỌNG: Lấy URL an toàn, đề phòng cấu trúc bọc data của Axios
+  //       videoUrl = videoRes?.data?.data?.videoUrl || videoRes?.data?.videoUrl || videoRes?.videoUrl;
+
+  //       console.log('✅ Upload video thành công, URL chuẩn:', videoUrl);
+  //     } catch (videoErr: any) {
+  //       console.error(
+  //         'Lỗi upload video (Bỏ qua để phân tích AI):',
+  //         videoErr.response?.data || videoErr,
+  //       );
+  //       videoUrl = null;
+  //     }
+
+  //     // 3. BƯỚC 2: Upload Audio + Analyze (Luôn chạy bất kể video có lỗi hay không)
+  //     console.log('Bắt đầu gửi audio để AI phân tích...');
+  //     const analyzeFormData = new FormData();
+  //     analyzeFormData.append('file', audioFile, 'audio.wav');
+  //     analyzeFormData.append('userId', String(user.id));
+  //     analyzeFormData.append('duration', String(seconds));
+  //     analyzeFormData.append('question', selectedQuestion);
+
+  //     // Gửi videoUrl (chỉ gửi khi đã lấy được link thực sự)
+  //     if (videoUrl) {
+  //       analyzeFormData.append('videoUrl', videoUrl);
+  //     }
+
+  //     const analyzeRes = await soloRecordingService.uploadAudioAndAnalyze(analyzeFormData);
+
+  //     // SỬA QUAN TRỌNG: Lấy dữ liệu an toàn tương tự như video
+  //     const analysisData = analyzeRes?.data?.data || analyzeRes?.data;
+
+  //     console.log('Phân tích AI hoàn tất!', analysisData);
+  //     setAnalysisResult(analysisData);
+  //     setStep('analysis');
+  //   } catch (err: any) {
+  //     console.error('Lỗi nghiêm trọng trong luồng phân tích:', err.response?.data || err);
+  //     alert('Không thể thực hiện phân tích AI. Vui lòng kiểm tra console!');
+  //   } finally {
+  //     setIsUploading(false);
+  //   }
+  // };
+
+  //Ver 5 Chạy ngầm upload video trước, sau đó mới upload audio và phân tích AI (Nếu video lỗi thì vẫn chạy AI nhưng không có videoUrl)
+  // const handleUploadAndAnalyze = async () => {
+  //   if (!user) return alert('Please log in to continue');
+  //   setIsUploading(true);
+
+  //   try {
+  //     // 1. Chuẩn bị file (Giữ nguyên)
+  //     const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+  //     const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
+
+  //     console.log('Bắt đầu tách audio từ video...');
+  //     const audioBlob = await extractAudioFromVideoBlob(videoBlob);
+  //     const audioFile = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
+
+  //     // 2. CHUẨN BỊ FORM DATA CHO CẢ HAI
+  //     const analyzeFormData = new FormData();
+  //     analyzeFormData.append('file', audioFile, 'audio.wav');
+  //     analyzeFormData.append('userId', String(user.id));
+  //     analyzeFormData.append('duration', String(seconds));
+  //     analyzeFormData.append('question', selectedQuestion);
+  //     // LƯU Ý: Không gửi videoUrl nữa vì lúc này video chưa upload xong
+
+  //     const videoFormData = new FormData();
+  //     videoFormData.append('file', videoFile, 'video.webm');
+
+  //     // 3. KHỞI ĐỘNG 2 TIẾN TRÌNH CÙNG LÚC (Không có chữ 'await' ở đây)
+  //     console.log('🚀 Bắn Audio và Video đi cùng lúc...');
+  //     const audioPromise = soloRecordingService.uploadAudioAndAnalyze(analyzeFormData);
+  //     const videoPromise = soloRecordingService.uploadVideo(videoFormData);
+
+  //     // 4. CHỈ CHỜ AUDIO & AI PHÂN TÍCH (Ưu tiên UX - Trả kết quả ngay)
+  //     const analyzeRes = await audioPromise;
+  //     const analysisData = analyzeRes?.data?.data || analyzeRes?.data;
+  //     const recordingId = analysisData?.recordingId; // Backend trả về ID của record vừa lưu
+
+  //     console.log('✅ Phân tích AI hoàn tất! Chuyển màn hình ngay...');
+  //     setAnalysisResult(analysisData);
+  //     setStep('analysis');
+  //     setIsUploading(false); // Tắt loading ngay lập tức cho user xem kết quả
+
+  //     // 5. XỬ LÝ VIDEO CHẠY NGẦM DƯỚI BACKGROUND
+  //     videoPromise
+  //       .then(async (videoRes: any) => {
+  //         const videoUrl =
+  //           videoRes?.data?.data?.videoUrl || videoRes?.data?.videoUrl || videoRes?.videoUrl;
+
+  //         if (videoUrl && recordingId) {
+  //           console.log('🎥 Video đã tải lên xong ngầm, đang gắn vào Database...');
+  //           // Gắn link video vào bản ghi đã có
+  //           await soloRecordingService.updateVideoUrl(recordingId, videoUrl);
+  //           console.log('🎉 Update Database thành công hoàn toàn!');
+  //         }
+  //       })
+  //       .catch((err) => {
+  //         console.error('❌ Upload video ngầm bị lỗi:', err.response?.data || err);
+  //       });
+  //   } catch (err: any) {
+  //     console.error('Lỗi nghiêm trọng trong luồng AI:', err.response?.data || err);
+  //     alert('Không thể thực hiện phân tích AI. Vui lòng kiểm tra console!');
+  //     setIsUploading(false);
+  //   }
+  // };
+  // Ver 5: Chạy ngầm upload video, song song với AI analysis
   const handleUploadAndAnalyze = async () => {
     if (!user) return alert('Please log in to continue');
     setIsUploading(true);
 
     try {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      const file = new File([blob], `solo-${Date.now()}.webm`, { type: 'video/webm' });
+      // 1. Chuẩn bị file
+      const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
+      const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
 
-      const formData = new FormData();
-      formData.append('file', file);
-      formData.append('userId', String(user.id));
-      formData.append('duration', String(seconds));
-      formData.append('question', selectedQuestion);
-      console.log(formData);
-      // ✅ upload
-      const uploadRes = await soloRecordingService.upload(formData);
-      const uploadData = uploadRes.data;
+      console.log('Bắt đầu tách audio từ video...');
+      const audioBlob = await extractAudioFromVideoBlob(videoBlob);
+      const audioFile = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
 
-      console.log(uploadRes);
-      console.log(uploadData);
-      // ✅ analyze
+      // 2. CHUẨN BỊ FORM DATA CHO CẢ HAI
       const analyzeFormData = new FormData();
-      analyzeFormData.append('file', file);
+      analyzeFormData.append('file', audioFile, 'audio.wav');
+      analyzeFormData.append('userId', String(user.id));
+      analyzeFormData.append('duration', String(seconds));
       analyzeFormData.append('question', selectedQuestion);
-      console.log(uploadRes);
+      // LƯU Ý: Không gửi videoUrl nữa vì lúc này video chưa upload xong
 
-      setAnalysisResult(uploadRes.data.data);
+      const videoFormData = new FormData();
+      videoFormData.append('file', videoFile, 'video.webm');
+
+      // 3. KHỞI ĐỘNG 2 TIẾN TRÌNH CÙNG LÚC (Không await ở đây)
+      console.log('🚀 Bắn Audio và Video đi cùng lúc...');
+      const audioPromise = soloRecordingService.uploadAudioAndAnalyze(analyzeFormData);
+      const videoPromise = soloRecordingService.uploadVideo(videoFormData);
+
+      // 4. CHỈ CHỜ AUDIO & AI PHÂN TÍCH (Ưu tiên UX - Trả kết quả ngay)
+      const analyzeRes = await audioPromise;
+      const analysisData = analyzeRes?.data?.data || analyzeRes?.data;
+
+      // Bắt chính xác ID của bản ghi để tý nữa gắn Video vào
+      const currentRecordingId = analysisData?.recordingId || analysisData?.id;
+
+      console.log('✅ Phân tích AI hoàn tất! ID Bản ghi hiện tại:', currentRecordingId);
+
+      // Chuyển màn hình ngay lập tức cho người dùng xem
+      setAnalysisResult(analysisData);
       setStep('analysis');
-    } catch (err) {
-      console.error(err);
-      alert('AI analysis failed. Please try again.');
-    } finally {
+      setIsUploading(false);
+
+      // 5. XỬ LÝ VIDEO CHẠY NGẦM DƯỚI BACKGROUND
+      videoPromise
+        .then(async (videoRes: any) => {
+          console.group('--- 🔍 DEBUG LUỒNG VIDEO NGẦM ---');
+          console.log('1. Phản hồi gốc từ API Upload Video:', videoRes);
+
+          // Bóc tách lớp dữ liệu (Quét mọi ngóc ngách của Axios)
+          const vData = videoRes?.data?.data || videoRes?.data || videoRes;
+
+          // Lấy URL: Ưu tiên 'videoUrl' do Backend trả về, phòng hờ 'secure_url' của Cloudinary
+          const finalVideoUrl = vData?.videoUrl || vData?.secure_url || vData?.url;
+
+          console.log('2. URL bóc được:', finalVideoUrl);
+          console.log('3. ID Bản ghi chuẩn bị ghép:', currentRecordingId);
+
+          if (finalVideoUrl && currentRecordingId) {
+            console.log('4. 🚀 Đang bắn lệnh PATCH lên server để lưu Database...');
+
+            // Gọi API PATCH cập nhật URL
+            const patchRes = await soloRecordingService.updateVideoUrl(
+              currentRecordingId,
+              finalVideoUrl,
+            );
+
+            console.log('5. 🎉 Server trả lời PATCH thành công:', patchRes?.data || 'OK');
+          } else {
+            console.warn('⚠️ THẤT BẠI: Thiếu URL Video hoặc Thiếu ID Bản ghi! Không thể cập nhật.');
+          }
+          console.groupEnd();
+        })
+        .catch((err) => {
+          console.error('❌ Upload video ngầm bị lỗi:', err.response?.data || err);
+        });
+    } catch (err: any) {
+      console.error('Lỗi nghiêm trọng trong luồng AI:', err.response?.data || err);
+      // Hiển thị thông báo thân thiện nếu lỗi 422 (Không có tiếng)
+      const errorMessage =
+        err.response?.data?.message ||
+        'Không thể thực hiện phân tích AI. Vui lòng kiểm tra lại mic.';
+      alert(errorMessage);
       setIsUploading(false);
     }
   };

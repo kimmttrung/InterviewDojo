@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
+  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
+import { Messages } from '../../common/constants/messages.constant'; // Đảm bảo import đúng đường dẫn
 import axios from 'axios';
 import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
 import * as fs from 'fs';
@@ -49,19 +51,27 @@ export class AiAnalysisService {
     return ext || 'webm';
   }
 
+  // Tải file từ Cloudinary về Server
   private async downloadAudioToTempFile(audioUrl: string): Promise<string> {
     const ext = this.getExtensionFromUrl(audioUrl);
     const inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
 
-    const response = await axios.get<ArrayBuffer>(audioUrl, {
-      responseType: 'arraybuffer',
-      timeout: 30000,
-    });
-
-    fs.writeFileSync(inputPath, Buffer.from(response.data));
-    return inputPath;
+    try {
+      const response = await axios.get<ArrayBuffer>(audioUrl, {
+        responseType: 'arraybuffer',
+        timeout: 30000,
+      });
+      fs.writeFileSync(inputPath, Buffer.from(response.data));
+      return inputPath;
+    } catch (error) {
+      console.error('Lỗi khi tải file từ Cloudinary:', error);
+      throw new InternalServerErrorException(
+        'Không thể tải file âm thanh từ máy chủ lưu trữ',
+      );
+    }
   }
 
+  // Dùng FFmpeg convert WebM/MP4 sang WAV chuẩn Azure
   private async convertToWav(inputPath: string): Promise<string> {
     if (!ffmpegPath) {
       throw new InternalServerErrorException('Không tìm thấy ffmpeg-static');
@@ -69,20 +79,24 @@ export class AiAnalysisService {
 
     const outputPath = path.join(os.tmpdir(), `solo-output-${Date.now()}.wav`);
 
-    await execFileAsync(ffmpegPath, [
-      '-y',
-      '-i',
-      inputPath,
-      '-ac',
-      '1',
-      '-ar',
-      '16000',
-      '-sample_fmt',
-      's16',
-      outputPath,
-    ]);
-
-    return outputPath;
+    try {
+      await execFileAsync(ffmpegPath, [
+        '-y',
+        '-i',
+        inputPath,
+        '-ac',
+        '1', // Mono channel (Azure yêu cầu)
+        '-ar',
+        '16000', // 16kHz sample rate (Azure yêu cầu)
+        '-sample_fmt',
+        's16', // 16-bit
+        outputPath,
+      ]);
+      return outputPath;
+    } catch (error) {
+      console.error('Lỗi khi convert bằng FFmpeg:', error);
+      throw new InternalServerErrorException('Lỗi xử lý định dạng âm thanh');
+    }
   }
 
   async transcribeFromAudioUrl(audioUrl: string): Promise<string> {
@@ -99,7 +113,10 @@ export class AiAnalysisService {
     let wavPath: string | null = null;
 
     try {
+      // 1. Tải file Cloudinary về (Thường là đuôi .webm)
       inputPath = await this.downloadAudioToTempFile(audioUrl);
+
+      // 2. Chuyển đổi sang .wav chuẩn
       wavPath = await this.convertToWav(inputPath);
 
       const wavBuffer = fs.readFileSync(wavPath);
@@ -108,7 +125,6 @@ export class AiAnalysisService {
         speechKey,
         speechRegion,
       );
-
       speechConfig.speechRecognitionLanguage = 'vi-VN';
 
       const audioConfig = sdk.AudioConfig.fromWavFileInput(wavBuffer);
@@ -129,33 +145,43 @@ export class AiAnalysisService {
         },
       );
 
+      // Xử lý kết quả từ Azure
       if (result.reason === sdk.ResultReason.RecognizedSpeech) {
         const transcript = result.text?.trim() ?? '';
         if (!transcript) {
-          throw new BadRequestException('Transcript rỗng');
+          // Báo lỗi 422 nếu Azure dịch ra chuỗi rỗng
+          throw new UnprocessableEntityException(
+            Messages.AI_ANALYSIS.NO_SPEECH_DETECTED,
+          );
         }
         return transcript;
       }
 
       if (result.reason === sdk.ResultReason.NoMatch) {
-        throw new BadRequestException('Không nhận diện được giọng nói');
+        // Báo lỗi 422 nếu Azure không nghe thấy tiếng
+        throw new UnprocessableEntityException(
+          Messages.AI_ANALYSIS.NO_SPEECH_DETECTED,
+        );
       }
 
       throw new InternalServerErrorException(
-        `Azure Speech thất bại, reason=${String(result.reason)}`,
+        `${Messages.AI_ANALYSIS.TRANSCRIPT_FAILED}, reason=${String(result.reason)}`,
       );
     } catch (error) {
       console.error('Azure STT error:', error);
+      // Ném lại các Exception đã được định hình sẵn (422, 400, 500)
       if (
+        error instanceof UnprocessableEntityException ||
         error instanceof BadRequestException ||
         error instanceof InternalServerErrorException
       ) {
         throw error;
       }
       throw new InternalServerErrorException(
-        'Không thể chuyển audio sang text bằng Azure Speech',
+        Messages.AI_ANALYSIS.TRANSCRIPT_FAILED,
       );
     } finally {
+      // Luôn dọn dẹp file rác dù có lỗi hay không
       if (inputPath && fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
       if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
     }
@@ -168,7 +194,9 @@ export class AiAnalysisService {
     const { transcript, question } = params;
 
     if (!transcript?.trim()) {
-      throw new BadRequestException('Transcript rỗng');
+      throw new UnprocessableEntityException(
+        Messages.AI_ANALYSIS.NO_SPEECH_DETECTED,
+      );
     }
 
     const prompt = `
