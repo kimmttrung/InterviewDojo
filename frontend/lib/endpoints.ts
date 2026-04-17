@@ -42,4 +42,10 @@ export const API_ENPOINT = {
     MATCHING: {
         JOIN: '/matching/join',
     },
+    CODING: {
+        GET_ALL: '/coding/questions',
+        SUBMIT: '/coding/submit',
+        GET_SUBMISSION: (id: number) => `/coding/submission/${id}`,
+        GET_QUESTION: (slug: string) => `/coding/question/${slug}`,
+    },
 }
