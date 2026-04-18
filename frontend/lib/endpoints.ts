@@ -54,4 +54,8 @@ export const API_ENPOINT = {
     GET_USER_RECORDINGS: (userId: number | string) => `/solo-recordings/user/${userId}`,
     UPDATE_VIDEO_URL: (recordingId: number) => `/solo-recordings/${recordingId}/video`,
   },
+  AI_ANALYSIS: {
+    GET_SOLO_RECORDING: (recordingId: number | string) =>
+      `/ai-analysis/solo-recording/${recordingId}`,
+  },
 };

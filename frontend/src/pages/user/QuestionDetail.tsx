@@ -1,5 +1,3 @@
-// src/components/interview/QuestionDetail.tsx
-
 import { Question } from '../../types/interview';
 
 interface QuestionDetailProps {
