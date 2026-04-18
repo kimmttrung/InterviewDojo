@@ -11,54 +11,7 @@ export class SoloRecordingService {
     private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly aiAnalysisService: AiAnalysisService,
-  ) {}
-
-  // Upload video file to Cloudinary and return the URL and public ID
-  // async uploadVideo(file: UploadedFileType) {
-  //   if (!file) {
-  //     throw new BadRequestException(
-  //       Messages.SOLO_RECORDING.UPLOAD_VIDEO_FAILED,
-  //     );
-  //   }
-
-  //   if (
-  //     !file ||
-  //     (!file.mimetype?.startsWith('video/') &&
-  //       file.mimetype !== 'application/octet-stream')
-  //   ) {
-  //     throw new BadRequestException(Messages.SOLO_RECORDING.ERROR_VIDEO_FILE);
-  //   }
-
-  //   const uploaded = await this.cloudinaryService.uploadVideo(file);
-
-  //   return {
-  //     videoUrl: uploaded.secure_url,
-  //     publicId: uploaded.public_id,
-  //   };
-  // }
-
-  // Upload audio file to Cloudinary
-  // async uploadVideo(file: UploadedFileType) {
-  //   if (!file) {
-  //     throw new BadRequestException(
-  //       Messages.SOLO_RECORDING.UPLOAD_VIDEO_FAILED,
-  //     );
-  //   }
-
-  //   try {
-  //     const uploaded = await this.cloudinaryService.uploadVideo(file);
-
-  //     return {
-  //       videoUrl: uploaded.secure_url,
-  //       publicId: uploaded.public_id,
-  //     };
-  //   } catch (error) {
-  //     console.error('Cloudinary upload error:', error);
-  //     throw new BadRequestException(
-  //       Messages.SOLO_RECORDING.UPLOAD_VIDEO_FAILED,
-  //     );
-  //   }
-  // }
+  ) { }
 
   // Fewer logs version
   async uploadVideo(file: UploadedFileType) {

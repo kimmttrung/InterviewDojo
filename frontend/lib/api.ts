@@ -7,11 +7,22 @@ export const api = axios.create({
   },
 });
 
-// attach token sau này
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  // 1. Lấy chuỗi JSON chứa thông tin user
+  const userStr = localStorage.getItem('user');
+
+  if (userStr) {
+    try {
+      const user = JSON.parse(userStr);
+
+      const token = user?.token || user?.access_token || user?.accessToken;
+
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+    } catch (error) {
+      console.error('Lỗi khi parse user data:', error);
+    }
   }
   return config;
 });

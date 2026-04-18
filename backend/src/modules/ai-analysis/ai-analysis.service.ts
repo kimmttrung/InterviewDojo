@@ -2,22 +2,15 @@ import {
   BadRequestException,
   Injectable,
   InternalServerErrorException,
-  UnprocessableEntityException,
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Messages } from '../../common/constants/messages.constant'; // Đảm bảo import đúng đường dẫn
-import axios from 'axios';
-import * as sdk from 'microsoft-cognitiveservices-speech-sdk';
+// import axios from 'axios';
 import * as fs from 'fs';
 import * as os from 'os';
 import * as path from 'path';
-import { promisify } from 'util';
-import { execFile } from 'child_process';
-import ffmpegPath from 'ffmpeg-static';
+import axios from 'axios';
 import Groq from 'groq-sdk';
-
-const execFileAsync = promisify(execFile);
 
 type FeedbackResult = {
   overallScore: number;
@@ -56,141 +49,131 @@ export class AiAnalysisService {
     return ext || 'webm';
   }
 
-  // Tải file từ Cloudinary về Server
   private async downloadAudioToTempFile(audioUrl: string): Promise<string> {
     const ext = this.getExtensionFromUrl(audioUrl);
     const inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
 
-    try {
-      const response = await axios.get<ArrayBuffer>(audioUrl, {
-        responseType: 'arraybuffer',
-        timeout: 30000,
-      });
-      fs.writeFileSync(inputPath, Buffer.from(response.data));
-      return inputPath;
-    } catch (error) {
-      console.error('Lỗi khi tải file từ Cloudinary:', error);
-      throw new InternalServerErrorException(
-        'Không thể tải file âm thanh từ máy chủ lưu trữ',
-      );
-    }
+    const response = await axios.get(audioUrl, {
+      responseType: 'arraybuffer',
+      timeout: 30000,
+    });
+
+    fs.writeFileSync(inputPath, Buffer.from(response.data));
+    return inputPath;
   }
 
-  // Dùng FFmpeg convert WebM/MP4 sang WAV chuẩn Azure
-  private async convertToWav(inputPath: string): Promise<string> {
-    if (!ffmpegPath) {
-      throw new InternalServerErrorException('Không tìm thấy ffmpeg-static');
-    }
-
-    const outputPath = path.join(os.tmpdir(), `solo-output-${Date.now()}.wav`);
-
-    try {
-      await execFileAsync(ffmpegPath, [
-        '-y',
-        '-i',
-        inputPath,
-        '-ac',
-        '1', // Mono channel (Azure yêu cầu)
-        '-ar',
-        '16000', // 16kHz sample rate (Azure yêu cầu)
-        '-sample_fmt',
-        's16', // 16-bit
-        outputPath,
-      ]);
-      return outputPath;
-    } catch (error) {
-      console.error('Lỗi khi convert bằng FFmpeg:', error);
-      throw new InternalServerErrorException('Lỗi xử lý định dạng âm thanh');
-    }
+  async getSoloRecordingAnalysis(recordingId: number) {
+    return this.prisma.aiAnalysis.findUnique({
+      where: { soloRecordingId: recordingId },
+      include: { soloRecording: true },
+    });
   }
 
   async transcribeFromAudioUrl(audioUrl: string): Promise<string> {
-    const speechKey = this.configService.get<string>('AZURE_SPEECH_KEY');
-    const speechRegion = this.configService.get<string>('AZURE_SPEECH_REGION');
-
-    if (!speechKey || !speechRegion) {
-      throw new InternalServerErrorException(
-        'Thiếu AZURE_SPEECH_KEY hoặc AZURE_SPEECH_REGION trong .env',
-      );
-    }
-
     let inputPath: string | null = null;
-    let wavPath: string | null = null;
 
     try {
-      // 1. Tải file Cloudinary về (Thường là đuôi .webm)
+      console.log('audioUrl:', audioUrl);
+
       inputPath = await this.downloadAudioToTempFile(audioUrl);
 
-      // 2. Chuyển đổi sang .wav chuẩn
-      wavPath = await this.convertToWav(inputPath);
-
-      const wavBuffer = fs.readFileSync(wavPath);
-
-      const speechConfig = sdk.SpeechConfig.fromSubscription(
-        speechKey,
-        speechRegion,
-      );
-      speechConfig.speechRecognitionLanguage = 'vi-VN';
-
-      const audioConfig = sdk.AudioConfig.fromWavFileInput(wavBuffer);
-      const recognizer = new sdk.SpeechRecognizer(speechConfig, audioConfig);
-
-      const result = await new Promise<sdk.SpeechRecognitionResult>(
-        (resolve, reject) => {
-          recognizer.recognizeOnceAsync(
-            (res: sdk.SpeechRecognitionResult) => {
-              recognizer.close();
-              resolve(res);
-            },
-            (err: string) => {
-              recognizer.close();
-              reject(new Error(err));
-            },
-          );
-        },
-      );
-
-      // Xử lý kết quả từ Azure
-      if (result.reason === sdk.ResultReason.RecognizedSpeech) {
-        const transcript = result.text?.trim() ?? '';
-        if (!transcript) {
-          // Báo lỗi 422 nếu Azure dịch ra chuỗi rỗng
-          throw new UnprocessableEntityException(
-            Messages.AI_ANALYSIS.NO_SPEECH_DETECTED,
-          );
-        }
-        return transcript;
-      }
-
-      if (result.reason === sdk.ResultReason.NoMatch) {
-        // Báo lỗi 422 nếu Azure không nghe thấy tiếng
-        throw new UnprocessableEntityException(
-          Messages.AI_ANALYSIS.NO_SPEECH_DETECTED,
+      if (!fs.existsSync(inputPath)) {
+        throw new InternalServerErrorException(
+          'Không tải được file audio tạm thời',
         );
       }
 
-      throw new InternalServerErrorException(
-        `${Messages.AI_ANALYSIS.TRANSCRIPT_FAILED}, reason=${String(result.reason)}`,
-      );
+      const stats = fs.statSync(inputPath);
+      console.log('inputPath:', inputPath);
+      console.log('input size:', stats.size);
+
+      if (stats.size === 0) {
+        throw new BadRequestException('File audio rỗng');
+      }
+
+      const transcription = await this.groq.audio.transcriptions.create({
+        file: fs.createReadStream(inputPath),
+        model: this.groqSttModel,
+        language: 'vi',
+        temperature: 0,
+      });
+
+      const transcript = transcription.text?.trim() ?? '';
+
+      console.log('Groq transcript:', transcript);
+
+      if (!transcript) {
+        throw new BadRequestException('Transcript rỗng');
+      }
+
+      return transcript;
     } catch (error) {
-      console.error('Azure STT error:', error);
-      // Ném lại các Exception đã được định hình sẵn (422, 400, 500)
+      console.error('Groq STT error:', error);
+
       if (
-        error instanceof UnprocessableEntityException ||
         error instanceof BadRequestException ||
         error instanceof InternalServerErrorException
       ) {
         throw error;
       }
+
       throw new InternalServerErrorException(
-        Messages.AI_ANALYSIS.TRANSCRIPT_FAILED,
+        'Không thể chuyển audio sang text bằng Groq Whisper',
       );
     } finally {
-      // Luôn dọn dẹp file rác dù có lỗi hay không
-      if (inputPath && fs.existsSync(inputPath)) fs.unlinkSync(inputPath);
-      if (wavPath && fs.existsSync(wavPath)) fs.unlinkSync(wavPath);
+      if (inputPath && fs.existsSync(inputPath)) {
+        fs.unlinkSync(inputPath);
+      }
     }
   }
+  // async transcribeAudioBuffer(
+  //   buffer: Buffer,
+  //   originalname: string,
+  // ): Promise<string> {
+  //   let inputPath: string | null = null;
+
+  //   try {
+  //     // 1. Lấy đúng đuôi file Frontend gửi lên (VD: audio.wav -> wav)
+  //     const ext =
+  //       path
+  //         .extname(originalname || '')
+  //         .replace('.', '')
+  //         .toLowerCase() || 'wav';
+  //     inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
+
+  //     // 2. Ghi thẳng buffer từ RAM ra file tạm (Không thông qua Cloudinary)
+  //     fs.writeFileSync(inputPath, buffer);
+
+  //     const stats = fs.statSync(inputPath);
+  //     if (stats.size === 0) {
+  //       throw new BadRequestException('File audio rỗng (0 bytes)');
+  //     }
+
+  //     // 3. Đưa cho Groq xử lý
+  //     const transcription = await this.groq.audio.transcriptions.create({
+  //       file: fs.createReadStream(inputPath),
+  //       model: this.groqSttModel,
+  //       language: 'vi',
+  //       temperature: 0,
+  //     });
+
+  //     const transcript = transcription.text?.trim() ?? '';
+  //     if (!transcript)
+  //       throw new BadRequestException('Groq trả về transcript rỗng');
+
+  //     return transcript;
+  //   } catch (error) {
+  //     console.error('Groq STT error:', error);
+  //     throw new InternalServerErrorException(
+  //       'Lỗi AI không thể phân tích âm thanh',
+  //     );
+  //   } finally {
+  //     // 4. Luôn dọn rác server
+  //     if (inputPath && fs.existsSync(inputPath)) {
+  //       fs.unlinkSync(inputPath);
+  //     }
+  //   }
+  // }
 
   async generateFeedback(params: {
     transcript: string;
