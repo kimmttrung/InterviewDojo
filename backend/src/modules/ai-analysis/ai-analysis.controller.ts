@@ -11,7 +11,7 @@ import { AiAnalysisService } from './ai-analysis.service';
 @ApiTags('AI Analysis')
 @Controller('ai-analysis')
 export class AiAnalysisController {
-  constructor(private readonly aiAnalysisService: AiAnalysisService) { }
+  constructor(private readonly aiAnalysisService: AiAnalysisService) {}
 
   @Get('solo-recording/:recordingId')
   async getBySoloRecordingId(

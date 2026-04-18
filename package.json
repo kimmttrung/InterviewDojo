@@ -35,12 +35,12 @@
   },
   "lint-staged": {
     "backend/src/**/*.ts": [
-      "npm --prefix backend run lint",
-      "prettier --write"
+      "prettier --write",
+      "npm --prefix backend run lint"
     ],
-    "frontend/src/**/*.{ts,tsx}": [
-      "npm --prefix frontend run lint",
-      "prettier --write"
+    "frontend/src/**/*.{ts,tsx,js,jsx}": [
+      "prettier --write",
+      "npm --prefix frontend run lint"
     ]
   }
 }

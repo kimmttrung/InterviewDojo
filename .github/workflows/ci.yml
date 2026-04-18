@@ -107,7 +107,7 @@ jobs:
       #     BACKEND_URL: http://localhost:3000
 
       - name: Delete Neon Branch
-        if: always() 
+        if: always()
         run: |
           npm install -g neonctl@2
           BRANCH_NAME="test-branch-${{ github.event.pull_request.number || 'local' }}"

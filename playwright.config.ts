@@ -10,10 +10,7 @@ export const STORAGE_STATE = path.join(__dirname, '.auth/user.json');
 export default defineConfig({
   testDir: './tests',
   fullyParallel: true,
-  reporter: [
-    ['line'],
-    ['allure-playwright', { outputFolder: 'allure-results' }]
-  ],
+  reporter: [['line'], ['allure-playwright', { outputFolder: 'allure-results' }]],
   use: {
     baseURL: 'http://localhost:5173',
     trace: 'on-first-retry',
@@ -25,7 +22,7 @@ export default defineConfig({
     // PROJECT SETUP: Chạy trước để lấy Token ---
     {
       name: 'setup',
-      testMatch: /.*\.setup\.ts/, 
+      testMatch: /.*\.setup\.ts/,
     },
 
     // PROJECT TESTING CHÍNH: Dùng Token đã lấy ---

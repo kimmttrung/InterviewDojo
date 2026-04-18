@@ -1,28 +1,28 @@
-import { api } from "../lib/api";
-import { API_ENPOINT } from "../lib/endpoints";
+import { api } from '../lib/api';
+import { API_ENPOINT } from '../lib/endpoints';
 
 // DTO cho dữ liệu gửi lên
 export interface ExecuteCodeDto {
-    code: string;
-    languageId: string;
+  code: string;
+  languageId: string;
 }
 
 // Interface cho kết quả trả về từ Backend
 export interface CodeExecutionResult {
-    stdout: string;
-    stderr: string;
-    compile_output: string;
-    message: string;
-    status: string;
-    time: string;
-    memory: number;
+  stdout: string;
+  stderr: string;
+  compile_output: string;
+  message: string;
+  status: string;
+  time: string;
+  memory: number;
 }
 
 export const codeEngineService = {
-    /**
-     * Thực thi mã nguồn thông qua Judge0 Engine
-     */
-    runCode: (data: ExecuteCodeDto) => {
-        return api.post<CodeExecutionResult>(API_ENPOINT.CODE_ENGINE.RUN, data);
-    }
+  /**
+   * Thực thi mã nguồn thông qua Judge0 Engine
+   */
+  runCode: (data: ExecuteCodeDto) => {
+    return api.post<CodeExecutionResult>(API_ENPOINT.CODE_ENGINE.RUN, data);
+  },
 };

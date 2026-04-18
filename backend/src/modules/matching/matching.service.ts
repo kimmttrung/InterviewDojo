@@ -14,7 +14,7 @@ export class MatchingService {
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
     private readonly socketService: SocketService,
     private readonly streamService: StreamService,
-  ) { }
+  ) {}
 
   async handleJoinQueue(userId: number, level: string) {
     const queueKey = `queue:${level.toUpperCase()}`;

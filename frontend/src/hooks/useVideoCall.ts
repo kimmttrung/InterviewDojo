@@ -5,7 +5,7 @@ export function useVideoCall(
   roomId: string | undefined,
   token: string | null,
   userId: string,
-  currentUser: any
+  currentUser: any,
 ) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);

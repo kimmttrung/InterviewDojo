@@ -3,19 +3,26 @@ import axios from 'axios';
 
 @Injectable()
 export class CodeEngineService {
-
   // Dùng cho /run — không có stdin
   async executeCode(sourceCode: string, languageId: string) {
     return this.callJudge0(sourceCode, Number(languageId), '');
   }
 
   // Dùng cho processor — có stdin từng test case
-  async executeWithInput(sourceCode: string, languageId: number, stdin: string = '') {
+  async executeWithInput(
+    sourceCode: string,
+    languageId: number,
+    stdin: string = '',
+  ) {
     return this.callJudge0(sourceCode, languageId, stdin);
   }
 
-  // private method dungf chung 
-  private async callJudge0(sourceCode: string, languageId: number, stdin: string) {
+  // private method dungf chung
+  private async callJudge0(
+    sourceCode: string,
+    languageId: number,
+    stdin: string,
+  ) {
     try {
       const response = await axios.post(
         `${process.env.JUDGE0_URL}?base64_encoded=true&wait=true`,
@@ -45,12 +52,12 @@ export class CodeEngineService {
       };
 
       return {
-        stdout:         decode(data.stdout),
-        stderr:         decode(data.stderr),
+        stdout: decode(data.stdout),
+        stderr: decode(data.stderr),
         compile_output: decode(data.compile_output),
-        status:         data.status?.description || 'Unknown',
-        time:           data.time   || '0',
-        memory:         data.memory || 0,
+        status: data.status?.description || 'Unknown',
+        time: data.time || '0',
+        memory: data.memory || 0,
       };
     } catch (error) {
       console.error('Judge0 error:', error);
