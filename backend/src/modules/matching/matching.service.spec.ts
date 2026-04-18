@@ -1,147 +1,171 @@
-// import { Test, TestingModule } from '@nestjs/testing';
-// import { MatchingService } from './matching.service';
-// import { SocketService } from '../socket/socket.service';
-// import { StreamService } from '../stream/stream.service';
-// import { createMock, DeepMocked } from '@golevelup/ts-jest';
-// import Redis from 'ioredis';
-// import { InternalServerErrorException } from '@nestjs/common';
-// // import { v4 as uuidv4 } from 'uuid';
+/* eslint-disable @typescript-eslint/unbound-method */
+import { Test, TestingModule } from '@nestjs/testing';
+import { MatchingService } from './matching.service';
+import { SocketService } from '../socket/socket.service';
+import { StreamService } from '../stream/stream.service';
+import { createMock, DeepMocked } from '@golevelup/ts-jest';
+import Redis from 'ioredis';
+import { InternalServerErrorException } from '@nestjs/common';
 
-// // Mock module uuid để trả về 1 ID cố định khi test
-// jest.mock('uuid', () => ({
-//   v4: jest.fn(() => 'mock-room-id'),
-// }));
+// Mock module uuid để trả về 1 ID cố định khi test, giúp so sánh dễ dàng hơn
+jest.mock('uuid', () => ({
+  v4: jest.fn(() => 'mock-room-id'),
+}));
 
-// /* eslint-disable @typescript-eslint/unbound-method */
-// /* eslint-disable prettier/prettier */
+describe('MatchingService', () => {
+  let service: MatchingService;
+  let redis: DeepMocked<Redis>;
+  let socketService: DeepMocked<SocketService>;
+  let streamService: DeepMocked<StreamService>;
 
-// describe('MatchingService', () => {
-//   let service: MatchingService;
-//   let redis: DeepMocked<Redis>;
-//   let socketService: DeepMocked<SocketService>;
-//   let streamService: DeepMocked<StreamService>;
+  beforeEach(async () => {
+    jest.clearAllMocks();
 
-//   beforeEach(async () => {
-//     const module: TestingModule = await Test.createTestingModule({
-//       providers: [
-//         MatchingService,
-//         {
-//           provide: 'REDIS_CLIENT',
-//           useValue: createMock<Redis>(),
-//         },
-//         {
-//           provide: SocketService,
-//           useValue: createMock<SocketService>(),
-//         },
-//         {
-//           provide: StreamService,
-//           useValue: createMock<StreamService>(),
-//         },
-//       ],
-//     }).compile();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MatchingService,
+        {
+          provide: 'REDIS_CLIENT',
+          useValue: createMock<Redis>(),
+        },
+        {
+          provide: SocketService,
+          useValue: createMock<SocketService>(),
+        },
+        {
+          provide: StreamService,
+          useValue: createMock<StreamService>(),
+        },
+      ],
+    }).compile();
 
-//     service = module.get<MatchingService>(MatchingService);
-//     redis = module.get('REDIS_CLIENT');
-//     socketService = module.get(SocketService);
-//     streamService = module.get(StreamService);
-//   });
+    service = module.get<MatchingService>(MatchingService);
+    redis = module.get('REDIS_CLIENT');
+    socketService = module.get(SocketService);
+    streamService = module.get(StreamService);
+  });
 
-//   describe('handleJoinQueue', () => {
-//     const userId = 1;
-//     const sUserId = '1';
-//     const level = 'senior';
-//     const queueKey = 'queue:SENIOR';
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
-//     it('nên thêm user vào hàng chờ nếu không có đối thủ', async () => {
-//       (redis.zrange as unknown as jest.Mock).mockResolvedValue([]);
+  describe('handleJoinQueue', () => {
+    const userId = 1;
+    const sUserId = '1';
+    const level = 'senior';
+    const queueKey = 'queue:SENIOR';
 
-//       const result = await service.handleJoinQueue(userId, level);
+    it('nên thêm user vào hàng chờ nếu không có đối thủ', async () => {
+      // Giả lập Redis zrange trả về mảng rỗng (không có ai đang đợi)
+      redis.zrange.mockResolvedValue([]);
 
-//       expect(redis.zadd).toHaveBeenCalledWith(
-//         queueKey,
-//         expect.any(Number),
-//         sUserId,
-//       );
-//       expect(result).toEqual({
-//         status: 'in_queue',
-//         message: 'Đang tìm đối thủ phù hợp...',
-//       });
-//     });
+      const result = await service.handleJoinQueue(userId, level);
 
-//     it('nên thực hiện matching nếu tìm thấy đối thủ hợp lệ', async () => {
-//       const opponentId = '2';
+      expect(redis.zadd).toHaveBeenCalledWith(
+        queueKey,
+        expect.any(Number),
+        sUserId,
+      );
+      expect(result).toEqual({
+        status: 'in_queue',
+        message: 'Đang tìm đối thủ phù hợp...',
+      });
+    });
 
-//       (redis.zrange as unknown as jest.Mock).mockResolvedValue([opponentId]);
-//       (redis.zrem as unknown as jest.Mock).mockResolvedValue(1);
-//       (streamService.createToken as unknown as jest.Mock).mockReturnValue('mock-token');
+    it('nên thực hiện matching nếu tìm thấy đối thủ hợp lệ', async () => {
+      const opponentId = '2';
 
-//       const result = await service.handleJoinQueue(userId, level);
+      // Giả lập Redis tìm thấy đối thủ
+      redis.zrange.mockResolvedValue([opponentId]);
+      // Giả lập Redis zrem trả về 1 (xóa thành công -> cướp được người)
+      redis.zrem.mockResolvedValue(1);
+      // Giả lập tạo token thành công
+      streamService.createToken.mockReturnValue('mock-token');
+      streamService.createCall.mockResolvedValue(undefined as any);
 
-//       expect(streamService.createCall).toHaveBeenCalledWith(
-//         'mock-room-id',
-//         sUserId,
-//       );
+      const result = await service.handleJoinQueue(userId, level);
 
-//       expect(socketService.emitToUser).toHaveBeenCalledWith(
-//         sUserId,
-//         'match_found',
-//         expect.objectContaining({
-//           roomId: 'mock-room-id',
-//           role: 'interviewee',
-//         }),
-//       );
-//       expect(socketService.emitToUser).toHaveBeenCalledWith(
-//         opponentId,
-//         'match_found',
-//         expect.objectContaining({
-//           role: 'interviewer',
-//           opponentId: userId,
-//         }),
-//       );
+      // Kiểm tra API Stream được gọi đúng
+      expect(streamService.createCall).toHaveBeenCalledWith(
+        'mock-room-id',
+        sUserId,
+      );
 
-//       expect(result).toEqual({
-//         status: 'matched',
-//         roomId: 'mock-room-id',
-//         token: 'mock-token',
-//       });
-//     });
+      // Kiểm tra bắn Socket cho User hiện tại
+      expect(socketService.emitToUser).toHaveBeenCalledWith(
+        sUserId,
+        'match_found',
+        expect.objectContaining({
+          roomId: 'mock-room-id',
+          role: 'interviewee',
+          token: 'mock-token',
+          opponentId: parseInt(opponentId),
+        }),
+      );
 
-//     it('nên tự đưa mình vào hàng chờ nếu có đối thủ nhưng không "chiếm" được (Race Condition)', async () => {
-//       const opponentId = '2';
+      // Kiểm tra bắn Socket cho Đối thủ
+      expect(socketService.emitToUser).toHaveBeenCalledWith(
+        opponentId,
+        'match_found',
+        expect.objectContaining({
+          roomId: 'mock-room-id',
+          role: 'interviewer',
+          token: 'mock-token',
+          opponentId: userId,
+        }),
+      );
 
-//       (redis.zrange as unknown as jest.Mock).mockResolvedValue([opponentId]);
-//       (redis.zrem as unknown as jest.Mock).mockResolvedValue(0);
+      expect(result).toEqual({
+        status: 'matched',
+        roomId: 'mock-room-id',
+        token: 'mock-token',
+      });
+    });
 
-//       const result = await service.handleJoinQueue(userId, level);
+    it('nên tự đưa mình vào hàng chờ nếu có đối thủ nhưng không "chiếm" được (Race Condition)', async () => {
+      const opponentId = '2';
 
-//       expect(redis.zadd).toHaveBeenCalled();
-//       expect(result.status).toBe('in_queue');
-//     });
+      // Tìm thấy đối thủ...
+      redis.zrange.mockResolvedValue([opponentId]);
+      // ...nhưng khi zrem lại ra 0 (đã có người khác chiếm mất trước 1 mili-giây)
+      redis.zrem.mockResolvedValue(0);
 
-//     it('nên ném ra lỗi nếu StreamService gặp sự cố', async () => {
-//       const opponentId = '2';
+      const result = await service.handleJoinQueue(userId, level);
 
-//       (redis.zrange as unknown as jest.Mock).mockResolvedValue([opponentId]);
-//       (redis.zrem as unknown as jest.Mock).mockResolvedValue(1);
-//       (streamService.createCall as unknown as jest.Mock).mockRejectedValue(
-//         new Error('Stream down'),
-//       );
+      // Sẽ quay về logic add vào hàng đợi
+      expect(redis.zadd).toHaveBeenCalledWith(
+        queueKey,
+        expect.any(Number),
+        sUserId,
+      );
+      expect(result.status).toBe('in_queue');
+    });
 
-//       await expect(service.handleJoinQueue(userId, level)).rejects.toThrow(
-//         InternalServerErrorException,
-//       );
-//     });
-//   });
+    it('nên ném ra lỗi nếu StreamService gặp sự cố', async () => {
+      const opponentId = '2';
 
-//   describe('handleLeaveQueue', () => {
-//     it('nên xóa user khỏi hàng chờ Redis', async () => {
-//       const userId = 123;
-//       const level = 'junior';
+      redis.zrange.mockResolvedValue([opponentId]);
+      redis.zrem.mockResolvedValue(1);
+      // Giả lập Stream API (bên thứ 3) bị sập mạng
+      streamService.createCall.mockRejectedValue(new Error('Stream down'));
 
-//       const result = await service.handleLeaveQueue(userId, level);
+      await expect(service.handleJoinQueue(userId, level)).rejects.toThrow(
+        InternalServerErrorException,
+      );
+    });
+  });
 
-//       expect(redis.zrem).toHaveBeenCalledWith('queue:JUNIOR', '123');
-//       expect(result).toEqual({ status: 'left' });
-//     });
-//   });
-// });
+  describe('handleLeaveQueue', () => {
+    it('nên xóa user khỏi hàng chờ Redis', async () => {
+      const userId = 123;
+      const level = 'junior';
+
+      redis.zrem.mockResolvedValue(1);
+
+      const result = await service.handleLeaveQueue(userId, level);
+
+      expect(redis.zrem).toHaveBeenCalledWith('queue:JUNIOR', '123');
+      expect(result).toEqual({ status: 'left' });
+    });
+  });
+});

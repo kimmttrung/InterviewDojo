@@ -49,57 +49,55 @@ export default function SoloRecording() {
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
 
-  // useEffect(() => {
-  //   return () => stopStream();
-  // }, []);
-
   useEffect(() => {
-    let activeStream: MediaStream | null = null;
+    return () => stopStream();
+  }, []);
 
-    const startCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        activeStream = stream;
-        streamRef.current = stream; // Lưu vào ref để dùng cho MediaRecorder
+  // useEffect(() => {
+  //   let activeStream: MediaStream | null = null;
 
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-      } catch (err) {
-        console.error('Lỗi bật camera:', err);
-      }
-    };
+  //   const startCamera = async () => {
+  //     try {
+  //       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  //       activeStream = stream;
+  //       streamRef.current = stream; // Lưu vào ref để dùng cho MediaRecorder
 
-    if (step === 'recording' || step === 'setup') {
-      startCamera();
+  //       if (videoRef.current) {
+  //         videoRef.current.srcObject = stream;
+  //       }
+  //     } catch (err) {
+  //       console.error('Lỗi bật camera:', err);
+  //     }
+  //   };
+
+  //   if (step === 'recording' || step === 'setup') {
+  //     startCamera();
+  //   }
+
+  //   // 👇 ĐÂY LÀ ĐOẠN QUAN TRỌNG NHẤT ĐỂ CHỐNG DUPLICATE 👇
+  //   return () => {
+  //     if (activeStream) {
+  //       activeStream.getTracks().forEach((track) => track.stop()); // Tắt stream cũ đi
+  //     }
+  //   };
+  // }, [step]);
+  useEffect(() => {
+    if (step === 'recording' && videoRef.current && streamRef.current) {
+      videoRef.current.srcObject = streamRef.current;
+      startRecording(); // LỖI THỜI GIAN KHÔNG CHẠY ĐÃ ĐƯỢC FIX TẠI ĐÂY!
     }
-
-    // 👇 ĐÂY LÀ ĐOẠN QUAN TRỌNG NHẤT ĐỂ CHỐNG DUPLICATE 👇
-    return () => {
-      if (activeStream) {
-        activeStream.getTracks().forEach((track) => track.stop()); // Tắt stream cũ đi
-      }
-    };
-  }, [step]); // Phụ thuộc vào step hoặc rỗng tùy logic của bạn
+  }, [step]);
 
   const stopStream = () => {
     if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
       streamRef.current = null;
     }
-  };
-
-  const initCamera = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (videoRef.current) videoRef.current.srcObject = stream;
-
-      // Reset toggle states when starting new stream
-      setIsCamOn(true);
-      setIsMicOn(true);
-    } catch (err) {
-      alert('Could not access Camera/Mic. Please check permissions.');
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
   };
 
@@ -126,6 +124,7 @@ export default function SoloRecording() {
   };
 
   const handleTryAgain = () => {
+    stopStream();
     setStep('setup');
     setSeconds(0);
     setPreviewUrl(null);
@@ -133,10 +132,23 @@ export default function SoloRecording() {
     chunksRef.current = [];
   };
 
+  // const handleStartInterview = async () => {
+  //   setStep('recording');
+  //   await initCamera();
+  //   startRecording();
+  // };
   const handleStartInterview = async () => {
-    setStep('recording');
-    await initCamera();
-    startRecording();
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = stream;
+      setIsCamOn(true);
+      setIsMicOn(true);
+
+      // Đổi sang màn hình recording -> Tự động kích hoạt useEffect số 2 để đếm giờ
+      setStep('recording');
+    } catch (err) {
+      alert('Không thể truy cập Camera/Mic. Vui lòng kiểm tra quyền trên trình duyệt.');
+    }
   };
 
   const startRecording = () => {
@@ -156,8 +168,16 @@ export default function SoloRecording() {
     (window as any).recordingTimer = timer;
   };
 
+  // const handleStopRecording = () => {
+  //   mediaRecorderRef.current?.stop();
+  //   clearInterval((window as any).recordingTimer);
+  //   stopStream();
+  //   setStep('preview');
+  // };
   const handleStopRecording = () => {
-    mediaRecorderRef.current?.stop();
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      mediaRecorderRef.current.stop();
+    }
     clearInterval((window as any).recordingTimer);
     stopStream();
     setStep('preview');
