@@ -6,7 +6,9 @@ import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 // import { TransformInterceptor } from './common/interceptors/transform.interceptor';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+  });
 
   //set prefix api
   app.setGlobalPrefix('api/v1');

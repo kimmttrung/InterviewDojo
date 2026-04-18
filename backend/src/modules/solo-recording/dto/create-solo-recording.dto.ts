@@ -15,4 +15,12 @@ export class CreateSoloRecordingDto {
   @IsOptional()
   @IsString()
   question?: string;
+
+  @IsOptional()
+  @IsString()
+  videoUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  audioUrl?: string;
 }

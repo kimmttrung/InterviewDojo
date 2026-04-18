@@ -329,6 +329,7 @@ model SoloRecording {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   videoUrl  String   @map("video_url")
+  audioUrl  String   @map("audio_url")
   publicId  String   @map("public_id")
   duration  Int?
   createdAt DateTime @default(now()) @map("created_at")
@@ -411,7 +412,7 @@ model TestCase {
   explanation      String? // giải thích khi sai
 
   codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-  
+
   @@unique([codingQuestionId, order])
   @@map("test_cases")
 }

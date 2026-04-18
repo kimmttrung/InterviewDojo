@@ -30,6 +30,7 @@ import PeerMatchingPage from './pages/user/PeerMatchingPage';
 import QuestionsPage from './pages/admin/QuestionsPage';
 import CategoriesPage from './pages/admin/CategoriesPage';
 import CompaniesPage from './pages/admin/CompaniesPage';
+import AIAnalysisResult from './pages/user/AIAnalysisResult';
 import QuestionBankDetail from './pages/user/QuestionBankDetail';
 
 interface ProtectedRouteProps {
@@ -119,6 +120,15 @@ export function App({ queryClient }: AppProps) {
               <Route path="/admin/questions" element={<QuestionsPage />} />
               <Route path="/admin/categories" element={<CategoriesPage />} />
               <Route path="/admin/companies" element={<CompaniesPage />} />
+              <Route
+                path="/ai-analysis/:recordingId"
+                element={
+                  <ProtectedRoute
+                    element={<AIAnalysisResult />}
+                    roles={['CANDIDATE']}
+                  />
+                }
+              />
             </Routes>
           </TooltipProvider>
         </QueryClientProvider>
