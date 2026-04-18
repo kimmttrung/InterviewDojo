@@ -2,12 +2,12 @@
 import React, { useEffect, useState, useRef } from 'react';
 import Editor from '@monaco-editor/react';
 import { io, Socket } from 'socket.io-client';
-import { api } from '../../../lib/api';   // dùng api instance của bạn
+import { api } from '../../../lib/api'; // dùng api instance của bạn
 
 interface CodeEditorProps {
   roomId: string;
   userId: string;
-  currentQuestion: any;        // Question từ useQuestions
+  currentQuestion: any; // Question từ useQuestions
 }
 
 const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
@@ -38,7 +38,7 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
     return () => {
       socketRef.current?.disconnect();
     };
-  }, [roomId, userId]);
+  }, [currentQuestion?.id]);
 
   const handleEditorChange = (value: string | undefined) => {
     const newCode = value || '';
@@ -72,11 +72,12 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
       const response = await api.post('/coding/submit', payload);
       const submission = response.data.data || response.data;
 
-      setOutput(`✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`);
+      setOutput(
+        `✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`,
+      );
 
       // Bắt đầu polling kết quả
       pollSubmission(submission.id);
-
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Lỗi không xác định';
       setOutput(`❌ Nộp bài thất bại: ${msg}`);
@@ -109,20 +110,32 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
         setOutput(text);
 
         // Kết thúc polling khi có kết quả cuối
-        if (['ACCEPTED', 'WRONG_ANSWER', 'RUNTIME_ERROR', 'COMPILE_ERROR',
-             'TIME_LIMIT_EXCEEDED', 'MEMORY_LIMIT_EXCEEDED'].includes(data.status)) {
+        if (
+          [
+            'ACCEPTED',
+            'WRONG_ANSWER',
+            'RUNTIME_ERROR',
+            'COMPILE_ERROR',
+            'TIME_LIMIT_EXCEEDED',
+            'MEMORY_LIMIT_EXCEEDED',
+          ].includes(data.status)
+        ) {
           clearInterval(interval);
 
           if (data.status === 'ACCEPTED') {
-            setOutput(prev => prev + '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.');
+            setOutput((prev) => prev + '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.');
           } else {
-            setOutput(prev => prev + `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`);
+            setOutput(
+              (prev) =>
+                prev +
+                `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`,
+            );
           }
         }
 
         if (attempts >= maxAttempts) {
           clearInterval(interval);
-          setOutput(prev => prev + '\n\n⏰ Quá thời gian chờ kết quả.');
+          setOutput((prev) => prev + '\n\n⏰ Quá thời gian chờ kết quả.');
         }
       } catch (err) {
         console.error('Poll submission error:', err);
