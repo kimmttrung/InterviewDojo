@@ -1,6 +1,6 @@
 // src/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 import { useVideoCall } from '../../hooks/useVideoCall';
@@ -10,6 +10,8 @@ import { QuestionPanel } from './QuestionPanel';
 import { WorkspaceTabs } from './WorkspaceTabs';
 import { VideoCallSection } from './VideoCallSection';
 import { ChatAndNotes } from './ChatAndNotes';
+import { io } from 'socket.io-client';
+import { WorkMode } from '../../types/interview';
 
 export default function InterviewRoom() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -19,6 +21,7 @@ export default function InterviewRoom() {
   const currentUser = userStore ? JSON.parse(userStore) : null;
   const userId = currentUser?.id?.toString() || searchParams.get('userId') || 'guest';
   const token = searchParams.get('token');
+  const socketRef = useRef<any>(null);
 
   const { client, call } = useVideoCall(roomId, token, userId, currentUser);
   const {
@@ -37,6 +40,29 @@ export default function InterviewRoom() {
     'code',
   );
 
+  useEffect(() => {
+    if (!userId || !roomId) return;
+
+    // Khởi tạo socket
+    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
+      query: { userId },
+    });
+
+    // Tham gia phòng
+    socketRef.current.emit('join_room', roomId);
+
+    // LẮNG NGHE KHI NGƯỜI KIA ĐỔI CÂU HỎI
+    socketRef.current.on('receive_question', (data: { question: any; mode: 'code' | 'theory' }) => {
+      setCurrentQuestion(data.question);
+      setQuestionMode(data.mode);
+      setWorkMode(data.mode === 'code' ? 'code' : 'theory');
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, [roomId, userId]);
+
   // Tải danh sách câu hỏi
   useEffect(() => {
     fetchQuestions();
@@ -45,22 +71,39 @@ export default function InterviewRoom() {
   // Random câu hỏi
   const handleRandom = useCallback(
     (type: 'code' | 'theory') => {
-      setQuestionMode(type);
-      setWorkMode(type === 'code' ? 'code' : 'theory');
-
       const question = getRandomQuestion(type);
       if (question) {
         setCurrentQuestion(question);
+        setQuestionMode(type);
+        setWorkMode(type === 'code' ? 'code' : 'theory');
+
+        // 2. GỬI CHO NGƯỜI KIA QUA SOCKET
+        socketRef.current?.emit('send_question', {
+          roomId,
+          question: question,
+          mode: type,
+        });
       }
     },
-    [getRandomQuestion, setCurrentQuestion, setWorkMode, setQuestionMode],
+    [getRandomQuestion, setCurrentQuestion, setWorkMode, setQuestionMode, roomId],
   );
+
+  // EFFECT DỌN DẸP KHI THOÁT PHÒNG
+  useEffect(() => {
+    // Hàm này sẽ chạy khi component bị Unmount (người dùng rời khỏi InterviewRoom)
+    return () => {
+      console.log('🧹 Đang dọn dẹp dữ liệu phòng phỏng vấn...');
+      localStorage.removeItem('workMode');
+      localStorage.removeItem('questionMode');
+      // Nếu bạn có lưu các bản nháp code hay whiteboard thì xóa ở đây luôn
+      localStorage.removeItem('whiteboard_shapes');
+    };
+  }, []); // Array rỗng để chỉ chạy 1 lần khi mount và 1 lần khi unmount
 
   // Loading khi chưa kết nối
   if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
-
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>

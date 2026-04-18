@@ -1,4 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
+import { io, Socket } from 'socket.io-client';
 
 type WBTool =
   | 'pen'
@@ -10,10 +11,12 @@ type WBTool =
   | 'arrow'
   | 'line'
   | 'text';
+
 interface Point {
   x: number;
   y: number;
 }
+
 interface WBShape {
   id: string;
   tool: WBTool;
@@ -24,8 +27,16 @@ interface WBShape {
   filled?: boolean;
 }
 
-export default function Whiteboard() {
+interface WhiteboardProps {
+  roomId: string;
+  userId: string;
+}
+
+export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const socketRef = useRef<Socket | null>(null);
+
+  // States
   const [tool, setTool] = useState<WBTool>('pen');
   const [color, setColor] = useState('#3B82F6');
   const [lineWidth, setLineWidth] = useState(3);
@@ -61,6 +72,14 @@ export default function Whiteboard() {
     { id: 'arrow', label: '➡️', name: 'Arrow' },
     { id: 'text', label: '📝', name: 'Text' },
   ];
+
+  // Helper: Đồng bộ danh sách hình qua Socket
+  const emitShapes = (newShapes: WBShape[]) => {
+    socketRef.current?.emit('send_whiteboard_shapes', {
+      roomId,
+      shapes: newShapes,
+    });
+  };
 
   const getPos = (e: any): Point => {
     const rect = canvasRef.current!.getBoundingClientRect();
@@ -101,13 +120,10 @@ export default function Whiteboard() {
       const [start, end] = s.points;
       const angle = Math.atan2(end.y - start.y, end.x - start.x);
       const arrowSize = 15;
-
       ctx.beginPath();
       ctx.moveTo(start.x, start.y);
       ctx.lineTo(end.x, end.y);
       ctx.stroke();
-
-      // Vẽ đầu mũi tên
       ctx.beginPath();
       ctx.moveTo(end.x, end.y);
       ctx.lineTo(
@@ -122,18 +138,16 @@ export default function Whiteboard() {
     } else if (s.tool === 'rect') {
       if (s.points.length < 2) return;
       const [a, b] = s.points;
-      const x = Math.min(a.x, b.x);
-      const y = Math.min(a.y, b.y);
-      const width = Math.abs(b.x - a.x);
-      const height = Math.abs(b.y - a.y);
-
-      if (s.filled) ctx.fillRect(x, y, width, height);
-      ctx.strokeRect(x, y, width, height);
+      const x = Math.min(a.x, b.x),
+        y = Math.min(a.y, b.y);
+      const w = Math.abs(b.x - a.x),
+        h = Math.abs(b.y - a.y);
+      if (s.filled) ctx.fillRect(x, y, w, h);
+      ctx.strokeRect(x, y, w, h);
     } else if (s.tool === 'circle') {
       if (s.points.length < 2) return;
       const [a, b] = s.points;
       const radius = Math.sqrt(Math.pow(b.x - a.x, 2) + Math.pow(b.y - a.y, 2));
-
       ctx.beginPath();
       ctx.arc(a.x, a.y, radius, 0, Math.PI * 2);
       if (s.filled) ctx.fill();
@@ -141,33 +155,27 @@ export default function Whiteboard() {
     } else if (s.tool === 'triangle') {
       if (s.points.length < 2) return;
       const [a, b] = s.points;
-      const width = b.x - a.x;
-      const height = b.y - a.y;
-
       ctx.beginPath();
-      ctx.moveTo(a.x + width / 2, a.y);
-      ctx.lineTo(a.x + width, a.y + height);
-      ctx.lineTo(a.x, a.y + height);
+      ctx.moveTo(a.x + (b.x - a.x) / 2, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(a.x, b.y);
       ctx.closePath();
       if (s.filled) ctx.fill();
       ctx.stroke();
     } else if (s.tool === 'parallelogram') {
       if (s.points.length < 2) return;
       const [a, b] = s.points;
-      const width = b.x - a.x;
-      const height = b.y - a.y;
-      const skew = width * 0.3;
-
+      const skew = (b.x - a.x) * 0.3;
       ctx.beginPath();
       ctx.moveTo(a.x + skew, a.y);
-      ctx.lineTo(a.x + width + skew, a.y);
-      ctx.lineTo(a.x + width, a.y + height);
-      ctx.lineTo(a.x, a.y + height);
+      ctx.lineTo(b.x + skew, a.y);
+      ctx.lineTo(b.x, b.y);
+      ctx.lineTo(a.x, b.y);
       ctx.closePath();
       if (s.filled) ctx.fill();
       ctx.stroke();
     } else if (s.tool === 'text') {
-      ctx.font = `${s.width * 5 + 16}px "Segoe UI", monospace`;
+      ctx.font = `${s.width * 5 + 16}px "Segoe UI", sans-serif`;
       ctx.fillStyle = s.color;
       ctx.fillText(s.text || '', s.points[0].x, s.points[0].y);
     }
@@ -179,11 +187,11 @@ export default function Whiteboard() {
     if (!ctx) return;
     ctx.clearRect(0, 0, canvasRef.current!.width, canvasRef.current!.height);
 
-    // Vẽ background grid
+    // Background grid
     ctx.save();
-    ctx.strokeStyle = '#E5E7EB';
+    ctx.strokeStyle = '#F1F5F9';
     ctx.lineWidth = 1;
-    const gridSize = 20;
+    const gridSize = 25;
     for (let x = 0; x < canvasRef.current!.width; x += gridSize) {
       ctx.beginPath();
       ctx.moveTo(x, 0);
@@ -201,6 +209,52 @@ export default function Whiteboard() {
     [...list, ...(extra ? [extra] : [])].forEach((s) => drawShape(ctx, s));
   }, []);
 
+  // --- Logic Socket ---
+  useEffect(() => {
+    const socket = io(import.meta.env.VITE_SOCKET_URL, { query: { userId } });
+    socketRef.current = socket;
+    socket.emit('join_room', roomId);
+
+    socket.on('receive_whiteboard_shapes', (remoteShapes: WBShape[]) => {
+      setShapes(remoteShapes);
+      redraw(remoteShapes);
+      setHistory((prev) => [...prev, remoteShapes]);
+      setHistoryIndex((h) => h + 1);
+    });
+
+    socket.on('receive_clear_whiteboard', () => {
+      setShapes([]);
+      redraw([]);
+      setHistory([[]]);
+      setHistoryIndex(0);
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [roomId, userId, redraw]);
+
+  // --- Logic Resize ---
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const resize = () => {
+      const parent = canvas.parentElement;
+      if (
+        parent &&
+        (canvas.width !== parent.clientWidth || canvas.height !== parent.clientHeight)
+      ) {
+        canvas.width = parent.clientWidth;
+        canvas.height = parent.clientHeight;
+        redraw(shapes);
+      }
+    };
+    resize();
+    window.addEventListener('resize', resize);
+    return () => window.removeEventListener('resize', resize);
+  }, [shapes, redraw]);
+
+  // --- Mouse Events ---
   const onMouseDown = (e: React.MouseEvent) => {
     const pos = getPos(e);
     if (tool === 'text') {
@@ -235,6 +289,8 @@ export default function Whiteboard() {
     setIsDrawing(false);
     const newShapes = [...shapes, currentShape];
     setShapes(newShapes);
+    emitShapes(newShapes); // Đồng bộ ngay
+
     setHistory([...history.slice(0, historyIndex + 1), newShapes]);
     setHistoryIndex(historyIndex + 1);
     setCurrentShape(null);
@@ -252,6 +308,8 @@ export default function Whiteboard() {
       };
       const newShapes = [...shapes, newShape];
       setShapes(newShapes);
+      emitShapes(newShapes); // Đồng bộ văn bản
+
       setHistory([...history.slice(0, historyIndex + 1), newShapes]);
       setHistoryIndex(historyIndex + 1);
       setPendingText(null);
@@ -261,17 +319,21 @@ export default function Whiteboard() {
 
   const undo = () => {
     if (historyIndex > 0) {
+      const prevShapes = history[historyIndex - 1];
       setHistoryIndex(historyIndex - 1);
-      setShapes(history[historyIndex - 1]);
-      redraw(history[historyIndex - 1]);
+      setShapes(prevShapes);
+      redraw(prevShapes);
+      emitShapes(prevShapes); // Đồng bộ Undo
     }
   };
 
   const redo = () => {
     if (historyIndex < history.length - 1) {
+      const nextShapes = history[historyIndex + 1];
       setHistoryIndex(historyIndex + 1);
-      setShapes(history[historyIndex + 1]);
-      redraw(history[historyIndex + 1]);
+      setShapes(nextShapes);
+      redraw(nextShapes);
+      emitShapes(nextShapes); // Đồng bộ Redo
     }
   };
 
@@ -280,182 +342,119 @@ export default function Whiteboard() {
     setHistory([[]]);
     setHistoryIndex(0);
     redraw([]);
+    socketRef.current?.emit('clear_whiteboard', roomId);
   };
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const resize = () => {
-      const parent = canvas.parentElement;
-      if (parent) {
-        canvas.width = parent.clientWidth;
-        canvas.height = parent.clientHeight;
-        redraw(shapes);
-      }
-    };
-    resize();
-    window.addEventListener('resize', resize);
-    return () => window.removeEventListener('resize', resize);
-  }, [shapes, redraw]);
-
   return (
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="h-full flex flex-col bg-white overflow-hidden">
       {/* Toolbar */}
-      <div className="bg-white border-b border-gray-200 shadow-sm px-4 py-2">
-        <div className="flex items-center gap-4 flex-wrap">
-          {/* Tools */}
-          <div className="flex gap-1 bg-gray-100 rounded-lg p-1">
-            {TOOLS.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => setTool(t.id as WBTool)}
-                className={`relative group p-2 rounded-md transition-all ${
-                  tool === t.id
-                    ? 'bg-blue-500 text-white shadow-md'
-                    : 'hover:bg-gray-200 text-gray-700'
-                }`}
-                title={t.name}
-              >
-                <span className="text-lg">{t.label}</span>
-                <span className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 bg-gray-800 text-white text-xs px-2 py-1 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap pointer-events-none">
-                  {t.name}
-                </span>
-              </button>
-            ))}
-          </div>
+      <div className="bg-slate-50 border-b border-slate-200 p-2 flex items-center gap-3 flex-wrap">
+        <div className="flex gap-0.5 bg-white p-1 rounded-lg border shadow-sm">
+          {TOOLS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTool(t.id as WBTool)}
+              className={`p-2 rounded-md transition-all ${tool === t.id ? 'bg-indigo-600 text-white shadow-inner' : 'hover:bg-slate-100 text-slate-600'}`}
+              title={t.name}
+            >
+              <span className="text-base">{t.label}</span>
+            </button>
+          ))}
+        </div>
 
-          <div className="w-px h-8 bg-gray-300" />
+        <div className="h-6 w-px bg-slate-300 mx-1" />
 
-          {/* Colors */}
-          <div className="flex gap-1.5">
-            {COLORS.map((c) => (
-              <button
-                key={c.code}
-                onClick={() => setColor(c.code)}
-                className={`relative w-8 h-8 rounded-lg transition-all ${
-                  color === c.code
-                    ? 'ring-2 ring-blue-500 ring-offset-2 scale-110'
-                    : 'hover:scale-105'
-                }`}
-                style={{ backgroundColor: c.code, boxShadow: '0 1px 3px rgba(0,0,0,0.1)' }}
-                title={c.name}
-              />
-            ))}
-          </div>
-
-          <div className="w-px h-8 bg-gray-300" />
-
-          {/* Line Width */}
-          <div className="flex items-center gap-2">
-            <span className="text-xs font-medium text-gray-600">Stroke:</span>
-            <input
-              type="range"
-              min="1"
-              max="20"
-              value={lineWidth}
-              onChange={(e) => setLineWidth(parseInt(e.target.value))}
-              className="w-24 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer"
+        <div className="flex gap-1">
+          {COLORS.map((c) => (
+            <button
+              key={c.code}
+              onClick={() => setColor(c.code)}
+              className={`w-6 h-6 rounded-full border-2 transition-transform ${color === c.code ? 'border-slate-900 scale-110' : 'border-transparent hover:scale-105'}`}
+              style={{ backgroundColor: c.code }}
             />
-            <span className="text-xs font-mono text-gray-500 w-8">{lineWidth}px</span>
-          </div>
+          ))}
+        </div>
 
-          {/* Fill Toggle */}
-          <button
-            onClick={() => setFilled(!filled)}
-            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-              filled
-                ? 'bg-blue-500 text-white shadow-md'
-                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-            }`}
-          >
-            {filled ? '🎨 Filled' : '⬜ Outline'}
+        <div className="flex items-center gap-2 ml-2">
+          <input
+            type="range"
+            min="1"
+            max="20"
+            value={lineWidth}
+            onChange={(e) => setLineWidth(parseInt(e.target.value))}
+            className="w-20 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+          />
+        </div>
+
+        <button
+          onClick={() => setFilled(!filled)}
+          className={`px-3 py-1 rounded-md text-[10px] font-bold uppercase ${filled ? 'bg-indigo-600 text-white' : 'bg-white border text-slate-600 shadow-sm'}`}
+        >
+          {filled ? 'Filled' : 'Outline'}
+        </button>
+
+        <div className="flex-1" />
+
+        <div className="flex gap-1">
+          <button onClick={undo} className="p-2 hover:bg-white rounded-md border text-xs shadow-sm">
+            ↩️
           </button>
-
-          <div className="flex-1" />
-
-          {/* Actions */}
-          <div className="flex gap-2">
-            <button
-              onClick={undo}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
-              title="Undo"
-            >
-              ↩️ Undo
-            </button>
-            <button
-              onClick={redo}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-100 text-gray-700 hover:bg-gray-200 transition-all"
-              title="Redo"
-            >
-              ↪️ Redo
-            </button>
-            <button
-              onClick={clearCanvas}
-              className="px-3 py-1.5 rounded-lg text-xs font-medium bg-red-500 text-white hover:bg-red-600 transition-all shadow-sm"
-            >
-              🗑️ Clear All
-            </button>
-          </div>
+          <button onClick={redo} className="p-2 hover:bg-white rounded-md border text-xs shadow-sm">
+            ↪️
+          </button>
+          <button
+            onClick={clearCanvas}
+            className="px-3 py-1 bg-red-50 text-red-600 border border-red-200 rounded-md text-[10px] font-bold uppercase hover:bg-red-600 hover:text-white transition-colors"
+          >
+            Clear
+          </button>
         </div>
       </div>
 
       {/* Canvas Area */}
-      <div className="flex-1 relative overflow-hidden bg-white">
+      <div className="flex-1 relative bg-white">
         <canvas
           ref={canvasRef}
-          className="absolute inset-0 w-full h-full cursor-crosshair shadow-inner"
+          className="absolute inset-0 w-full h-full cursor-crosshair"
           onMouseDown={onMouseDown}
           onMouseMove={onMouseMove}
           onMouseUp={onMouseUp}
           onMouseLeave={onMouseUp}
         />
-      </div>
 
-      {/* Text Input Modal */}
-      {pendingText && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-xl shadow-2xl p-6 min-w-[320px]">
-            <h3 className="text-lg font-semibold mb-4">Enter Text</h3>
-            <input
-              type="text"
-              value={textInput}
-              onChange={(e) => setTextInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleTextSubmit()}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 mb-4"
-              placeholder="Type your text here..."
-              autoFocus
-            />
-            <div className="flex gap-2 justify-end">
-              <button
-                onClick={() => setPendingText(null)}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 hover:bg-gray-200 transition-all"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleTextSubmit}
-                className="px-4 py-2 rounded-lg text-sm font-medium bg-blue-500 text-white hover:bg-blue-600 transition-all"
-              >
-                Add Text
-              </button>
+        {/* Text Input Modal */}
+        {pendingText && (
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-[2px] flex items-center justify-center z-50">
+            <div className="bg-white rounded-2xl shadow-2xl p-6 w-80 border border-slate-200 animate-in fade-in zoom-in duration-200">
+              <h3 className="text-sm font-black text-slate-800 mb-4 uppercase tracking-tight">
+                Thêm văn bản
+              </h3>
+              <input
+                type="text"
+                value={textInput}
+                onChange={(e) => setTextInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
+                className="w-full px-4 py-2 border rounded-xl focus:ring-2 focus:ring-indigo-500 outline-none mb-4 text-sm"
+                placeholder="Nhập nội dung..."
+                autoFocus
+              />
+              <div className="flex gap-2 justify-end">
+                <button
+                  onClick={() => setPendingText(null)}
+                  className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-lg uppercase"
+                >
+                  Hủy
+                </button>
+                <button
+                  onClick={handleTextSubmit}
+                  className="px-4 py-2 text-xs font-bold bg-indigo-600 text-white rounded-lg shadow-md uppercase"
+                >
+                  Xác nhận
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Info Bar */}
-      <div className="bg-gray-100 border-t border-gray-200 px-4 py-1.5 text-xs text-gray-500 flex justify-between items-center">
-        <div className="flex gap-4">
-          <span>🖱️ Click and drag to draw</span>
-          <span>🎨 Current tool: {TOOLS.find((t) => t.id === tool)?.name}</span>
-          <span>
-            🎯 Color:{' '}
-            <span className="inline-block w-3 h-3 rounded" style={{ backgroundColor: color }} />
-          </span>
-        </div>
-        <div>
-          {shapes.length} shape{shapes.length !== 1 ? 's' : ''} on canvas
-        </div>
+        )}
       </div>
     </div>
   );

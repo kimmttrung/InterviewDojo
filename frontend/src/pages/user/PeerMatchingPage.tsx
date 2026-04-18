@@ -13,6 +13,7 @@ export default function PeerMatchingPage() {
 
   const userStore = localStorage.getItem('user');
   const user = userStore ? JSON.parse(userStore) : null;
+  const [socketConnected, setSocketConnected] = useState(false);
 
   // Wait timer logic
   useEffect(() => {
@@ -33,6 +34,7 @@ export default function PeerMatchingPage() {
     const socket = io(import.meta.env.VITE_SOCKET_URL, {
       query: { userId: user.id },
     });
+    socket.on('connect', () => setSocketConnected(true));
 
     socket.on('match_found', (data: { roomId: string; token: string }) => {
       setIsSearching(false);

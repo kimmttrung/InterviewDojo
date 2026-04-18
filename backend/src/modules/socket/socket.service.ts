@@ -26,4 +26,14 @@ export class SocketService {
       this.socketServer.emit(event, data);
     }
   }
+
+  isUserOnline(userId: string | number): boolean {
+    if (!this.socketServer) return false;
+
+    const roomName = `user_${userId}`;
+    const room = this.socketServer.sockets.adapter.rooms.get(roomName);
+
+    // Nếu room tồn tại và có ít nhất 1 socket id trong đó thì là online
+    return !!(room && room.size > 0);
+  }
 }
