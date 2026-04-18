@@ -122,12 +122,7 @@ export function App({ queryClient }: AppProps) {
               <Route path="/admin/companies" element={<CompaniesPage />} />
               <Route
                 path="/ai-analysis/:recordingId"
-                element={
-                  <ProtectedRoute
-                    element={<AIAnalysisResult />}
-                    roles={['CANDIDATE']}
-                  />
-                }
+                element={<ProtectedRoute element={<AIAnalysisResult />} roles={['CANDIDATE']} />}
               />
             </Routes>
           </TooltipProvider>

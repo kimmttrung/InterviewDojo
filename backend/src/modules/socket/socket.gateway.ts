@@ -18,10 +18,11 @@ import { SocketService } from './socket.service';
   },
 })
 export class SocketGateway
-  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect {
+  implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
+{
   @WebSocketServer() server: Server;
 
-  constructor(private readonly socketService: SocketService) { }
+  constructor(private readonly socketService: SocketService) {}
 
   // Gán server vào service sau khi khởi tạo xong
   afterInit(server: Server) {

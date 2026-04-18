@@ -3,7 +3,7 @@ import { Card } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Input } from '../../../components/ui/input';
 import { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();
@@ -28,8 +28,8 @@ export default function MentorSchedule() {
   const generateSlots = (start: string, end: string, duration: number) => {
     const result: string[] = [];
 
-    let [startH, startM] = start.split(':').map(Number);
-    let [endH, endM] = end.split(':').map(Number);
+    const [startH, startM] = start.split(':').map(Number);
+    const [endH, endM] = end.split(':').map(Number);
 
     let current = new Date();
     current.setHours(startH, startM, 0);

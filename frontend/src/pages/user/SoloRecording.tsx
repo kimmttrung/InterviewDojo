@@ -6,10 +6,7 @@ import {
   MicOff,
   StopCircle,
   RefreshCcw,
-  ArrowLeft,
   Loader2,
-  CheckCircle2,
-  AlertCircle,
   Brain,
 } from 'lucide-react';
 import { Button } from '../../../components/ui/button';
@@ -48,6 +45,58 @@ export default function SoloRecording() {
   const [isMicOn, setIsMicOn] = useState(true);
 
   const user = JSON.parse(localStorage.getItem('user') || 'null');
+
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => {
+        track.stop();
+        track.enabled = false;
+      });
+      streamRef.current = null;
+    }
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
+    }
+  };
+
+  // Toggle Camera Logic
+  const toggleCamera = () => {
+    if (streamRef.current) {
+      const videoTrack = streamRef.current.getVideoTracks()[0];
+      if (videoTrack) {
+        videoTrack.enabled = !videoTrack.enabled;
+        setIsCamOn(videoTrack.enabled);
+      }
+    }
+  };
+
+  // Toggle Mic Logic
+  const toggleMic = () => {
+    if (streamRef.current) {
+      const audioTrack = streamRef.current.getAudioTracks()[0];
+      if (audioTrack) {
+        audioTrack.enabled = !audioTrack.enabled;
+        setIsMicOn(audioTrack.enabled);
+      }
+    }
+  };
+
+  const startRecording = () => {
+    chunksRef.current = [];
+    setSeconds(0);
+    const recorder = new MediaRecorder(streamRef.current!, { mimeType: 'video/webm' });
+    mediaRecorderRef.current = recorder;
+
+    recorder.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
+    recorder.onstop = () => {
+      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
+      setPreviewUrl(URL.createObjectURL(blob));
+    };
+
+    recorder.start(1000);
+    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
+    (window as any).recordingTimer = timer;
+  };
 
   useEffect(() => {
     return () => stopStream();
@@ -88,41 +137,6 @@ export default function SoloRecording() {
     }
   }, [step]);
 
-  const stopStream = () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => {
-        track.stop();
-        track.enabled = false;
-      });
-      streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
-    }
-  };
-
-  // Toggle Camera Logic
-  const toggleCamera = () => {
-    if (streamRef.current) {
-      const videoTrack = streamRef.current.getVideoTracks()[0];
-      if (videoTrack) {
-        videoTrack.enabled = !videoTrack.enabled;
-        setIsCamOn(videoTrack.enabled);
-      }
-    }
-  };
-
-  // Toggle Mic Logic
-  const toggleMic = () => {
-    if (streamRef.current) {
-      const audioTrack = streamRef.current.getAudioTracks()[0];
-      if (audioTrack) {
-        audioTrack.enabled = !audioTrack.enabled;
-        setIsMicOn(audioTrack.enabled);
-      }
-    }
-  };
-
   const handleTryAgain = () => {
     stopStream();
     setStep('setup');
@@ -149,23 +163,6 @@ export default function SoloRecording() {
     } catch (err) {
       alert('Không thể truy cập Camera/Mic. Vui lòng kiểm tra quyền trên trình duyệt.');
     }
-  };
-
-  const startRecording = () => {
-    chunksRef.current = [];
-    setSeconds(0);
-    const recorder = new MediaRecorder(streamRef.current!, { mimeType: 'video/webm' });
-    mediaRecorderRef.current = recorder;
-
-    recorder.ondataavailable = (e) => e.data.size > 0 && chunksRef.current.push(e.data);
-    recorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      setPreviewUrl(URL.createObjectURL(blob));
-    };
-
-    recorder.start(1000);
-    const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
-    (window as any).recordingTimer = timer;
   };
 
   // const handleStopRecording = () => {

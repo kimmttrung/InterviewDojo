@@ -15,10 +15,7 @@ import { CodeEngineModule } from '../code-engine/code-engine.module';
     CodeEngineModule,
   ],
   controllers: [CodingController],
-  providers: [
-    CodingService,
-    CodeExecutionProcessor,
-  ],
+  providers: [CodingService, CodeExecutionProcessor],
   exports: [CodingService],
 })
-export class CodingModule { }
+export class CodingModule {}

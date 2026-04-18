@@ -38,7 +38,7 @@ export function useQuestions() {
 
   const fetchQuestions = useCallback(async () => {
     try {
-      const response = await codingService.getAllQuestions();   // ← sửa dòng này
+      const response = await codingService.getAllQuestions(); // ← sửa dòng này
       console.log('check questions', response);
       setCodingQuestions(response.data);
     } catch (error) {

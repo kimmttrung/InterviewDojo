@@ -17,7 +17,7 @@ import { Messages } from '@/common/constants/messages.constant';
 @Controller('coding')
 @UseGuards(JwtAuthGuard)
 export class CodingController {
-  constructor(private readonly codingService: CodingService) { }
+  constructor(private readonly codingService: CodingService) {}
 
   @Post('submit')
   @ResponseMessage(Messages.CODING.SUBMIT_SUCCESS)

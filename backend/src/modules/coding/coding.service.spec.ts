@@ -9,8 +9,7 @@ import { SubmissionStatus, Difficulty } from '@prisma/client';
 import { CreateCodingQuestionDto } from './dto/create-coding-question.dto';
 import { CreateTestCaseDto } from './dto/create-test-case.dto';
 
-/* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable prettier/prettier */
+ 
 
 describe('CodingService', () => {
   let service: CodingService;
@@ -53,15 +52,19 @@ describe('CodingService', () => {
     const code = 'print(1+2)';
 
     it('nên ném lỗi BadRequest nếu không tìm thấy câu hỏi', async () => {
-      (prisma.codingQuestion.findUnique as unknown as jest.Mock).mockResolvedValue(null);
+      (
+        prisma.codingQuestion.findUnique as unknown as jest.Mock
+      ).mockResolvedValue(null);
 
-      await expect(service.submitCode(userId, 999, langId, code)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(
+        service.submitCode(userId, 999, langId, code),
+      ).rejects.toThrow(BadRequestException);
     });
 
     it('nên ném lỗi BadRequest nếu câu hỏi không có test case', async () => {
-      (prisma.codingQuestion.findUnique as unknown as jest.Mock).mockResolvedValue({
+      (
+        prisma.codingQuestion.findUnique as unknown as jest.Mock
+      ).mockResolvedValue({
         ...mockQuestion,
         testCases: [],
       });
@@ -72,10 +75,14 @@ describe('CodingService', () => {
     });
 
     it('nên tạo submission và push vào queue thành công', async () => {
-      (prisma.codingQuestion.findUnique as unknown as jest.Mock).mockResolvedValue(mockQuestion);
-      
+      (
+        prisma.codingQuestion.findUnique as unknown as jest.Mock
+      ).mockResolvedValue(mockQuestion);
+
       const mockSubmission = { id: 500, status: SubmissionStatus.PENDING };
-      (prisma.codeSubmission.create as unknown as jest.Mock).mockResolvedValue(mockSubmission);
+      (prisma.codeSubmission.create as unknown as jest.Mock).mockResolvedValue(
+        mockSubmission,
+      );
 
       const result = await service.submitCode(userId, 1, langId, code);
 
@@ -90,12 +97,15 @@ describe('CodingService', () => {
       });
 
       // 2. Kiểm tra đẩy vào BullMQ
-      expect(executionQueue.add).toHaveBeenCalledWith('execute-code', expect.objectContaining({
-        submissionId: 500,
-        testCases: expect.arrayContaining([
-          expect.objectContaining({ input: '1 2' })
-        ]),
-      }));
+      expect(executionQueue.add).toHaveBeenCalledWith(
+        'execute-code',
+        expect.objectContaining({
+          submissionId: 500,
+          testCases: expect.arrayContaining([
+            expect.objectContaining({ input: '1 2' }),
+          ]),
+        }),
+      );
 
       expect(result).toEqual(mockSubmission);
     });

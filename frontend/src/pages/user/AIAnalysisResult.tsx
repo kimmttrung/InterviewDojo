@@ -4,11 +4,9 @@ import axios from 'axios';
 import {
   ArrowLeft,
   Brain,
-  CalendarClock,
   CircleCheck,
   CircleAlert,
   Lightbulb,
-  FileText,
   Sparkles,
   Video,
   RefreshCw,

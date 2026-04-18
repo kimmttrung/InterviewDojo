@@ -1,4 +1,3 @@
-import { useTranslation } from 'react-i18next';
 import { Layout } from './Layout';
 import { Card } from '../components/ui/card';
 import { AlertCircle } from 'lucide-react';
@@ -10,7 +9,6 @@ interface PlaceholderPageProps {
 }
 
 export function PlaceholderPage({ title, description, icon }: PlaceholderPageProps) {
-  const { t } = useTranslation();
 
   return (
     <Layout>
@@ -23,12 +21,8 @@ export function PlaceholderPage({ title, description, icon }: PlaceholderPagePro
               <AlertCircle className="h-12 w-12 text-muted-foreground" />
             )}
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-3">
-            {title}
-          </h1>
-          {description && (
-            <p className="text-muted-foreground mb-6">{description}</p>
-          )}
+          <h1 className="text-3xl font-bold text-foreground mb-3">{title}</h1>
+          {description && <p className="text-muted-foreground mb-6">{description}</p>}
           <p className="text-sm text-muted-foreground">
             This page is under development. Feel free to prompt to continue building this feature!
           </p>

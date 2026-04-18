@@ -285,7 +285,17 @@ function FeaturedSmallCard({
   );
 }
 
-function QuestionCard({ id, askedAt, timeAgo, title, tags, answers, hasVideo, codeSnippet, slug }: any) {
+function QuestionCard({
+  id,
+  askedAt,
+  timeAgo,
+  title,
+  tags,
+  answers,
+  hasVideo,
+  codeSnippet,
+  slug,
+}: any) {
   const navigate = useNavigate();
 
   return (

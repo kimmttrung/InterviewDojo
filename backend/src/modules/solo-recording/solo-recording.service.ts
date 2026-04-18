@@ -11,7 +11,7 @@ export class SoloRecordingService {
     private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
     private readonly aiAnalysisService: AiAnalysisService,
-  ) { }
+  ) {}
 
   // Fewer logs version
   async uploadVideo(file: UploadedFileType) {

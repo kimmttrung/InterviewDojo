@@ -30,9 +30,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     let appliedTheme = theme;
 
     if (theme === 'system') {
-      appliedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches
-        ? 'dark'
-        : 'light';
+      appliedTheme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
     }
 
     setIsDark(appliedTheme === 'dark');
@@ -68,9 +66,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>
-      {children}
-    </ThemeContext.Provider>
+    <ThemeContext.Provider value={{ theme, setTheme, isDark }}>{children}</ThemeContext.Provider>
   );
 }
 
