@@ -1,4 +1,3 @@
-// src/components/interview/QuestionPanel.tsx
 import { useState } from 'react';
 import { Question } from '../../types/interview';
 

@@ -1,7 +1,9 @@
 // src/components/interview/WorkspaceTabs.tsx
 import CodeEditor from './CodeEditor';
 import Whiteboard from './Whiteboard';
-import { Question } from '../types/interview';
+import { Question } from '../../types/interview';
+import { useEffect } from 'react';
+import { useSocketStore } from '../../stores/useSocketStore';
 
 type WorkMode = 'code' | 'theory' | 'whiteboard';
 
@@ -20,13 +22,40 @@ export function WorkspaceTabs({
   roomId,
   userId,
 }: WorkspaceTabsProps) {
+  const { connect, joinRoom, emit, socket } = useSocketStore();
+
+  // Kết nối socket và join room
+  useEffect(() => {
+    if (!userId || !roomId) return;
+
+    connect(userId);
+    joinRoom(roomId);
+
+    // Lắng nghe chuyển tab từ người kia
+    const handleReceiveWorkMode = (mode: WorkMode) => {
+      setWorkMode(mode);
+    };
+
+    socket?.on('receive_work_mode', handleReceiveWorkMode);
+
+    return () => {
+      socket?.off('receive_work_mode', handleReceiveWorkMode);
+    };
+  }, [userId, roomId, socket, connect, joinRoom, setWorkMode]);
+
+  const handleTabChange = (mode: WorkMode) => {
+    setWorkMode(mode);
+    // Gửi cho người kia
+    emit('send_work_mode', { roomId, mode });
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
       <div className="flex gap-1 px-4 pt-2 border-b bg-white">
-        {['code', 'theory', 'whiteboard'].map((m) => (
+        {(['code', 'theory', 'whiteboard'] as WorkMode[]).map((m) => (
           <button
             key={m}
-            onClick={() => setWorkMode(m as WorkMode)}
+            onClick={() => handleTabChange(m)}
             className={`px-4 py-2 text-[10px] font-bold border-b-2 transition-all uppercase tracking-wider ${
               workMode === m
                 ? 'border-blue-600 text-blue-600 bg-blue-50/50'
@@ -40,12 +69,9 @@ export function WorkspaceTabs({
 
       <div className="flex-1 relative overflow-hidden">
         {workMode === 'code' && (
-          <CodeEditor
-            roomId={roomId}
-            userId={userId}
-            currentQuestion={currentQuestion} // ← Truyền vào đây
-          />
+          <CodeEditor roomId={roomId} userId={userId} currentQuestion={currentQuestion} />
         )}
+
         {workMode === 'theory' && (
           <div className="h-full overflow-y-auto p-8 flex justify-center bg-[#fcfcfc]">
             {currentQuestion ? (
@@ -60,12 +86,13 @@ export function WorkspaceTabs({
               </div>
             ) : (
               <div className="flex items-center justify-center h-full text-slate-400 italic text-sm">
-                Chọn "Theory" và nhấn Random để hiển thị câu hỏi lý thuyết
+                Chọn loại câu hỏi và nhấn Random để hiển thị nội dung
               </div>
             )}
           </div>
         )}
-        {workMode === 'whiteboard' && <Whiteboard />}
+
+        {workMode === 'whiteboard' && <Whiteboard roomId={roomId} userId={userId} />}
       </div>
     </div>
   );

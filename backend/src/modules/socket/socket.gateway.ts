@@ -20,9 +20,12 @@ import { SocketService } from './socket.service';
 export class SocketGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer() server: Server;
+  @WebSocketServer()
+  server: Server;
 
-  constructor(private readonly socketService: SocketService) {}
+  constructor(private readonly socketService: SocketService) {
+    this.server = null as any; // hoặc để sau
+  }
 
   // Gán server vào service sau khi khởi tạo xong
   afterInit(server: Server) {
@@ -40,7 +43,6 @@ export class SocketGateway
 
     if (userId && userId !== 'undefined') {
       client.join(`user_${userId}`);
-      // console.log(`📡 User connected: ${userId} (SocketID: ${client.id})`);
     } else {
       console.log(`⚠️ Anonymous connection attempt (SocketID: ${client.id})`);
       client.disconnect();
@@ -78,5 +80,53 @@ export class SocketGateway
   ) {
     // Gửi cho người còn lại trong phòng biết ngôn ngữ đã đổi
     client.to(payload.roomId).emit('receive_language', payload.languageId);
+  }
+
+  @SubscribeMessage('send_question')
+  handleQuestionChange(
+    client: Socket,
+    payload: { roomId: string; question: any; mode: 'code' | 'theory' },
+  ) {
+    // Phát lại cho những người khác trong phòng nhận câu hỏi mới và mode mới
+    client.to(payload.roomId).emit('receive_question', {
+      question: payload.question,
+      mode: payload.mode,
+    });
+    console.log(
+      `Room ${payload.roomId} changed question to: ${payload.question?.title}`,
+    );
+  }
+
+  // 1. Đồng bộ chuyển Tab (Code/Theory/Whiteboard)
+  @SubscribeMessage('send_work_mode')
+  handleWorkModeChange(
+    client: Socket,
+    payload: { roomId: string; mode: string },
+  ) {
+    client.to(payload.roomId).emit('receive_work_mode', payload.mode);
+  }
+
+  // 2. Đồng bộ vẽ Whiteboard (Gửi danh sách hình vẽ)
+  @SubscribeMessage('send_whiteboard_shapes')
+  handleWhiteboardDraw(
+    client: Socket,
+    payload: { roomId: string; shapes: any[] },
+  ) {
+    client.to(payload.roomId).emit('receive_whiteboard_shapes', payload.shapes);
+  }
+
+  // 3. Đồng bộ Clear Whiteboard
+  @SubscribeMessage('clear_whiteboard')
+  handleClearWhiteboard(client: Socket, roomId: string) {
+    client.to(roomId).emit('receive_clear_whiteboard');
+  }
+
+  @SubscribeMessage('send_submit_result')
+  handleSubmitResult(
+    client: Socket,
+    payload: { roomId: string; result: string },
+  ) {
+    client.to(payload.roomId).emit('receive_submit_result', payload.result);
+    console.log(`📤 Submit result shared in room ${payload.roomId}`);
   }
 }

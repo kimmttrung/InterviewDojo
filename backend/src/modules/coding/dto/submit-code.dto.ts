@@ -7,7 +7,7 @@ export class SubmitCodeDto {
 
   @IsString()
   @IsNotEmpty()
-  languageId!: string;   // "71", "54", "63"
+  languageId!: string; // "71", "54", "63"
 
   @IsString()
   @IsNotEmpty()

@@ -1,51 +1,66 @@
+// src/pages/PeerMatchingPage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { io } from 'socket.io-client';
 import { Layout } from '../../../components/Layout';
 import { Button } from '../../../components/ui/button';
 import { Loader2, Users, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 import { matchingService } from '../../../services/matching.service';
+import { useSocketStore } from '../../stores/useSocketStore';
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();
+  const { connect, disconnect, socket } = useSocketStore();
+
   const [isSearching, setIsSearching] = useState(false);
   const [timer, setTimer] = useState(0);
 
   const userStore = localStorage.getItem('user');
   const user = userStore ? JSON.parse(userStore) : null;
 
-  // Wait timer logic
+  // ==================== TIMER ====================
   useEffect(() => {
-    let interval: any;
+    let interval: ReturnType<typeof setInterval> | null = null;
+
     if (isSearching) {
-      interval = setInterval(() => setTimer((prev) => prev + 1), 1000);
+      interval = setInterval(() => {
+        setTimer((prev) => prev + 1);
+      }, 1000);
     } else {
       setTimer(0);
-      if (interval) clearInterval(interval);
     }
-    return () => clearInterval(interval);
-  }, [isSearching]);
-
-  // Socket logic for listening to match results
-  useEffect(() => {
-    if (!user) return;
-
-    const socket = io(import.meta.env.VITE_SOCKET_URL, {
-      query: { userId: user.id },
-    });
-
-    socket.on('match_found', (data: { roomId: string; token: string }) => {
-      setIsSearching(false);
-      navigate(`/interview/${data.roomId}?token=${data.token}`);
-    });
 
     return () => {
-      socket.disconnect();
+      if (interval) clearInterval(interval);
     };
-  }, [user, navigate]);
+  }, [isSearching]);
 
+  // ==================== SOCKET CONNECTION ====================
+  useEffect(() => {
+    if (!user?.id) return;
+
+    // Chỉ connect 1 lần, không phụ thuộc vào các state khác
+    connect(user.id);
+
+    const handleMatchFound = (data: { roomId: string; token: string }) => {
+      setIsSearching(false);
+      navigate(`/interview/${data.roomId}?token=${data.token}`);
+    };
+
+    const currentSocket = useSocketStore.getState().socket;
+    currentSocket?.on('match_found', handleMatchFound);
+
+    return () => {
+      currentSocket?.off('match_found', handleMatchFound);
+    };
+  }, [user?.id, navigate, connect]);
+
+  // ==================== START MATCHING ====================
   const handleStartMatching = async () => {
-    if (!user) return alert('Please log in to continue!');
+    if (!user) {
+      alert('Please log in to continue!');
+      return;
+    }
+
     setIsSearching(true);
 
     try {
@@ -54,7 +69,9 @@ export default function PeerMatchingPage() {
         level: 'Junior',
       });
 
+      // Nếu backend trả về ngay matched (trường hợp hiếm)
       if (data.status === 'matched') {
+        setIsSearching(false);
         navigate(`/interview/${data.roomId}?token=${data.token}`);
       }
     } catch (error: any) {

@@ -29,7 +29,7 @@ import { Role } from '@prisma/client';
 @Controller('questions')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class QuestionsController {
-  constructor(private readonly questionsService: QuestionsService) { }
+  constructor(private readonly questionsService: QuestionsService) {}
 
   @Get()
   @HttpCode(HttpStatus.OK)
@@ -50,7 +50,7 @@ export class QuestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy 1 câu hỏi' })
   @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.questionsService.findOne(id);
   }
 

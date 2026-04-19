@@ -10,13 +10,12 @@ export function useVideoCall(
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [error, setError] = useState<string | null>(null);
-
-  // Dùng ref để tránh việc khởi tạo lại nhiều lần do React Strict Mode
+  const [isInitializing, setIsInitializing] = useState(false);
   const initializing = useRef(false);
 
   useEffect(() => {
-    // Nếu không có thông tin hoặc đang khởi tạo/đã có client thì bỏ qua
-    if (!roomId || !token || client || initializing.current) return;
+    // Ngăn chặn chạy 2 lần trong Strict Mode và check điều kiện
+    if (!roomId || !token || !userId || initializing.current) return;
 
     const apiKey = import.meta.env.VITE_STREAM_API_KEY;
     if (!apiKey) {
@@ -24,55 +23,56 @@ export function useVideoCall(
       return;
     }
 
-    initializing.current = true;
-
-    const _client = new StreamVideoClient({ apiKey });
-    const user: User = {
-      id: userId,
-      name: currentUser?.name || userId,
-      image: currentUser?.avatar || undefined,
-    };
-
     const initVideo = async () => {
-      try {
-        // 1. Kết nối user
-        await _client.connectUser(user, token);
+      initializing.current = true;
+      setIsInitializing(true);
 
-        // 2. Tạo đối tượng call
+      try {
+        const _client = new StreamVideoClient({ apiKey });
+        const user: User = {
+          id: userId,
+          name: currentUser?.name || userId,
+          image: currentUser?.avatar || undefined,
+        };
+
+        await _client.connectUser(user, token);
         const _call = _client.call('default', roomId);
 
-        // 3. Join call TRƯỚC khi set state để đảm bảo trạng thái "joined"
+        // QUAN TRỌNG: Join với các thiết bị ở trạng thái TẮT mặc định
+        // Điều này giúp tránh lỗi kẹt luồng nếu người dùng chưa cấp quyền
         await _call.join({ create: true });
 
-        // 4. Bật thiết bị
-        await _call.camera.enable();
-        await _call.microphone.enable();
+        // Sau khi join thành công, chủ động tắt thiết bị nếu không muốn bật ngay
+        // Việc này không gây lỗi 400 như cách trước
+        await _call.camera.disable();
+        await _call.microphone.disable();
 
         setClient(_client);
         setCall(_call);
-        console.log('✅ Joined room:', roomId);
+        setError(null);
       } catch (err) {
         console.error('❌ Video connection error:', err);
         setError(err instanceof Error ? err.message : 'Connection failed');
         initializing.current = false;
+      } finally {
+        setIsInitializing(false);
       }
     };
 
     initVideo();
 
     return () => {
-      // Cleanup function
-      const cleanup = async () => {
-        if (call) await call.leave();
-        if (_client) await _client.disconnectUser();
-        setClient(null);
-        setCall(null);
-        initializing.current = false;
-      };
-      cleanup();
+      // Cleanup đúng cách
+      if (initializing.current) {
+        const cleanup = async () => {
+          if (call) await call.leave();
+          if (client) await client.disconnectUser();
+          initializing.current = false;
+        };
+        cleanup();
+      }
     };
-    // KHÔNG đưa 'client' vào đây
-  }, [roomId, token, userId, currentUser?.name, currentUser?.avatar]);
+  }, [roomId, token, userId]); // Giảm dependency để tránh re-init thừa
 
-  return { client, call, error };
+  return { client, call, error, isInitializing };
 }

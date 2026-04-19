@@ -3,6 +3,7 @@ import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
+
 import { useVideoCall } from '../../hooks/useVideoCall';
 import { useQuestions } from '../../hooks/useQuestions';
 import { InterviewHeader } from './InterviewHeader';
@@ -10,6 +11,9 @@ import { QuestionPanel } from './QuestionPanel';
 import { WorkspaceTabs } from './WorkspaceTabs';
 import { VideoCallSection } from './VideoCallSection';
 import { ChatAndNotes } from './ChatAndNotes';
+
+import { useSocketStore } from '../../stores/useSocketStore';
+import { WorkMode } from '../../types/interview';
 
 export default function InterviewRoom() {
   const { roomId } = useParams<{ roomId: string }>();
@@ -21,6 +25,7 @@ export default function InterviewRoom() {
   const token = searchParams.get('token');
 
   const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+
   const {
     codingQuestions,
     currentQuestion,
@@ -37,26 +42,69 @@ export default function InterviewRoom() {
     'code',
   );
 
+  // Lấy các hàm từ Zustand Socket Store
+  const { connect, joinRoom, emit, socket } = useSocketStore();
+
+  // ==================== SOCKET CONNECTION ====================
+  useEffect(() => {
+    if (!userId || !roomId) return;
+
+    // 1. Kết nối socket (chỉ tạo 1 lần duy nhất trong toàn app)
+    connect(userId);
+
+    // 2. Join vào room phỏng vấn
+    joinRoom(roomId);
+
+    // 3. Lắng nghe sự kiện từ người kia
+    const handleReceiveQuestion = (data: { question: any; mode: 'code' | 'theory' }) => {
+      setCurrentQuestion(data.question);
+      setQuestionMode(data.mode);
+      setWorkMode(data.mode === 'code' ? 'code' : 'theory');
+    };
+
+    socket?.on('receive_question', handleReceiveQuestion);
+
+    // Cleanup listener khi component unmount
+    return () => {
+      socket?.off('receive_question', handleReceiveQuestion);
+    };
+  }, [userId, roomId, socket, connect, joinRoom, setCurrentQuestion, setQuestionMode, setWorkMode]);
+
   // Tải danh sách câu hỏi
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  // Random câu hỏi
+  // Random câu hỏi + gửi cho người kia
   const handleRandom = useCallback(
     (type: 'code' | 'theory') => {
+      const question = getRandomQuestion(type);
+      if (!question) return;
+
+      setCurrentQuestion(question);
       setQuestionMode(type);
       setWorkMode(type === 'code' ? 'code' : 'theory');
 
-      const question = getRandomQuestion(type);
-      if (question) {
-        setCurrentQuestion(question);
-      }
+      // Gửi qua socket (dùng emit từ store)
+      emit('send_question', {
+        roomId,
+        question,
+        mode: type,
+      });
     },
-    [getRandomQuestion, setCurrentQuestion, setWorkMode, setQuestionMode],
+    [getRandomQuestion, setCurrentQuestion, setQuestionMode, setWorkMode, emit, roomId],
   );
 
-  // Loading khi chưa kết nối
+  // Dọn dẹp localStorage khi rời phòng
+  useEffect(() => {
+    return () => {
+      console.log('🧹 Dọn dẹp dữ liệu phòng phỏng vấn...');
+      localStorage.removeItem('workMode');
+      localStorage.removeItem('questionMode');
+      localStorage.removeItem('whiteboard_shapes');
+    };
+  }, []);
+
   if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
@@ -84,9 +132,7 @@ export default function InterviewRoom() {
             />
 
             <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-              {/* <VideoErrorBoundary> */}
               <VideoCallSection />
-              {/* </VideoErrorBoundary> */}
               <ChatAndNotes />
             </aside>
           </main>
@@ -96,7 +142,7 @@ export default function InterviewRoom() {
   );
 }
 
-// Component loading riêng
+// Component loading
 function InterviewLoading({ roomId }: { roomId?: string }) {
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
@@ -107,7 +153,7 @@ function InterviewLoading({ roomId }: { roomId?: string }) {
   );
 }
 
-// Custom hook cho localStorage
+// Custom hook localStorage (giữ nguyên)
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {

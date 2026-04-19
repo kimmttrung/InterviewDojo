@@ -1,4 +1,10 @@
-import { IsNotEmpty, IsString, IsEnum, IsArray, IsOptional } from 'class-validator';
+import {
+  IsNotEmpty,
+  IsString,
+  IsEnum,
+  IsArray,
+  IsOptional,
+} from 'class-validator';
 import { Difficulty } from '@prisma/client';
 
 export class CreateCodingQuestionDto {

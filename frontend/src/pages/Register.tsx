@@ -43,8 +43,11 @@ export default function Register() {
       });
       showToast.success(t('register.registerSuccess'));
       navigate('/login');
-    } catch (error) {
-      showToast.error('Register failed');
+    } catch (error: any) {
+      const message = error?.response?.data?.message || 'Something went wrong';
+
+      showToast.error(message);
+      console.error('Register error:', error);
     } finally {
       setIsLoading(false);
     }

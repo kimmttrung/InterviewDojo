@@ -38,10 +38,9 @@ export function useQuestions() {
 
   const fetchQuestions = useCallback(async () => {
     try {
-      const response = await codingService.getAllQuestions();   // ← sửa dòng này
-      const questions = response.data || response;
-      console.log('check questions', questions);
-      setCodingQuestions(questions);
+      const response = await codingService.getAllQuestions(); // ← sửa dòng này
+      console.log('check questions', response);
+      setCodingQuestions(response.data);
     } catch (error) {
       console.error('Lỗi tải danh sách câu hỏi:', error);
     }

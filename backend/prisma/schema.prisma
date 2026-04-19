@@ -411,7 +411,7 @@ model TestCase {
   explanation      String? // giải thích khi sai
 
   codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-  
+
   @@unique([codingQuestionId, order])
   @@map("test_cases")
 }

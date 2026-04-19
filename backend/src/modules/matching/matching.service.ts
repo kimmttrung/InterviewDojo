@@ -20,57 +20,63 @@ export class MatchingService {
     const queueKey = `queue:${level.toUpperCase()}`;
     const sUserId = userId.toString();
 
-    // 1. Kiểm tra xem đối thủ cũ nhất trong hàng chờ là ai
-    // Lấy người đầu tiên (score thấp nhất - đợi lâu nhất)
-    const oldestWaiters = await this.redis.zrange(queueKey, 0, 0);
-    const opponentId = oldestWaiters[0];
+    await this.redis.zrem(queueKey, sUserId);
 
-    // 2. Nếu có đối thủ và đối thủ không phải là chính mình
-    if (opponentId && opponentId !== sUserId) {
-      // ATOMIC: Cố gắng xóa đối thủ khỏi hàng chờ
-      // Nếu xóa thành công (trả về 1), nghĩa là ta đã "chiếm" được đối thủ này
-      const removed = await this.redis.zrem(queueKey, opponentId);
+    // KIỂM TRA ĐỐI THỦ
+    let opponentId: string | null = null;
 
-      if (removed === 1) {
-        const roomId = uuidv4();
+    // Vòng lặp tìm đối thủ thực sự online
+    while (true) {
+      // Lấy và xóa người đứng đầu hàng chờ (Atomic)
+      const popped = await this.redis.zpopmin(queueKey);
+      if (!popped || popped.length === 0) break;
 
-        try {
-          // 3. Khởi tạo Call trên GetStream Server (Backend-side)
-          await this.streamService.createCall(roomId, sUserId);
+      const [targetId] = popped;
 
-          // 4. Tạo Token cho cả 2
-          const userToken = this.streamService.createToken(sUserId);
-          const opponentToken = this.streamService.createToken(opponentId);
-
-          // 5. Bắn Socket báo tin vui cho cả hai
-          // User hiện tại (người vừa bấm nút)
-          this.socketService.emitToUser(sUserId, 'match_found', {
-            roomId,
-            token: userToken,
-            opponentId: parseInt(opponentId),
-            role: 'interviewee',
-          });
-
-          // Đối thủ (người đang đợi sẵn)
-          this.socketService.emitToUser(opponentId, 'match_found', {
-            roomId,
-            token: opponentToken,
-            opponentId: userId,
-            role: 'interviewer',
-          });
-
-          return { status: 'matched', roomId, token: userToken };
-        } catch (error) {
-          console.error('Stream Error:', error);
-          // Nếu lỗi Stream, nên trả đối thủ lại vào queue hoặc báo lỗi
-          throw new InternalServerErrorException(
-            'Lỗi khởi tạo phòng phỏng vấn',
-          );
-        }
+      // Kiểm tra online
+      if (this.socketService.isUserOnline(targetId)) {
+        opponentId = targetId;
+        break;
+      } else {
+        console.log(`🧹 Xóa Zombie: ${targetId}`);
+        // Không đẩy lại vào hàng chờ vì họ offline
       }
     }
 
-    // 3. Nếu không có ai hoặc không "cướp" được đối thủ, ta tự đưa mình vào hàng chờ
+    // NẾU TÌM ĐƯỢC ĐỐI THỦ HỢP LỆ
+    if (opponentId) {
+      const roomId = uuidv4();
+      try {
+        // Tạo call và token
+        await this.streamService.createCall(roomId, sUserId);
+        const userToken = this.streamService.createToken(sUserId);
+        const opponentToken = this.streamService.createToken(opponentId);
+
+        // Bắn Socket cho cả hai
+        this.socketService.emitToUser(sUserId, 'match_found', {
+          roomId,
+          token: userToken,
+          opponentId: parseInt(opponentId),
+          role: 'interviewee',
+        });
+
+        this.socketService.emitToUser(opponentId, 'match_found', {
+          roomId,
+          token: opponentToken,
+          opponentId: userId,
+          role: 'interviewer',
+        });
+
+        return { status: 'matched', roomId, token: userToken };
+      } catch (error) {
+        // HOÀN TÁC: Nếu lỗi Stream, đẩy đối thủ vào lại hàng chờ (score = 0 để họ vẫn được ưu tiên)
+        await this.redis.zadd(queueKey, 0, opponentId);
+        throw new InternalServerErrorException('Lỗi khởi tạo phòng phỏng vấn');
+        console.log(error);
+      }
+    }
+
+    // Nếu không tìm được ai, ghi danh vào hàng chờ
     await this.redis.zadd(queueKey, Date.now(), sUserId);
     return { status: 'in_queue', message: 'Đang tìm đối thủ phù hợp...' };
   }

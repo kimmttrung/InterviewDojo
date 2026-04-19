@@ -1,19 +1,11 @@
-import { useTranslation } from 'react-i18next'
-import { useTheme } from '../contexts/ThemeContext'
-import { Moon, Sun, Globe, Search, Sparkles, UserIcon, LogOut } from 'lucide-react'
-import { Button } from '../components/ui/button'
-import { Badge } from '../components/ui/badge'
-import { Input } from '../components/ui/input'
-import { useLocation, Link, useNavigate } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  BookOpen,
-  Users,
-  HelpCircle,
-  MessageSquare,
-  BarChart3,
-} from 'lucide-react'
-import { cn } from '../lib/utils'
+import { useTranslation } from 'react-i18next';
+import { useTheme } from '../contexts/ThemeContext';
+import { Moon, Sun, Globe, Search, Sparkles, UserIcon, LogOut } from 'lucide-react';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
+import { Input } from '../components/ui/input';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { cn } from '../lib/utils';
 
 import {
   DropdownMenu,
@@ -21,67 +13,66 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../components/ui/dropdown-menu'
+} from '../components/ui/dropdown-menu';
 
-import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar'
-import { useState, useEffect } from 'react'
+import { Avatar, AvatarImage, AvatarFallback } from '../components/ui/avatar';
+import { useState, useEffect } from 'react';
 
 export function Navbar() {
-  const { t, i18n } = useTranslation()
-  const { theme, setTheme } = useTheme()
-  const location = useLocation()
+  const { t, i18n } = useTranslation();
+  const { theme, setTheme } = useTheme();
+  const location = useLocation();
   const navigate = useNavigate();
 
-  const [user, setUser] = useState<any>(null)
-  const [role, setRole] = useState<any>(null)
-  const [targetRole, setTargetRole] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null);
+  const [role, setRole] = useState<any>(null);
+  const [targetRole, setTargetRole] = useState<string | null>(null);
 
   const menuItems = [
-    { label: t("sidebar.dashboard"), href: "/dashboard" },
-    { label: t("sidebar.practice"), href: "/practice" },
-    { label: t("sidebar.questionBank"), href: "/question-bank" },
-    { label: t("sidebar.feedback"), href: "/feedback" },
-    { label: t("sidebar.analytics"), href: "/analytics" },
-  ]
+    { label: t('sidebar.dashboard'), href: '/dashboard' },
+    { label: t('sidebar.practice'), href: '/practice' },
+    { label: t('sidebar.questionBank'), href: '/question-bank' },
+    { label: t('sidebar.feedback'), href: '/feedback' },
+    { label: t('sidebar.analytics'), href: '/analytics' },
+  ];
 
   useEffect(() => {
-    const userStore = localStorage.getItem('user')
-    const token = localStorage.getItem('access_token')
+    const userStore = localStorage.getItem('user');
+    const token = localStorage.getItem('access_token');
     if (userStore && token) {
       try {
-        const userData = JSON.parse(userStore)
-        setUser(userData)
-        setRole(userData.role)
-        setTargetRole(userData.targetRole || null)
+        const userData = JSON.parse(userStore);
+        setUser(userData);
+        setRole(userData.role);
+        setTargetRole(userData.targetRole || null);
       } catch {
-        setTargetRole(null)
+        setTargetRole(null);
       }
     }
-  }, [location.pathname])
+  }, [location.pathname]);
 
   const handleLogout = () => {
-    localStorage.removeItem('access_token')
-    localStorage.removeItem('refresh_token')
-    localStorage.removeItem('user')
-    setUser(null)
-    navigate('/login')
-  }
+    localStorage.removeItem('access_token');
+    localStorage.removeItem('refresh_token');
+    localStorage.removeItem('user');
+    setUser(null);
+    navigate('/login');
+  };
 
   const changeLanguage = (lng: string) => {
-    i18n.changeLanguage(lng)
-    localStorage.setItem('language', lng)
-  }
+    i18n.changeLanguage(lng);
+    localStorage.setItem('language', lng);
+  };
 
   const languages = [
     { code: 'en', label: t('language.en') },
     { code: 'vi', label: t('language.vi') },
     { code: 'jp', label: t('language.jp') },
-  ]
+  ];
 
   return (
     <nav className="sticky top-0 z-40 border-b border-border bg-background/90 backdrop-blur">
       <div className="flex h-16 items-center justify-between px-6 gap-6">
-
         {/* LOGO */}
 
         <div className="flex items-center gap-3">
@@ -91,9 +82,7 @@ export function Navbar() {
 
           <div className="hidden sm:flex flex-col">
             <Link to="/">
-              <span className="text-sm font-bold text-foreground">
-                {t('navbar.logo')}
-              </span>
+              <span className="text-sm font-bold text-foreground">{t('navbar.logo')}</span>
             </Link>
 
             {targetRole && (
@@ -108,22 +97,20 @@ export function Navbar() {
 
         <div className="hidden lg:flex items-center gap-6">
           {menuItems.map((item) => {
-            const isActive = location.pathname === item.href
+            const isActive = location.pathname === item.href;
 
             return (
               <Link
                 key={item.href}
                 to={item.href}
                 className={cn(
-                  "flex items-center gap-2 text-sm font-medium transition-colors",
-                  isActive
-                    ? "text-primary"
-                    : "text-muted-foreground hover:text-foreground"
+                  'flex items-center gap-2 text-sm font-medium transition-colors',
+                  isActive ? 'text-primary' : 'text-muted-foreground hover:text-foreground',
                 )}
               >
                 {item.label}
               </Link>
-            )
+            );
           })}
         </div>
 
@@ -141,7 +128,6 @@ export function Navbar() {
         {/* RIGHT SIDE */}
 
         <div className="flex items-center gap-3">
-
           {/* Upgrade */}
 
           <Button
@@ -180,8 +166,7 @@ export function Navbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon">
                 {theme === 'dark' ||
-                  (theme === 'system' &&
-                    document.documentElement.classList.contains('dark')) ? (
+                (theme === 'system' && document.documentElement.classList.contains('dark')) ? (
                   <Moon className="h-4 w-4" />
                 ) : (
                   <Sun className="h-4 w-4" />
@@ -208,7 +193,10 @@ export function Navbar() {
             {user ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="relative h-9 w-9 rounded-full border border-primary/10">
+                  <Button
+                    variant="ghost"
+                    className="relative h-9 w-9 rounded-full border border-primary/10"
+                  >
                     <Avatar className="h-9 w-9">
                       {/* Backend bạn không trả về avatarUrl, nên dùng fallback bằng chữ cái đầu của email/name */}
                       <AvatarImage src={user.avatarUrl} />
@@ -232,7 +220,10 @@ export function Navbar() {
                     {t('sidebar.profile')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="text-red-500 focus:text-red-500">
+                  <DropdownMenuItem
+                    onClick={handleLogout}
+                    className="text-red-500 focus:text-red-500"
+                  >
                     <LogOut className="mr-2 h-4 w-4" />
                     {t('sidebar.logout')}
                   </DropdownMenuItem>
@@ -249,9 +240,8 @@ export function Navbar() {
               </div>
             )}
           </div>
-
         </div>
       </div>
     </nav>
-  )
+  );
 }

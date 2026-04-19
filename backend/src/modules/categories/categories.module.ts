@@ -8,4 +8,4 @@ import { PrismaModule } from '@/prisma/prisma.module'; // Thay đổi đường 
   controllers: [CategoriesController],
   providers: [CategoriesService],
 })
-export class CategoriesModule { }
+export class CategoriesModule {}

@@ -35,10 +35,10 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
 
     // đăng ký queue sẽ dùng
     BullModule.registerQueue(
-      { name: 'code-execution' },     // cho submit code
-      { name: 'ai-analysis' },        // cho AI phân tích
-      { name: 'notification' },       // cho gửi thông báo sau này
-      { name: 'email' },              // cho gửi email
+      { name: 'code-execution' }, // cho submit code
+      { name: 'ai-analysis' }, // cho AI phân tích
+      { name: 'notification' }, // cho gửi thông báo sau này
+      { name: 'email' }, // cho gửi email
     ),
 
     PrismaModule,
@@ -58,9 +58,12 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     CompaniesModule,
   ],
   controllers: [AppController],
-  providers: [AppService, {
+  providers: [
+    AppService,
+    {
       provide: APP_INTERCEPTOR,
       useClass: TransformInterceptor, // NestJS tự inject Reflector
-    }],
+    },
+  ],
 })
-export class AppModule { }
+export class AppModule {}

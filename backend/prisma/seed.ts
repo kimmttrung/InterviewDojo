@@ -8,292 +8,609 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 const questions = [
-  // ─────────────── EASY (8 câu) ───────────────
+  // ═══════════════════════════════════════════════
+  // EASY (14 câu)
+  // ═══════════════════════════════════════════════
 
   {
-    title: 'Two Sum',
-    slug: 'two-sum',
+    title: 'Reverse Linked List',
+    slug: 'reverse-linked-list',
     description:
-      'Given an array of integers `nums` and an integer `target`, return indices of the two numbers such that they add up to `target`.\n\nYou may assume that each input would have exactly one solution, and you may not use the same element twice.',
-    difficulty: Difficulty.EASY,
-    tags: ['array', 'hash-table'],
-    constraints:
-      '2 <= nums.length <= 10^4\n-10^9 <= nums[i] <= 10^9\n-10^9 <= target <= 10^9\nOnly one valid answer exists.',
-    hints: [
-      'Use a hash map to store numbers you have seen so far.',
-      'For each number, check if (target - num) already exists in the map.',
-    ],
-    testCases: [
-      { input: '[2,7,11,15]\n9', expectedOutput: '[0,1]', isSample: true, order: 1 },
-      { input: '[3,2,4]\n6', expectedOutput: '[1,2]', isSample: true, order: 2 },
-      { input: '[3,3]\n6', expectedOutput: '[0,1]', isSample: false, order: 3 },
-      { input: '[1,5,3,7]\n8', expectedOutput: '[1,2]', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: 'Valid Parentheses',
-    slug: 'valid-parentheses',
-    description:
-      "Given a string `s` containing just the characters `'('`, `')'`, `'{'`, `'}'`, `'['` and `']'`, determine if the input string is valid.\n\nAn input string is valid if:\n- Open brackets must be closed by the same type of brackets.\n- Open brackets must be closed in the correct order.\n- Every close bracket has a corresponding open bracket of the same type.",
-    difficulty: Difficulty.EASY,
-    tags: ['string', 'stack'],
-    constraints: "1 <= s.length <= 10^4\ns consists of parentheses only '()[]{}'",
-    hints: [
-      'Use a stack. Push opening brackets; pop and verify on closing brackets.',
-      "Map each closing bracket to its matching opener: ')' → '('.",
-    ],
-    testCases: [
-      { input: '()', expectedOutput: 'true', isSample: true, order: 1 },
-      { input: '()[]{}', expectedOutput: 'true', isSample: true, order: 2 },
-      { input: '(]', expectedOutput: 'false', isSample: false, order: 3 },
-      { input: '([)]', expectedOutput: 'false', isSample: false, order: 4 },
-      { input: '{[]}', expectedOutput: 'true', isSample: false, order: 5 },
-    ],
-  },
-
-  {
-    title: 'Best Time to Buy and Sell Stock',
-    slug: 'best-time-to-buy-and-sell-stock',
-    description:
-      'You are given an array `prices` where `prices[i]` is the price of a given stock on the `i`th day.\n\nYou want to maximize your profit by choosing a single day to buy one stock and choosing a different day **in the future** to sell that stock.\n\nReturn the maximum profit you can achieve from this transaction. If you cannot achieve any profit, return `0`.',
-    difficulty: Difficulty.EASY,
-    tags: ['array', 'dynamic-programming'],
-    constraints: '1 <= prices.length <= 10^5\n0 <= prices[i] <= 10^4',
-    hints: [
-      'Keep track of the minimum price seen so far (buy day).',
-      'At each day, compute profit = prices[i] - minPrice and update the answer.',
-    ],
-    testCases: [
-      { input: '[7,1,5,3,6,4]', expectedOutput: '5', isSample: true, order: 1 },
-      { input: '[7,6,4,3,1]', expectedOutput: '0', isSample: true, order: 2 },
-      { input: '[1,2]', expectedOutput: '1', isSample: false, order: 3 },
-      { input: '[2,4,1]', expectedOutput: '2', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: 'Valid Palindrome',
-    slug: 'valid-palindrome',
-    description:
-      'A phrase is a palindrome if, after converting all uppercase letters into lowercase letters and removing all non-alphanumeric characters, it reads the same forward and backward.\n\nGiven a string `s`, return `true` if it is a palindrome, or `false` otherwise.',
-    difficulty: Difficulty.EASY,
-    tags: ['two-pointers', 'string'],
-    constraints: '1 <= s.length <= 2 * 10^5\ns consists only of printable ASCII characters.',
-    hints: [
-      'Use two pointers starting from both ends.',
-      'Skip non-alphanumeric characters and compare lowercase versions.',
-    ],
-    testCases: [
-      { input: '"A man, a plan, a canal: Panama"', expectedOutput: 'true', isSample: true, order: 1 },
-      { input: '"race a car"', expectedOutput: 'false', isSample: true, order: 2 },
-      { input: '" "', expectedOutput: 'true', isSample: false, order: 3 },
-    ],
-  },
-
-  {
-    title: 'Merge Two Sorted Lists',
-    slug: 'merge-two-sorted-lists',
-    description:
-      'You are given the heads of two sorted linked lists `list1` and `list2`.\n\nMerge the two lists into one **sorted** list. The list should be made by splicing together the nodes of the first two lists.\n\nReturn the head of the merged linked list.',
+      'Given the `head` of a singly linked list, reverse the list, and return the reversed list.',
     difficulty: Difficulty.EASY,
     tags: ['linked-list', 'recursion'],
     constraints:
-      'The number of nodes in both lists is in the range [0, 50].\n-100 <= Node.val <= 100\nBoth list1 and list2 are sorted in non-decreasing order.',
+      'The number of nodes in the list is in the range [0, 5000].\n-5000 <= Node.val <= 5000',
     hints: [
-      'Use a dummy head node to avoid edge-case handling at the start.',
-      'Compare the current nodes of both lists and append the smaller one.',
-    ],
-    testCases: [
-      { input: '[1,2,4]\n[1,3,4]', expectedOutput: '[1,1,2,3,4,4]', isSample: true, order: 1 },
-      { input: '[]\n[]', expectedOutput: '[]', isSample: true, order: 2 },
-      { input: '[]\n[0]', expectedOutput: '[0]', isSample: false, order: 3 },
-    ],
-  },
-
-  {
-    title: 'Maximum Subarray',
-    slug: 'maximum-subarray',
-    description:
-      'Given an integer array `nums`, find the subarray with the largest sum, and return its sum.',
-    difficulty: Difficulty.EASY,
-    tags: ['array', 'dynamic-programming', 'divide-and-conquer'],
-    constraints: '1 <= nums.length <= 10^5\n-10^4 <= nums[i] <= 10^4',
-    hints: [
-      "Kadane's algorithm: keep a running sum; reset to 0 when it goes negative.",
-      'Track the maximum sum seen at each step.',
-    ],
-    testCases: [
-      { input: '[-2,1,-3,4,-1,2,1,-5,4]', expectedOutput: '6', isSample: true, order: 1 },
-      { input: '[1]', expectedOutput: '1', isSample: true, order: 2 },
-      { input: '[5,4,-1,7,8]', expectedOutput: '23', isSample: false, order: 3 },
-      { input: '[-1,-2,-3]', expectedOutput: '-1', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: 'Climbing Stairs',
-    slug: 'climbing-stairs',
-    description:
-      'You are climbing a staircase. It takes `n` steps to reach the top.\n\nEach time you can either climb `1` or `2` steps. In how many distinct ways can you climb to the top?',
-    difficulty: Difficulty.EASY,
-    tags: ['dynamic-programming', 'math', 'memoization'],
-    constraints: '1 <= n <= 45',
-    hints: [
-      'The number of ways to reach step n equals ways(n-1) + ways(n-2).',
-      'This is essentially the Fibonacci sequence.',
-    ],
-    testCases: [
-      { input: '2', expectedOutput: '2', isSample: true, order: 1 },
-      { input: '3', expectedOutput: '3', isSample: true, order: 2 },
-      { input: '10', expectedOutput: '89', isSample: false, order: 3 },
-      { input: '1', expectedOutput: '1', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: 'Binary Search',
-    slug: 'binary-search',
-    description:
-      'Given an array of integers `nums` which is sorted in ascending order, and an integer `target`, write a function to search `target` in `nums`. If `target` exists, return its index. Otherwise, return `-1`.\n\nYou must write an algorithm with `O(log n)` runtime complexity.',
-    difficulty: Difficulty.EASY,
-    tags: ['array', 'binary-search'],
-    constraints: '1 <= nums.length <= 10^4\n-10^4 < nums[i], target < 10^4\nAll integers in nums are unique.\nnums is sorted in ascending order.',
-    hints: [
-      'Maintain left and right pointers. Check the midpoint each iteration.',
-      'Narrow the search range based on whether mid value is less or greater than target.',
-    ],
-    testCases: [
-      { input: '[-1,0,3,5,9,12]\n9', expectedOutput: '4', isSample: true, order: 1 },
-      { input: '[-1,0,3,5,9,12]\n2', expectedOutput: '-1', isSample: true, order: 2 },
-      { input: '[5]\n5', expectedOutput: '0', isSample: false, order: 3 },
-      { input: '[1,3,5,7,9]\n1', expectedOutput: '0', isSample: false, order: 4 },
-    ],
-  },
-
-  // ─────────────── MEDIUM (8 câu) ───────────────
-
-  {
-    title: 'Longest Substring Without Repeating Characters',
-    slug: 'longest-substring-without-repeating-characters',
-    description:
-      'Given a string `s`, find the length of the **longest substring** without repeating characters.',
-    difficulty: Difficulty.MEDIUM,
-    tags: ['hash-table', 'string', 'sliding-window'],
-    constraints: '0 <= s.length <= 5 * 10^4\ns consists of English letters, digits, symbols and spaces.',
-    hints: [
-      'Use a sliding window with a set to track characters in the current window.',
-      'When a duplicate is found, shrink the window from the left.',
-    ],
-    testCases: [
-      { input: '"abcabcbb"', expectedOutput: '3', isSample: true, order: 1 },
-      { input: '"bbbbb"', expectedOutput: '1', isSample: true, order: 2 },
-      { input: '"pwwkew"', expectedOutput: '3', isSample: false, order: 3 },
-      { input: '""', expectedOutput: '0', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: '3Sum',
-    slug: '3sum',
-    description:
-      'Given an integer array `nums`, return all the triplets `[nums[i], nums[j], nums[k]]` such that `i != j`, `i != k`, `j != k`, and `nums[i] + nums[j] + nums[k] == 0`.\n\nNotice that the solution set must not contain duplicate triplets.',
-    difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'two-pointers', 'sorting'],
-    constraints:
-      '3 <= nums.length <= 3000\n-10^5 <= nums[i] <= 10^5',
-    hints: [
-      'Sort the array first to simplify duplicate handling.',
-      'Fix one element, then use two pointers on the remainder.',
-      'Skip duplicate values at each pointer position.',
-    ],
-    testCases: [
-      { input: '[-1,0,1,2,-1,-4]', expectedOutput: '[[-1,-1,2],[-1,0,1]]', isSample: true, order: 1 },
-      { input: '[0,1,1]', expectedOutput: '[]', isSample: true, order: 2 },
-      { input: '[0,0,0]', expectedOutput: '[[0,0,0]]', isSample: false, order: 3 },
-    ],
-  },
-
-  {
-    title: 'Container With Most Water',
-    slug: 'container-with-most-water',
-    description:
-      'You are given an integer array `height` of length `n`. There are `n` vertical lines drawn such that the two endpoints of the `i`th line are `(i, 0)` and `(i, height[i])`.\n\nFind two lines that together with the x-axis form a container, such that the container contains the most water.\n\nReturn the maximum amount of water a container can store.',
-    difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'two-pointers', 'greedy'],
-    constraints: 'n == height.length\n2 <= n <= 10^5\n0 <= height[i] <= 10^4',
-    hints: [
-      'Start with pointers at both ends. Area = min(h[l], h[r]) * (r - l).',
-      'Move the pointer pointing to the shorter line inward.',
-    ],
-    testCases: [
-      { input: '[1,8,6,2,5,4,8,3,7]', expectedOutput: '49', isSample: true, order: 1 },
-      { input: '[1,1]', expectedOutput: '1', isSample: true, order: 2 },
-      { input: '[4,3,2,1,4]', expectedOutput: '16', isSample: false, order: 3 },
-    ],
-  },
-
-  {
-    title: 'Product of Array Except Self',
-    slug: 'product-of-array-except-self',
-    description:
-      'Given an integer array `nums`, return an array `answer` such that `answer[i]` is equal to the product of all the elements of `nums` except `nums[i]`.\n\nThe product of any prefix or suffix of `nums` is **guaranteed** to fit in a 32-bit integer.\n\nYou must write an algorithm that runs in `O(n)` time and **without using the division operation**.',
-    difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'prefix-sum'],
-    constraints: '2 <= nums.length <= 10^5\n-30 <= nums[i] <= 30',
-    hints: [
-      'Build a prefix product array and a suffix product array.',
-      'answer[i] = prefix[i-1] * suffix[i+1]. Can be done in O(1) extra space.',
-    ],
-    testCases: [
-      { input: '[1,2,3,4]', expectedOutput: '[24,12,8,6]', isSample: true, order: 1 },
-      { input: '[-1,1,0,-3,3]', expectedOutput: '[0,0,9,0,0]', isSample: true, order: 2 },
-    ],
-  },
-
-  {
-    title: 'Find Minimum in Rotated Sorted Array',
-    slug: 'find-minimum-in-rotated-sorted-array',
-    description:
-      'Suppose an array of length `n` sorted in ascending order is **rotated** between 1 and `n` times.\n\nGiven the sorted rotated array `nums` of **unique** elements, return the minimum element of this array.\n\nYou must write an algorithm that runs in `O(log n)` time.',
-    difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'binary-search'],
-    constraints: 'n == nums.length\n1 <= n <= 5000\n-5000 <= nums[i] <= 5000\nAll integers are unique.\nnums is sorted and rotated between 1 and n times.',
-    hints: [
-      'Use binary search. The minimum is at the rotation pivot.',
-      'If nums[mid] > nums[right], the minimum is in the right half; otherwise in the left half.',
-    ],
-    testCases: [
-      { input: '[3,4,5,1,2]', expectedOutput: '1', isSample: true, order: 1 },
-      { input: '[4,5,6,7,0,1,2]', expectedOutput: '0', isSample: true, order: 2 },
-      { input: '[11,13,15,17]', expectedOutput: '11', isSample: false, order: 3 },
-      { input: '[2,1]', expectedOutput: '1', isSample: false, order: 4 },
-    ],
-  },
-
-  {
-    title: 'Number of Islands',
-    slug: 'number-of-islands',
-    description:
-      "Given an `m x n` 2D binary grid `grid` which represents a map of `'1'`s (land) and `'0'`s (water), return the number of islands.\n\nAn **island** is surrounded by water and is formed by connecting adjacent lands horizontally or vertically. You may assume all four edges of the grid are all surrounded by water.",
-    difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'depth-first-search', 'breadth-first-search', 'graph'],
-    constraints:
-      'm == grid.length\nn == grid[i].length\n1 <= m, n <= 300\ngrid[i][j] is either "0" or "1".',
-    hints: [
-      'Iterate over each cell. When you find a "1", run DFS/BFS to mark all connected land as visited.',
-      'Each DFS/BFS call counts as one island.',
+      'Keep track of prev, curr, and next pointers.',
+      'At each step: save next, point curr.next to prev, advance both pointers.',
     ],
     testCases: [
       {
-        input: '[["1","1","1","1","0"],["1","1","0","1","0"],["1","1","0","0","0"],["0","0","0","0","0"]]',
+        input: '[1,2,3,4,5]',
+        expectedOutput: '[5,4,3,2,1]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[1,2]', expectedOutput: '[2,1]', isSample: true, order: 2 },
+      { input: '[]', expectedOutput: '[]', isSample: false, order: 3 },
+      { input: '[1]', expectedOutput: '[1]', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Invert Binary Tree',
+    slug: 'invert-binary-tree',
+    description:
+      'Given the `root` of a binary tree, invert the tree, and return its root.',
+    difficulty: Difficulty.EASY,
+    tags: ['tree', 'depth-first-search', 'breadth-first-search', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [0, 100].\n-100 <= Node.val <= 100',
+    hints: [
+      'Recursively swap left and right children for every node.',
+      'Base case: if node is null, return null.',
+    ],
+    testCases: [
+      {
+        input: '[4,2,7,1,3,6,9]',
+        expectedOutput: '[4,7,2,9,6,3,1]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[2,1,3]', expectedOutput: '[2,3,1]', isSample: true, order: 2 },
+      { input: '[]', expectedOutput: '[]', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Maximum Depth of Binary Tree',
+    slug: 'maximum-depth-of-binary-tree',
+    description:
+      "Given the `root` of a binary tree, return its maximum depth.\n\nA binary tree's maximum depth is the number of nodes along the longest path from the root node down to the farthest leaf node.",
+    difficulty: Difficulty.EASY,
+    tags: ['tree', 'depth-first-search', 'breadth-first-search', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [0, 10^4].\n-100 <= Node.val <= 100',
+    hints: [
+      'DFS: depth(node) = 1 + max(depth(left), depth(right)).',
+      'BFS: count levels using a queue.',
+    ],
+    testCases: [
+      {
+        input: '[3,9,20,null,null,15,7]',
+        expectedOutput: '3',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[1,null,2]', expectedOutput: '2', isSample: true, order: 2 },
+      { input: '[]', expectedOutput: '0', isSample: false, order: 3 },
+      { input: '[0]', expectedOutput: '1', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Symmetric Tree',
+    slug: 'symmetric-tree',
+    description:
+      'Given the `root` of a binary tree, check whether it is a mirror of itself (i.e., symmetric around its center).',
+    difficulty: Difficulty.EASY,
+    tags: ['tree', 'depth-first-search', 'breadth-first-search', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [1, 1000].\n-100 <= Node.val <= 100',
+    hints: [
+      'Use a helper isMirror(left, right) that checks both sides simultaneously.',
+      'Two trees are mirrors if their roots are equal and each left subtree mirrors the right subtree.',
+    ],
+    testCases: [
+      {
+        input: '[1,2,2,3,4,4,3]',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[1,2,2,null,3,null,3]',
+        expectedOutput: 'false',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[1]', expectedOutput: 'true', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Single Number',
+    slug: 'single-number',
+    description:
+      'Given a non-empty array of integers `nums`, every element appears twice except for one. Find that single one.\n\nYou must implement a solution with a linear runtime complexity and use only constant extra space.',
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'bit-manipulation'],
+    constraints:
+      '1 <= nums.length <= 3 * 10^4\n-3 * 10^4 <= nums[i] <= 3 * 10^4\nEach element in the array appears twice except for one element which appears only once.',
+    hints: [
+      'XOR of a number with itself is 0, and XOR with 0 is the number itself.',
+      'XOR all elements together — duplicates cancel out, leaving the single number.',
+    ],
+    testCases: [
+      { input: '[2,2,1]', expectedOutput: '1', isSample: true, order: 1 },
+      { input: '[4,1,2,1,2]', expectedOutput: '4', isSample: true, order: 2 },
+      { input: '[1]', expectedOutput: '1', isSample: false, order: 3 },
+      { input: '[0,1,0]', expectedOutput: '1', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Move Zeroes',
+    slug: 'move-zeroes',
+    description:
+      "Given an integer array `nums`, move all `0`'s to the end of it while maintaining the relative order of the non-zero elements.\n\nNote that you must do this **in-place** without making a copy of the array.",
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'two-pointers'],
+    constraints: '1 <= nums.length <= 10^4\n-2^31 <= nums[i] <= 2^31 - 1',
+    hints: [
+      'Use a slow pointer to track the position where the next non-zero element should go.',
+      'After placing all non-zeros, fill the rest with zeros.',
+    ],
+    testCases: [
+      {
+        input: '[0,1,0,3,12]',
+        expectedOutput: '[1,3,12,0,0]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[0]', expectedOutput: '[0]', isSample: true, order: 2 },
+      {
+        input: '[1,0,0,2,3]',
+        expectedOutput: '[1,2,3,0,0]',
+        isSample: false,
+        order: 3,
+      },
+      { input: '[1]', expectedOutput: '[1]', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Linked List Cycle',
+    slug: 'linked-list-cycle',
+    description:
+      'Given `head`, the head of a linked list, determine if the linked list has a cycle in it.\n\nReturn `true` if there is a cycle in the linked list. Otherwise, return `false`.',
+    difficulty: Difficulty.EASY,
+    tags: ['hash-table', 'linked-list', 'two-pointers'],
+    constraints:
+      'The number of nodes in the list is in the range [0, 10^4].\n-10^5 <= Node.val <= 10^5',
+    hints: [
+      "Floyd's Cycle Detection: use a slow pointer (1 step) and a fast pointer (2 steps).",
+      'If they ever meet, there is a cycle.',
+    ],
+    testCases: [
+      {
+        input: '[3,2,0,-4]\npos=1',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[1,2]\npos=0',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 2,
+      },
+      {
+        input: '[1]\npos=-1',
+        expectedOutput: 'false',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Count Primes',
+    slug: 'count-primes',
+    description:
+      'Given an integer `n`, return the number of prime numbers that are strictly less than `n`.',
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'math', 'enumeration', 'number-theory'],
+    constraints: '0 <= n <= 5 * 10^6',
+    hints: [
+      'Use the Sieve of Eratosthenes: mark multiples of each prime as composite.',
+      'Start from 2, mark 4, 6, 8... then 3, mark 9, 12... and so on up to sqrt(n).',
+    ],
+    testCases: [
+      { input: '10', expectedOutput: '4', isSample: true, order: 1 },
+      { input: '0', expectedOutput: '0', isSample: true, order: 2 },
+      { input: '1', expectedOutput: '0', isSample: false, order: 3 },
+      { input: '20', expectedOutput: '8', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Is Balanced Binary Tree',
+    slug: 'balanced-binary-tree',
+    description:
+      'Given a binary tree, determine if it is **height-balanced**.\n\nA height-balanced binary tree is a binary tree in which the depth of the two subtrees of every node never differs by more than one.',
+    difficulty: Difficulty.EASY,
+    tags: ['tree', 'depth-first-search', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [0, 5000].\n-10^4 <= Node.val <= 10^4',
+    hints: [
+      'Write a helper that returns the height of a subtree, or -1 if it is unbalanced.',
+      'At each node, check if both subtrees are balanced and their height difference <= 1.',
+    ],
+    testCases: [
+      {
+        input: '[3,9,20,null,null,15,7]',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[1,2,2,3,3,null,null,4,4]',
+        expectedOutput: 'false',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[]', expectedOutput: 'true', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Majority Element',
+    slug: 'majority-element',
+    description:
+      'Given an array `nums` of size `n`, return the majority element.\n\nThe majority element is the element that appears more than `⌊n / 2⌋` times. You may assume that the majority element always exists in the array.',
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'hash-table', 'sorting', 'counting'],
+    constraints:
+      'n == nums.length\n1 <= n <= 5 * 10^4\n-10^9 <= nums[i] <= 10^9',
+    hints: [
+      'Boyer-Moore Voting Algorithm: maintain a candidate and a count.',
+      'Increment count if current element equals candidate; decrement otherwise. Reset when count reaches 0.',
+    ],
+    testCases: [
+      { input: '[3,2,3]', expectedOutput: '3', isSample: true, order: 1 },
+      {
+        input: '[2,2,1,1,1,2,2]',
+        expectedOutput: '2',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[1]', expectedOutput: '1', isSample: false, order: 3 },
+      { input: '[6,5,5]', expectedOutput: '5', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Missing Number',
+    slug: 'missing-number',
+    description:
+      'Given an array `nums` containing `n` distinct numbers in the range `[0, n]`, return the only number in the range that is missing from the array.',
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'hash-table', 'math', 'bit-manipulation'],
+    constraints:
+      'n == nums.length\n1 <= n <= 10^4\n0 <= nums[i] <= n\nAll the numbers of nums are unique.',
+    hints: [
+      'Expected sum = n*(n+1)/2. Subtract the actual sum to find the missing number.',
+      'Alternatively, XOR all indices and all values — the missing number remains.',
+    ],
+    testCases: [
+      { input: '[3,0,1]', expectedOutput: '2', isSample: true, order: 1 },
+      { input: '[0,1]', expectedOutput: '2', isSample: true, order: 2 },
+      {
+        input: '[9,6,4,2,3,5,7,0,1]',
+        expectedOutput: '8',
+        isSample: false,
+        order: 3,
+      },
+      { input: '[0]', expectedOutput: '1', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Intersection of Two Arrays',
+    slug: 'intersection-of-two-arrays',
+    description:
+      'Given two integer arrays `nums1` and `nums2`, return an array of their intersection. Each element in the result must be unique and you may return the result in any order.',
+    difficulty: Difficulty.EASY,
+    tags: ['array', 'hash-table', 'two-pointers', 'sorting'],
+    constraints:
+      '1 <= nums1.length, nums2.length <= 1000\n0 <= nums1[i], nums2[i] <= 1000',
+    hints: [
+      'Convert one array to a Set, then iterate the other and collect matches.',
+    ],
+    testCases: [
+      {
+        input: '[1,2,2,1]\n[2,2]',
+        expectedOutput: '[2]',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[4,9,5]\n[9,4,9,8,4]',
+        expectedOutput: '[9,4]',
+        isSample: true,
+        order: 2,
+      },
+      {
+        input: '[1,2,3]\n[4,5,6]',
+        expectedOutput: '[]',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Excel Sheet Column Number',
+    slug: 'excel-sheet-column-number',
+    description:
+      'Given a string `columnTitle` that represents the column title as appears in an Excel spreadsheet, return its corresponding column number.\n\nFor example: A -> 1, B -> 2, ..., Z -> 26, AA -> 27, AB -> 28.',
+    difficulty: Difficulty.EASY,
+    tags: ['math', 'string'],
+    constraints:
+      '1 <= columnTitle.length <= 7\ncolumnTitle consists only of uppercase English letters.\ncolumnTitle is in the range ["A", "FXSHRXW"].',
+    hints: [
+      'Think of it as converting a base-26 number.',
+      'result = result * 26 + (char - "A" + 1) for each character.',
+    ],
+    testCases: [
+      { input: '"A"', expectedOutput: '1', isSample: true, order: 1 },
+      { input: '"AB"', expectedOutput: '28', isSample: true, order: 2 },
+      { input: '"ZY"', expectedOutput: '701', isSample: false, order: 3 },
+      {
+        input: '"FXSHRXW"',
+        expectedOutput: '2147483647',
+        isSample: false,
+        order: 4,
+      },
+    ],
+  },
+
+  {
+    title: 'Implement Stack Using Queues',
+    slug: 'implement-stack-using-queues',
+    description:
+      'Implement a last-in-first-out (LIFO) stack using only two queues. The implemented stack should support all the functions of a normal stack (`push`, `top`, `pop`, and `empty`).',
+    difficulty: Difficulty.EASY,
+    tags: ['stack', 'design', 'queue'],
+    constraints:
+      '1 <= x <= 9\nAt most 100 calls will be made to push, pop, top, and empty.\nAll calls to pop and top are valid.',
+    hints: [
+      'On push, enqueue to q2, then move all of q1 into q2, then swap q1 and q2.',
+      'This makes pop and top O(1) at the cost of O(n) push.',
+    ],
+    testCases: [
+      {
+        input:
+          '["MyStack","push","push","top","pop","empty"]\n[[],[1],[2],[],[],[]]',
+        expectedOutput: '[null,null,null,2,2,false]',
+        isSample: true,
+        order: 1,
+      },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════
+  // MEDIUM (20 câu)
+  // ═══════════════════════════════════════════════
+
+  {
+    title: 'Group Anagrams',
+    slug: 'group-anagrams',
+    description:
+      'Given an array of strings `strs`, group the anagrams together. You can return the answer in any order.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'hash-table', 'string', 'sorting'],
+    constraints:
+      '1 <= strs.length <= 10^4\n0 <= strs[i].length <= 100\nstrs[i] consists of lowercase English letters.',
+    hints: [
+      'Sort each string alphabetically to get a canonical key, then group by key.',
+      'Alternatively, use a character-frequency tuple as the key.',
+    ],
+    testCases: [
+      {
+        input: '["eat","tea","tan","ate","nat","bat"]',
+        expectedOutput: '[["bat"],["nat","tan"],["ate","eat","tea"]]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[""]', expectedOutput: '[[""]]', isSample: true, order: 2 },
+      { input: '["a"]', expectedOutput: '[["a"]]', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Top K Frequent Elements',
+    slug: 'top-k-frequent-elements',
+    description:
+      'Given an integer array `nums` and an integer `k`, return the `k` most frequent elements. You may return the answer in any order.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'hash-table', 'sorting', 'heap'],
+    constraints:
+      '1 <= nums.length <= 10^5\n-10^4 <= nums[i] <= 10^4\nk is in the range [1, the number of unique elements in the array].',
+    hints: [
+      'Count frequencies with a hash map, then extract top-k using a min-heap of size k.',
+      'Bucket sort approach: create buckets by frequency (index = count), O(n).',
+    ],
+    testCases: [
+      {
+        input: '[1,1,1,2,2,3]\n2',
+        expectedOutput: '[1,2]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[1]\n1', expectedOutput: '[1]', isSample: true, order: 2 },
+      {
+        input: '[4,1,1,4,2,2,2]\n2',
+        expectedOutput: '[2,1]',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Encode and Decode Strings',
+    slug: 'encode-and-decode-strings',
+    description:
+      'Design an algorithm to encode a list of strings to a single string. The encoded string is then sent over the network and is decoded back to the original list of strings.\n\nImplement `encode(strs)` and `decode(s)`.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'string', 'design'],
+    constraints:
+      '1 <= strs.length <= 200\n0 <= strs[i].length <= 200\nstrs[i] contains any possible characters out of 256 valid ASCII characters.',
+    hints: [
+      'Prefix each string with its length followed by a delimiter, e.g. "4#word".',
+      'On decode, read the length, then jump exactly that many characters.',
+    ],
+    testCases: [
+      {
+        input: '["lint","code","love","you"]',
+        expectedOutput: '["lint","code","love","you"]',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '["we","say",":","yes"]',
+        expectedOutput: '["we","say",":","yes"]',
+        isSample: false,
+        order: 2,
+      },
+    ],
+  },
+
+  {
+    title: 'Validate Binary Search Tree',
+    slug: 'validate-binary-search-tree',
+    description:
+      "Given the `root` of a binary tree, determine if it is a valid binary search tree (BST).\n\nA valid BST is defined as follows:\n- The left subtree of a node contains only nodes with keys **less than** the node's key.\n- The right subtree of a node contains only nodes with keys **greater than** the node's key.\n- Both the left and right subtrees must also be binary search trees.",
+    difficulty: Difficulty.MEDIUM,
+    tags: ['tree', 'depth-first-search', 'binary-search-tree', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [1, 10^4].\n-2^31 <= Node.val <= 2^31 - 1',
+    hints: [
+      'Pass down min and max bounds as you recurse.',
+      'Left child must be < node.val; right child must be > node.val.',
+    ],
+    testCases: [
+      { input: '[2,1,3]', expectedOutput: 'true', isSample: true, order: 1 },
+      {
+        input: '[5,1,4,null,null,3,6]',
+        expectedOutput: 'false',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[2,2,2]', expectedOutput: 'false', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Binary Tree Level Order Traversal',
+    slug: 'binary-tree-level-order-traversal',
+    description:
+      "Given the `root` of a binary tree, return the level order traversal of its nodes' values (i.e., from left to right, level by level).",
+    difficulty: Difficulty.MEDIUM,
+    tags: ['tree', 'breadth-first-search', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [0, 2000].\n-1000 <= Node.val <= 1000',
+    hints: [
+      'Use a queue. At the start of each iteration, the queue holds all nodes of the current level.',
+      'Process them all, enqueueing their children — those become the next level.',
+    ],
+    testCases: [
+      {
+        input: '[3,9,20,null,null,15,7]',
+        expectedOutput: '[[3],[9,20],[15,7]]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[1]', expectedOutput: '[[1]]', isSample: true, order: 2 },
+      { input: '[]', expectedOutput: '[]', isSample: false, order: 3 },
+    ],
+  },
+
+  {
+    title: 'Construct Binary Tree from Preorder and Inorder Traversal',
+    slug: 'construct-binary-tree-from-preorder-and-inorder',
+    description:
+      'Given two integer arrays `preorder` and `inorder` where `preorder` is the preorder traversal of a binary tree and `inorder` is the inorder traversal of the same tree, construct and return the binary tree.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'hash-table', 'divide-and-conquer', 'tree', 'binary-tree'],
+    constraints:
+      '1 <= preorder.length <= 3000\ninorder.length == preorder.length\n-3000 <= preorder[i], inorder[i] <= 3000\npreorder and inorder consist of unique values.\nEach value of inorder also appears in preorder.',
+    hints: [
+      'The first element of preorder is always the root.',
+      'Find the root in inorder to determine left/right subtree sizes, then recurse.',
+    ],
+    testCases: [
+      {
+        input: '[3,9,20,15,7]\n[9,3,15,20,7]',
+        expectedOutput: '[3,9,20,null,null,15,7]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[-1]\n[-1]', expectedOutput: '[-1]', isSample: true, order: 2 },
+    ],
+  },
+
+  {
+    title: 'Kth Smallest Element in a BST',
+    slug: 'kth-smallest-element-in-bst',
+    description:
+      'Given the `root` of a binary search tree, and an integer `k`, return the `k`th smallest value (1-indexed) of all the values of the nodes in the tree.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['tree', 'depth-first-search', 'binary-search-tree', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is n.\n1 <= k <= n <= 10^4\n0 <= Node.val <= 10^4',
+    hints: [
+      'In-order traversal of a BST gives values in sorted ascending order.',
+      'The k-th element visited during in-order traversal is the answer.',
+    ],
+    testCases: [
+      {
+        input: '[3,1,4,null,2]\n1',
         expectedOutput: '1',
         isSample: true,
         order: 1,
       },
       {
-        input: '[["1","1","0","0","0"],["1","1","0","0","0"],["0","0","1","0","0"],["0","0","0","1","1"]]',
+        input: '[5,3,6,2,4,null,null,1]\n3',
         expectedOutput: '3',
+        isSample: true,
+        order: 2,
+      },
+      {
+        input: '[1,null,2]\n2',
+        expectedOutput: '2',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Lowest Common Ancestor of a BST',
+    slug: 'lowest-common-ancestor-of-bst',
+    description:
+      'Given a binary search tree (BST), find the lowest common ancestor (LCA) node of two given nodes in the BST.\n\nThe lowest common ancestor is defined between two nodes `p` and `q` as the lowest node in `T` that has both `p` and `q` as descendants (where we allow a node to be a descendant of itself).',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['tree', 'depth-first-search', 'binary-search-tree', 'binary-tree'],
+    constraints:
+      'The number of nodes in the tree is in the range [2, 10^5].\n-10^9 <= Node.val <= 10^9\nAll Node.val are unique.\np != q\np and q will exist in the BST.',
+    hints: [
+      'Use BST property: if both p and q are less than root, LCA is in the left subtree.',
+      'If both are greater, LCA is in the right subtree. Otherwise, root is the LCA.',
+    ],
+    testCases: [
+      {
+        input: '[6,2,8,0,4,7,9,null,null,3,5]\np=2\nq=8',
+        expectedOutput: '6',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[6,2,8,0,4,7,9,null,null,3,5]\np=2\nq=4',
+        expectedOutput: '2',
         isSample: true,
         order: 2,
       },
@@ -301,125 +618,507 @@ const questions = [
   },
 
   {
-    title: 'Coin Change',
-    slug: 'coin-change',
+    title: 'Combination Sum',
+    slug: 'combination-sum',
     description:
-      'You are given an integer array `coins` representing coins of different denominations and an integer `amount` representing a total amount of money.\n\nReturn the fewest number of coins that you need to make up that amount. If that amount of money cannot be made up by any combination of the coins, return `-1`.\n\nYou may assume that you have an infinite number of each kind of coin.',
+      'Given an array of distinct integers `candidates` and a target integer `target`, return a list of all unique combinations of `candidates` where the chosen numbers sum to `target`. You may return the combinations in any order.\n\nThe same number may be chosen from `candidates` an unlimited number of times.',
     difficulty: Difficulty.MEDIUM,
-    tags: ['array', 'dynamic-programming', 'breadth-first-search'],
+    tags: ['array', 'backtracking'],
     constraints:
-      '1 <= coins.length <= 12\n1 <= coins[i] <= 2^31 - 1\n0 <= amount <= 10^4',
+      '1 <= candidates.length <= 30\n2 <= candidates[i] <= 40\nAll elements of candidates are distinct.\n1 <= target <= 40',
     hints: [
-      'Classic bottom-up DP: dp[i] = minimum coins to make amount i.',
-      'dp[0] = 0. For each amount i, try every coin denomination.',
+      'Use backtracking: at each step, choose a candidate and recurse with remaining target.',
+      'To avoid duplicates, only iterate from the current index onward.',
     ],
     testCases: [
-      { input: '[1,5,11]\n11', expectedOutput: '1', isSample: true, order: 1 },
-      { input: '[2]\n3', expectedOutput: '-1', isSample: true, order: 2 },
-      { input: '[1]\n0', expectedOutput: '0', isSample: false, order: 3 },
-      { input: '[1,2,5]\n11', expectedOutput: '3', isSample: false, order: 4 },
+      {
+        input: '[2,3,6,7]\n7',
+        expectedOutput: '[[2,2,3],[7]]',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[2,3,5]\n8',
+        expectedOutput: '[[2,2,2,2],[2,3,3],[3,5]]',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[2]\n1', expectedOutput: '[]', isSample: false, order: 3 },
     ],
   },
 
   {
-    title: 'Longest Palindromic Substring',
-    slug: 'longest-palindromic-substring',
+    title: 'Permutations',
+    slug: 'permutations',
     description:
-      'Given a string `s`, return the longest palindromic substring in `s`.',
+      'Given an array `nums` of distinct integers, return all the possible permutations. You can return the answer in any order.',
     difficulty: Difficulty.MEDIUM,
-    tags: ['string', 'dynamic-programming', 'two-pointers'],
-    constraints: '1 <= s.length <= 1000\ns consists of only digits and English letters.',
-    hints: [
-      'Expand around every center (both single-character and between two characters).',
-      'Track the longest expansion seen so far.',
-    ],
-    testCases: [
-      { input: '"babad"', expectedOutput: '"bab"', isSample: true, order: 1 },
-      { input: '"cbbd"', expectedOutput: '"bb"', isSample: true, order: 2 },
-      { input: '"a"', expectedOutput: '"a"', isSample: false, order: 3 },
-      { input: '"racecar"', expectedOutput: '"racecar"', isSample: false, order: 4 },
-    ],
-  },
-
-  // ─────────────── HARD (4 câu) ───────────────
-
-  {
-    title: 'Trapping Rain Water',
-    slug: 'trapping-rain-water',
-    description:
-      'Given `n` non-negative integers representing an elevation map where the width of each bar is `1`, compute how much water it can trap after raining.',
-    difficulty: Difficulty.HARD,
-    tags: ['array', 'two-pointers', 'dynamic-programming', 'stack', 'monotonic-stack'],
-    constraints: 'n == height.length\n1 <= n <= 2 * 10^4\n0 <= height[i] <= 10^5',
-    hints: [
-      'For each index, water trapped = min(maxLeft, maxRight) - height[i].',
-      'Two-pointer approach: move the side with the smaller max inward.',
-    ],
-    testCases: [
-      { input: '[0,1,0,2,1,0,1,3,2,1,2,1]', expectedOutput: '6', isSample: true, order: 1 },
-      { input: '[4,2,0,3,2,5]', expectedOutput: '9', isSample: true, order: 2 },
-      { input: '[3,0,2,0,4]', expectedOutput: '7', isSample: false, order: 3 },
-    ],
-  },
-
-  {
-    title: 'Median of Two Sorted Arrays',
-    slug: 'median-of-two-sorted-arrays',
-    description:
-      'Given two sorted arrays `nums1` and `nums2` of size `m` and `n` respectively, return the **median** of the two sorted arrays.\n\nThe overall run time complexity should be `O(log (m+n))`.',
-    difficulty: Difficulty.HARD,
-    tags: ['array', 'binary-search', 'divide-and-conquer'],
+    tags: ['array', 'backtracking'],
     constraints:
-      'nums1.length == m\nnums2.length == n\n0 <= m <= 1000\n0 <= n <= 1000\n1 <= m + n <= 2000\n-10^6 <= nums1[i], nums2[i] <= 10^6',
+      '1 <= nums.length <= 6\n-10 <= nums[i] <= 10\nAll the integers of nums are unique.',
     hints: [
-      'Binary search on the smaller array to find the correct partition point.',
-      'Partition both arrays so that elements on the left half are all ≤ elements on the right half.',
+      'Backtracking: at each position, try every unused number.',
+      'Use a boolean visited array to mark which elements are already in the current permutation.',
     ],
     testCases: [
-      { input: '[1,3]\n[2]', expectedOutput: '2.00000', isSample: true, order: 1 },
-      { input: '[1,2]\n[3,4]', expectedOutput: '2.50000', isSample: true, order: 2 },
-      { input: '[0,0]\n[0,0]', expectedOutput: '0.00000', isSample: false, order: 3 },
-      { input: '[]\n[1]', expectedOutput: '1.00000', isSample: false, order: 4 },
+      {
+        input: '[1,2,3]',
+        expectedOutput: '[[1,2,3],[1,3,2],[2,1,3],[2,3,1],[3,1,2],[3,2,1]]',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[0,1]',
+        expectedOutput: '[[0,1],[1,0]]',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[1]', expectedOutput: '[[1]]', isSample: false, order: 3 },
     ],
   },
 
   {
-    title: 'Merge K Sorted Lists',
-    slug: 'merge-k-sorted-lists',
+    title: 'Subsets',
+    slug: 'subsets',
     description:
-      'You are given an array of `k` linked-lists `lists`, each linked-list is sorted in ascending order.\n\nMerge all the linked-lists into one sorted linked-list and return it.',
-    difficulty: Difficulty.HARD,
-    tags: ['linked-list', 'divide-and-conquer', 'heap', 'merge-sort'],
+      'Given an integer array `nums` of unique elements, return all possible subsets (the power set). The solution set must not contain duplicate subsets. Return the solution in any order.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'backtracking', 'bit-manipulation'],
     constraints:
-      'k == lists.length\n0 <= k <= 10^4\n0 <= lists[i].length <= 500\n-10^4 <= lists[i][j] <= 10^4\nlists[i] is sorted in ascending order.\nThe sum of lists[i].length will not exceed 10^4.',
+      '1 <= nums.length <= 10\n-10 <= nums[i] <= 10\nAll the numbers of nums are unique.',
     hints: [
-      'Use a min-heap (priority queue) to always pick the smallest head among all lists.',
-      'Alternatively, use divide-and-conquer: merge pairs of lists repeatedly.',
+      'Backtracking: at each index, choose to include or exclude the element.',
+      'Alternatively, iterate from 0 to 2^n and use bit masking.',
     ],
     testCases: [
-      { input: '[[1,4,5],[1,3,4],[2,6]]', expectedOutput: '[1,1,2,3,4,4,5,6]', isSample: true, order: 1 },
+      {
+        input: '[1,2,3]',
+        expectedOutput: '[[],[1],[2],[1,2],[3],[1,3],[2,3],[1,2,3]]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[0]', expectedOutput: '[[],[0]]', isSample: true, order: 2 },
+    ],
+  },
+
+  {
+    title: 'Word Search',
+    slug: 'word-search',
+    description:
+      'Given an `m x n` grid of characters `board` and a string `word`, return `true` if `word` exists in the grid.\n\nThe word can be constructed from letters of sequentially adjacent cells, where adjacent cells are horizontally or vertically neighboring. The same letter cell may not be used more than once.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'backtracking', 'depth-first-search', 'matrix'],
+    constraints:
+      'm == board.length\nn = board[i].length\n1 <= m, n <= 6\n1 <= word.length <= 15\nboard and word consists of only lowercase and uppercase English letters.',
+    hints: [
+      'DFS + backtracking: for each cell matching word[0], start a DFS.',
+      "Mark cells as visited (e.g., '#') before recursing and restore afterward.",
+    ],
+    testCases: [
+      {
+        input:
+          '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\n"ABCCED"',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\n"SEE"',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 2,
+      },
+      {
+        input:
+          '[["A","B","C","E"],["S","F","C","S"],["A","D","E","E"]]\n"ABCB"',
+        expectedOutput: 'false',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Jump Game',
+    slug: 'jump-game',
+    description:
+      "You are given an integer array `nums`. You are initially positioned at the array's first index, and each element in the array represents your maximum jump length at that position.\n\nReturn `true` if you can reach the last index, or `false` otherwise.",
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'dynamic-programming', 'greedy'],
+    constraints: '1 <= nums.length <= 10^4\n0 <= nums[i] <= 10^5',
+    hints: [
+      'Greedy: track the farthest index reachable so far.',
+      'If the current index exceeds the farthest reachable, return false.',
+    ],
+    testCases: [
+      {
+        input: '[2,3,1,1,4]',
+        expectedOutput: 'true',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[3,2,1,0,4]',
+        expectedOutput: 'false',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[0]', expectedOutput: 'true', isSample: false, order: 3 },
+      { input: '[1,0,0]', expectedOutput: 'false', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Unique Paths',
+    slug: 'unique-paths',
+    description:
+      'There is a robot on an `m x n` grid. The robot is initially located at the **top-left corner**. The robot tries to move to the **bottom-right corner**. The robot can only move either **down** or **right** at any point in time.\n\nGiven the two integers `m` and `n`, return the number of possible unique paths.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['math', 'dynamic-programming', 'combinatorics'],
+    constraints: '1 <= m, n <= 100',
+    hints: [
+      'dp[i][j] = dp[i-1][j] + dp[i][j-1]. Base case: first row and first column are all 1.',
+      'Mathematical solution: C(m+n-2, m-1) (combinations).',
+    ],
+    testCases: [
+      { input: '3\n7', expectedOutput: '28', isSample: true, order: 1 },
+      { input: '3\n2', expectedOutput: '3', isSample: true, order: 2 },
+      { input: '1\n1', expectedOutput: '1', isSample: false, order: 3 },
+      { input: '7\n3', expectedOutput: '28', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'House Robber',
+    slug: 'house-robber',
+    description:
+      'You are a professional robber planning to rob houses along a street. Each house has a certain amount of money stashed, the only constraint stopping you from robbing each of them is that adjacent houses have security systems connected and it will automatically contact the police if two adjacent houses were broken into on the same night.\n\nGiven an integer array `nums` representing the amount of money of each house, return the maximum amount of money you can rob tonight without alerting the police.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'dynamic-programming'],
+    constraints: '1 <= nums.length <= 100\n0 <= nums[i] <= 400',
+    hints: [
+      'dp[i] = max(dp[i-1], dp[i-2] + nums[i]).',
+      'You only need the previous two values, so this can be done in O(1) space.',
+    ],
+    testCases: [
+      { input: '[1,2,3,1]', expectedOutput: '4', isSample: true, order: 1 },
+      { input: '[2,7,9,3,1]', expectedOutput: '12', isSample: true, order: 2 },
+      { input: '[2,1]', expectedOutput: '2', isSample: false, order: 3 },
+      { input: '[1,2,3,4,5]', expectedOutput: '9', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Decode Ways',
+    slug: 'decode-ways',
+    description:
+      'A message containing letters from `A-Z` can be encoded into numbers using the mapping: `\'A\' -> "1"`, `\'B\' -> "2"`, ..., `\'Z\' -> "26"`.\n\nGiven a string `s` containing only digits, return the number of ways to decode it.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['string', 'dynamic-programming'],
+    constraints:
+      '1 <= s.length <= 100\ns contains only digits and may contain leading zeros.',
+    hints: [
+      'dp[i] = number of ways to decode s[0..i-1].',
+      'If s[i-1] != "0", dp[i] += dp[i-1]. If s[i-2..i-1] is in ["10".."26"], dp[i] += dp[i-2].',
+    ],
+    testCases: [
+      { input: '"12"', expectedOutput: '2', isSample: true, order: 1 },
+      { input: '"226"', expectedOutput: '3', isSample: true, order: 2 },
+      { input: '"06"', expectedOutput: '0', isSample: false, order: 3 },
+      { input: '"11106"', expectedOutput: '2', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Maximum Product Subarray',
+    slug: 'maximum-product-subarray',
+    description:
+      'Given an integer array `nums`, find a subarray that has the largest product, and return the product.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'dynamic-programming'],
+    constraints:
+      '1 <= nums.length <= 2 * 10^4\n-10 <= nums[i] <= 10\nThe product of any prefix or suffix of nums is guaranteed to fit in a 32-bit integer.',
+    hints: [
+      'Track both the maximum and minimum product ending at the current index (negatives can flip).',
+      'maxProd = max(num, maxProd*num, minProd*num); similarly for minProd.',
+    ],
+    testCases: [
+      { input: '[2,3,-2,4]', expectedOutput: '6', isSample: true, order: 1 },
+      { input: '[-2,0,-1]', expectedOutput: '0', isSample: true, order: 2 },
+      { input: '[-2,3,-4]', expectedOutput: '24', isSample: false, order: 3 },
+      { input: '[0,2]', expectedOutput: '2', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Pacific Atlantic Water Flow',
+    slug: 'pacific-atlantic-water-flow',
+    description:
+      "There is an `m x n` rectangular island that borders both the Pacific Ocean and Atlantic Ocean. The Pacific Ocean touches the island's left and top edges, and the Atlantic Ocean touches the island's right and bottom edges.\n\nWater can only flow in four directions (up, down, left, right) from a cell to an adjacent one with an equal or lower height.\n\nReturn a list of grid coordinates `result` where `result[i] = [ri, ci]` denotes that rain water can flow from cell `(ri, ci)` to **both** the Pacific and Atlantic oceans.",
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'depth-first-search', 'breadth-first-search', 'matrix'],
+    constraints:
+      'm == heights.length\nn == heights[r].length\n1 <= m, n <= 200\n0 <= heights[r][c] <= 10^5',
+    hints: [
+      'Reverse the direction: BFS/DFS from ocean borders, going uphill.',
+      'Find cells reachable from Pacific and cells reachable from Atlantic, then intersect.',
+    ],
+    testCases: [
+      {
+        input: '[[1,2,2,3,5],[3,2,3,4,4],[2,4,5,3,1],[6,7,1,4,5],[5,1,1,2,4]]',
+        expectedOutput: '[[0,4],[1,3],[1,4],[2,2],[3,0],[3,1],[4,0]]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[[1]]', expectedOutput: '[[0,0]]', isSample: true, order: 2 },
+    ],
+  },
+
+  {
+    title: 'Course Schedule',
+    slug: 'course-schedule',
+    description:
+      'There are a total of `numCourses` courses you have to take, labeled from `0` to `numCourses - 1`. You are given an array `prerequisites` where `prerequisites[i] = [ai, bi]` indicates that you must take course `bi` first if you want to take course `ai`.\n\nReturn `true` if you can finish all courses. Otherwise, return `false`.',
+    difficulty: Difficulty.MEDIUM,
+    tags: [
+      'depth-first-search',
+      'breadth-first-search',
+      'graph',
+      'topological-sort',
+    ],
+    constraints:
+      '1 <= numCourses <= 2000\n0 <= prerequisites.length <= 5000\nprerequisites[i].length == 2\n0 <= ai, bi < numCourses\nAll the pairs prerequisites[i] are unique.',
+    hints: [
+      'Build a directed graph. The answer is false iff there is a cycle.',
+      "Use DFS with three states (unvisited, visiting, visited) — 'visiting' a node you're currently exploring signals a cycle.",
+    ],
+    testCases: [
+      { input: '2\n[[1,0]]', expectedOutput: 'true', isSample: true, order: 1 },
+      {
+        input: '2\n[[1,0],[0,1]]',
+        expectedOutput: 'false',
+        isSample: true,
+        order: 2,
+      },
+      {
+        input: '5\n[[1,4],[2,4],[3,1],[3,2]]',
+        expectedOutput: 'true',
+        isSample: false,
+        order: 3,
+      },
+    ],
+  },
+
+  {
+    title: 'Rotting Oranges',
+    slug: 'rotting-oranges',
+    description:
+      'You are given an `m x n` grid where each cell can have one of three values:\n- `0` representing an empty cell,\n- `1` representing a fresh orange,\n- `2` representing a rotten orange.\n\nEvery minute, any fresh orange that is 4-directionally adjacent to a rotten orange becomes rotten.\n\nReturn the minimum number of minutes that must elapse until no cell has a fresh orange. If this is impossible, return `-1`.',
+    difficulty: Difficulty.MEDIUM,
+    tags: ['array', 'breadth-first-search', 'matrix'],
+    constraints:
+      'm == grid.length\nn == grid[i].length\n1 <= m, n <= 10\ngrid[i][j] is 0, 1, or 2.',
+    hints: [
+      'Multi-source BFS: start from all initially rotten oranges simultaneously.',
+      'Count fresh oranges; decrement when each turns rotten. Time = BFS levels.',
+    ],
+    testCases: [
+      {
+        input: '[[2,1,1],[1,1,0],[0,1,1]]',
+        expectedOutput: '4',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '[[2,1,1],[0,1,1],[1,0,1]]',
+        expectedOutput: '-1',
+        isSample: true,
+        order: 2,
+      },
+      { input: '[[0,2]]', expectedOutput: '0', isSample: false, order: 3 },
+    ],
+  },
+
+  // ═══════════════════════════════════════════════
+  // HARD (6 câu)
+  // ═══════════════════════════════════════════════
+
+  {
+    title: 'Sliding Window Maximum',
+    slug: 'sliding-window-maximum',
+    description:
+      'You are given an array of integers `nums`, there is a sliding window of size `k` which is moving from the very left of the array to the very right. You can only see the `k` numbers in the window. Each time the sliding window moves right by one position.\n\nReturn the max sliding window.',
+    difficulty: Difficulty.HARD,
+    tags: ['array', 'queue', 'sliding-window', 'heap', 'monotonic-queue'],
+    constraints:
+      '1 <= nums.length <= 10^5\n-10^4 <= nums[i] <= 10^4\n1 <= k <= nums.length',
+    hints: [
+      'Use a monotonic deque (decreasing order) storing indices.',
+      'Remove elements outside the window from the front; remove smaller elements from the back before inserting.',
+    ],
+    testCases: [
+      {
+        input: '[1,3,-1,-3,5,3,6,7]\n3',
+        expectedOutput: '[3,3,5,5,6,7]',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[1]\n1', expectedOutput: '[1]', isSample: true, order: 2 },
+      {
+        input: '[1,-1]\n1',
+        expectedOutput: '[1,-1]',
+        isSample: false,
+        order: 3,
+      },
+      { input: '[9,11]\n2', expectedOutput: '[11]', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Serialize and Deserialize Binary Tree',
+    slug: 'serialize-and-deserialize-binary-tree',
+    description:
+      'Serialization is the process of converting a data structure or object into a sequence of bits so that it can be stored in a file or memory buffer, or transmitted across a network connection link to be reconstructed later in the same or another computer environment.\n\nDesign an algorithm to serialize and deserialize a binary tree. Implement `serialize(root)` and `deserialize(data)`.',
+    difficulty: Difficulty.HARD,
+    tags: [
+      'string',
+      'tree',
+      'depth-first-search',
+      'breadth-first-search',
+      'design',
+      'binary-tree',
+    ],
+    constraints:
+      'The number of nodes in the tree is in the range [0, 10^4].\n-1000 <= Node.val <= 1000',
+    hints: [
+      'BFS level-order: serialize null pointers as "null" tokens.',
+      'On deserialize, use a queue to reconstruct nodes level by level.',
+    ],
+    testCases: [
+      {
+        input: '[1,2,3,null,null,4,5]',
+        expectedOutput: '[1,2,3,null,null,4,5]',
+        isSample: true,
+        order: 1,
+      },
       { input: '[]', expectedOutput: '[]', isSample: true, order: 2 },
-      { input: '[[]]', expectedOutput: '[]', isSample: false, order: 3 },
+      { input: '[1]', expectedOutput: '[1]', isSample: false, order: 3 },
     ],
   },
 
   {
-    title: 'Word Ladder',
-    slug: 'word-ladder',
+    title: 'Find Median from Data Stream',
+    slug: 'find-median-from-data-stream',
     description:
-      'A **transformation sequence** from word `beginWord` to word `endWord` using a dictionary `wordList` is a sequence `beginWord -> s1 -> s2 -> ... -> sk` such that:\n- Every adjacent pair of words differs by a single letter.\n- Every word in the sequence (except `beginWord`) is in `wordList`.\n\nGiven `beginWord`, `endWord`, and `wordList`, return the **number of words** in the shortest transformation sequence from `beginWord` to `endWord`, or `0` if no such sequence exists.',
+      'The **median** is the middle value in an ordered integer list. If the size of the list is even, there is no middle value, and the median is the mean of the two middle values.\n\nImplement the `MedianFinder` class:\n- `addNum(int num)` — adds integer `num` from the data stream to the data structure.\n- `findMedian()` — returns the median of all elements so far.',
     difficulty: Difficulty.HARD,
-    tags: ['hash-table', 'string', 'breadth-first-search'],
+    tags: ['two-pointers', 'design', 'sorting', 'heap', 'data-stream'],
     constraints:
-      '1 <= beginWord.length <= 10\nendWord.length == beginWord.length\n1 <= wordList.length <= 5000\nwordList[i].length == beginWord.length\nbeginWord, endWord, and wordList[i] consist of lowercase English letters.\nbeginWord != endWord\nAll words in wordList are unique.',
+      '-10^5 <= num <= 10^5\nThere will be at least one element in the data structure before calling findMedian.\nAt most 5 * 10^4 calls will be made to addNum and findMedian.',
     hints: [
-      'Model the problem as a graph: nodes are words, edges connect words that differ by one letter.',
-      'BFS from beginWord. The shortest path length is the answer.',
-      'Pre-process wordList into a set for O(1) lookup.',
+      'Maintain a max-heap for the lower half and a min-heap for the upper half.',
+      'Balance the heaps so their sizes differ by at most 1. Median = top(s) or average of both tops.',
     ],
     testCases: [
-      { input: '"hit"\n"cog"\n["hot","dot","dog","lot","log","cog"]', expectedOutput: '5', isSample: true, order: 1 },
-      { input: '"hit"\n"cog"\n["hot","dot","dog","lot","log"]', expectedOutput: '0', isSample: true, order: 2 },
+      {
+        input:
+          '["MedianFinder","addNum","addNum","findMedian","addNum","findMedian"]\n[[],[1],[2],[],[3],[]]',
+        expectedOutput: '[null,null,null,1.50000,null,2.00000]',
+        isSample: true,
+        order: 1,
+      },
+    ],
+  },
+
+  {
+    title: 'Largest Rectangle in Histogram',
+    slug: 'largest-rectangle-in-histogram',
+    description:
+      "Given an array of integers `heights` representing the histogram's bar height where the width of each bar is `1`, return the area of the largest rectangle in the histogram.",
+    difficulty: Difficulty.HARD,
+    tags: ['array', 'stack', 'monotonic-stack'],
+    constraints: '1 <= heights.length <= 10^5\n0 <= heights[i] <= 10^4',
+    hints: [
+      'Use a monotonic increasing stack storing indices.',
+      'When a shorter bar is found, pop the stack and compute the rectangle width using the current and stack-top indices.',
+    ],
+    testCases: [
+      {
+        input: '[2,1,5,6,2,3]',
+        expectedOutput: '10',
+        isSample: true,
+        order: 1,
+      },
+      { input: '[2,4]', expectedOutput: '4', isSample: true, order: 2 },
+      { input: '[1,1]', expectedOutput: '2', isSample: false, order: 3 },
+      {
+        input: '[6,2,5,4,5,1,6]',
+        expectedOutput: '12',
+        isSample: false,
+        order: 4,
+      },
+    ],
+  },
+
+  {
+    title: 'Edit Distance',
+    slug: 'edit-distance',
+    description:
+      'Given two strings `word1` and `word2`, return the minimum number of operations required to convert `word1` to `word2`.\n\nYou have the following three operations permitted on a word:\n- Insert a character\n- Delete a character\n- Replace a character',
+    difficulty: Difficulty.HARD,
+    tags: ['string', 'dynamic-programming'],
+    constraints:
+      '0 <= word1.length, word2.length <= 500\nword1 and word2 consist of lowercase English letters.',
+    hints: [
+      'dp[i][j] = min edit distance between word1[0..i-1] and word2[0..j-1].',
+      'If chars match: dp[i][j] = dp[i-1][j-1]. Else: dp[i][j] = 1 + min(dp[i-1][j], dp[i][j-1], dp[i-1][j-1]).',
+    ],
+    testCases: [
+      {
+        input: '"horse"\n"ros"',
+        expectedOutput: '3',
+        isSample: true,
+        order: 1,
+      },
+      {
+        input: '"intention"\n"execution"',
+        expectedOutput: '5',
+        isSample: true,
+        order: 2,
+      },
+      { input: '""\n""', expectedOutput: '0', isSample: false, order: 3 },
+      { input: '"a"\n"b"', expectedOutput: '1', isSample: false, order: 4 },
+    ],
+  },
+
+  {
+    title: 'Regular Expression Matching',
+    slug: 'regular-expression-matching',
+    description:
+      "Given an input string `s` and a pattern `p`, implement regular expression matching with support for `'.' ` and `'*'` where:\n- `'.'` matches any single character.\n- `'*'` matches zero or more of the preceding element.\n\nThe matching should cover the **entire** input string (not partial).",
+    difficulty: Difficulty.HARD,
+    tags: ['string', 'dynamic-programming', 'recursion'],
+    constraints:
+      "1 <= s.length <= 20\n1 <= p.length <= 30\ns contains only lowercase English letters.\np contains only lowercase English letters, '.', and '*'.\nIt is guaranteed for each occurrence of '*', there will be a previous valid character to match.",
+    hints: [
+      'dp[i][j] = whether s[0..i-1] matches p[0..j-1].',
+      "Handle the '*' case by checking zero occurrences (dp[i][j-2]) or one+ occurrences (dp[i-1][j] if chars match).",
+    ],
+    testCases: [
+      { input: '"aa"\n"a"', expectedOutput: 'false', isSample: true, order: 1 },
+      { input: '"aa"\n"a*"', expectedOutput: 'true', isSample: true, order: 2 },
+      {
+        input: '"ab"\n".*"',
+        expectedOutput: 'true',
+        isSample: false,
+        order: 3,
+      },
+      {
+        input: '"mississippi"\n"mis*is*p*."',
+        expectedOutput: 'false',
+        isSample: false,
+        order: 4,
+      },
     ],
   },
 ];
@@ -427,59 +1126,72 @@ const questions = [
 // ─────────────── SEED RUNNER ───────────────
 
 async function main() {
-  console.log(' Seeding 20 DSA coding questions...\n');
+  console.log(
+    `🌱 Seeding ${questions.length} additional DSA coding questions...\n`,
+  );
 
-  await prisma.$transaction(async (tx) => {
-    for (const q of questions) {
-      await tx.codingQuestion.upsert({
-        where: { slug: q.slug },
-        update: {
-          title: q.title,
-          description: q.description,
-          difficulty: q.difficulty,
-          tags: q.tags,
-          constraints: q.constraints ?? '',
-          hints: q.hints ?? [],
-          isPublished: true,
-        },
-        create: {
-          title: q.title,
-          slug: q.slug,
-          description: q.description,
-          difficulty: q.difficulty,
-          tags: q.tags,
-          constraints: q.constraints ?? '',
-          hints: q.hints ?? [],
-          isPublished: true,
-          timeLimit: 2000,
-          memoryLimit: 256000,
-        },
+  await prisma.$transaction(
+    async (tx) => {
+      // Upsert questions
+      for (const q of questions) {
+        await tx.codingQuestion.upsert({
+          where: { slug: q.slug },
+          update: {
+            title: q.title,
+            description: q.description,
+            difficulty: q.difficulty,
+            tags: q.tags,
+            constraints: q.constraints ?? '',
+            hints: q.hints ?? [],
+            isPublished: true,
+          },
+          create: {
+            title: q.title,
+            slug: q.slug,
+            description: q.description,
+            difficulty: q.difficulty,
+            tags: q.tags,
+            constraints: q.constraints ?? '',
+            hints: q.hints ?? [],
+            isPublished: true,
+            timeLimit: 2000,
+            memoryLimit: 256000,
+          },
+        });
+      }
+
+      // Fetch IDs
+      const saved = await tx.codingQuestion.findMany({
+        where: { slug: { in: questions.map((q) => q.slug) } },
+        select: { id: true, slug: true },
       });
-    }
+      const slugToId = Object.fromEntries(saved.map((q) => [q.slug, q.id]));
 
-    const saved = await tx.codingQuestion.findMany({
-      where: { slug: { in: questions.map((q) => q.slug) } },
-      select: { id: true, slug: true },
-    });
-    const slugToId = Object.fromEntries(saved.map((q) => [q.slug, q.id]));
+      // Upsert test cases — delete existing for these questions then re-insert
+      const ids = Object.values(slugToId);
+      await tx.testCase.deleteMany({
+        where: { codingQuestionId: { in: ids } },
+      });
 
-    const allTestCases = questions.flatMap((q) =>
-      (q.testCases ?? []).map((tc, i) => ({
-        codingQuestionId: slugToId[q.slug],
-        input: tc.input,
-        expectedOutput: tc.expectedOutput,
-        isSample: tc.isSample,
-        isHidden: false,
-        points: 1,
-        order: tc.order ?? i + 1,
-      }))
-    );
+      const allTestCases = questions.flatMap((q) =>
+        (q.testCases ?? []).map((tc) => ({
+          codingQuestionId: slugToId[q.slug],
+          input: tc.input,
+          expectedOutput: tc.expectedOutput,
+          isSample: tc.isSample,
+          isHidden: false,
+          points: 1,
+          order: tc.order,
+        })),
+      );
 
-    await tx.testCase.createMany({
-      data: allTestCases,
-      skipDuplicates: true, // cần @@unique([codingQuestionId, order]) trong schema
-    });
-  });
+      await tx.testCase.createMany({ data: allTestCases });
+    },
+    {
+      maxWait: 30000, // 30 giây để bắt đầu transaction
+      timeout: 180000, // 3 phút để hoàn thành (tăng cao vì seed lớn)
+    },
+  );
 
   // Summary
   const counts = questions.reduce(
@@ -487,10 +1199,10 @@ async function main() {
       acc[q.difficulty] = (acc[q.difficulty] ?? 0) + 1;
       return acc;
     },
-    {} as Record<string, number>
+    {} as Record<string, number>,
   );
 
-  console.log('Done!\n');
+  console.log('✅ Done!\n');
   console.log(`   EASY   : ${counts['EASY'] ?? 0} questions`);
   console.log(`   MEDIUM : ${counts['MEDIUM'] ?? 0} questions`);
   console.log(`   HARD   : ${counts['HARD'] ?? 0} questions`);
@@ -499,7 +1211,7 @@ async function main() {
 
 main()
   .catch((e) => {
-    console.error(' Seed failed:', e);
+    console.error('❌ Seed failed:', e);
     process.exit(1);
   })
   .finally(() => prisma.$disconnect());
