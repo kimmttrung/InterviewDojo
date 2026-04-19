@@ -1,4 +1,4 @@
-export const API_ENPOINT = {
+export const API_ENDPOINT = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',

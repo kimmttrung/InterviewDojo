@@ -1,9 +1,9 @@
 // src/components/interview/WorkspaceTabs.tsx
 import CodeEditor from './CodeEditor';
 import Whiteboard from './Whiteboard';
-import { Question } from '../types/interview';
-import { useEffect, useRef } from 'react';
-import { io } from 'socket.io-client';
+import { Question } from '../../types/interview';
+import { useEffect } from 'react';
+import { useSocketStore } from '../../stores/useSocketStore';
 
 type WorkMode = 'code' | 'theory' | 'whiteboard';
 
@@ -22,30 +22,31 @@ export function WorkspaceTabs({
   roomId,
   userId,
 }: WorkspaceTabsProps) {
-  const socketRef = useRef<any>(null);
+  const { connect, joinRoom, emit, socket } = useSocketStore();
 
+  // Kết nối socket và join room
   useEffect(() => {
-    // SỬA LỖI: Thay props.userId thành userId, props.roomId thành roomId
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
-      query: { userId: userId },
-    });
+    if (!userId || !roomId) return;
 
-    socketRef.current.emit('join_room', roomId);
+    connect(userId);
+    joinRoom(roomId);
 
-    // Lắng nghe lệnh chuyển tab từ người kia
-    socketRef.current.on('receive_work_mode', (mode: WorkMode) => {
+    // Lắng nghe chuyển tab từ người kia
+    const handleReceiveWorkMode = (mode: WorkMode) => {
       setWorkMode(mode);
-    });
+    };
+
+    socket?.on('receive_work_mode', handleReceiveWorkMode);
 
     return () => {
-      socketRef.current?.disconnect();
+      socket?.off('receive_work_mode', handleReceiveWorkMode);
     };
-  }, [roomId, userId, setWorkMode]);
+  }, [userId, roomId, socket, connect, joinRoom, setWorkMode]);
 
   const handleTabChange = (mode: WorkMode) => {
     setWorkMode(mode);
-    // Phát tín hiệu chuyển tab cho người kia
-    socketRef.current?.emit('send_work_mode', { roomId, mode });
+    // Gửi cho người kia
+    emit('send_work_mode', { roomId, mode });
   };
 
   return (

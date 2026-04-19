@@ -1,5 +1,5 @@
 import { api } from '../lib/api';
-import { API_ENPOINT } from '../lib/endpoints';
+import { API_ENDPOINT } from '../lib/endpoints';
 
 export interface LoginDto {
   email: string;
@@ -7,9 +7,9 @@ export interface LoginDto {
 }
 export const authService = {
   register: (data: any) => {
-    return api.post(API_ENPOINT.AUTH.REGISTER, data);
+    return api.post(API_ENDPOINT.AUTH.REGISTER, data);
   },
   login: (data: LoginDto) => {
-    return api.post(API_ENPOINT.AUTH.LOGIN, data);
+    return api.post(API_ENDPOINT.AUTH.LOGIN, data);
   },
 };

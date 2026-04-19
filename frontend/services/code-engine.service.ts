@@ -1,5 +1,5 @@
 import { api } from '../lib/api';
-import { API_ENPOINT } from '../lib/endpoints';
+import { API_ENDPOINT } from '../lib/endpoints';
 
 // DTO cho dữ liệu gửi lên
 export interface ExecuteCodeDto {
@@ -23,6 +23,6 @@ export const codeEngineService = {
    * Thực thi mã nguồn thông qua Judge0 Engine
    */
   runCode: (data: ExecuteCodeDto) => {
-    return api.post<CodeExecutionResult>(API_ENPOINT.CODE_ENGINE.RUN, data);
+    return api.post<CodeExecutionResult>(API_ENDPOINT.CODE_ENGINE.RUN, data);
   },
 };
