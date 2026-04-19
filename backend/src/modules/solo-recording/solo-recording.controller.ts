@@ -6,6 +6,7 @@ import {
   Patch,
   UploadedFile,
   UseInterceptors,
+  BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -55,47 +56,6 @@ export class SoloRecordingController {
     };
   }
 
-  @Post('upload')
-  @ApiOperation({
-    summary: 'Bước 2: Upload file audio, lưu DB và phân tích AI',
-  })
-  @UseInterceptors(FileInterceptor('file'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    schema: {
-      type: 'object',
-      properties: {
-        file: {
-          type: 'string',
-          format: 'binary',
-          description: 'File audio (mp3, wav...)',
-        },
-        userId: { type: 'number', example: 5 },
-        duration: { type: 'number', example: 90 },
-        question: { type: 'string', example: 'Tell me about yourself' },
-        videoUrl: {
-          type: 'string',
-          example: 'https://res.cloudinary.com/.../video.mp4',
-          description: 'URL của video nhận được từ Bước 1 (nếu có)',
-        },
-      },
-      required: ['file', 'userId'],
-    },
-  })
-  async upload(
-    @UploadedFile() file: UploadedFileType,
-    @Body() dto: CreateSoloRecordingDto,
-  ) {
-    const data = await this.soloRecordingService.uploadAudioAndAnalyze(
-      file,
-      dto,
-    );
-    return {
-      message: Messages.SOLO_RECORDING.UPLOAD_AUDIO_SUCCESS,
-      data: data,
-    };
-  }
-
   @Get('user/:userId')
   @ApiOperation({ summary: 'Lấy lịch sử bản ghi âm của người dùng' })
   async getByUser(@Param('userId', ParseIntPipe) userId: number) {
@@ -112,11 +72,48 @@ export class SoloRecordingController {
   @ApiOperation({ summary: 'Cập nhật ngầm URL Video sau khi upload xong' })
   async updateVideoUrl(
     @Param('id', ParseIntPipe) id: number,
-    @Body('videoUrl') videoUrl: string,
+    @Body() body: { videoUrl: string; publicId: string },
   ) {
-    const data = await this.soloRecordingService.updateVideoUrl(id, videoUrl);
+    const data = await this.soloRecordingService.updateVideoUrl(
+      id,
+      body.videoUrl,
+      body.publicId,
+    );
     return {
       message: 'Đã cập nhật Video URL thành công',
+      data: data,
+    };
+  }
+
+  @Post('upload')
+  @ApiOperation({
+    summary: 'Bước 2: Gửi Transcript Text, lưu DB và phân tích AI ngay lập tức',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        userId: { type: 'number', example: 5 },
+        duration: { type: 'number', example: 90 },
+        question: { type: 'string', example: 'Tell me about yourself' },
+        transcript: {
+          type: 'string',
+          example: 'Xin chào, tôi là lập trình viên...',
+        },
+      },
+      required: ['userId', 'transcript'],
+    },
+  })
+  async upload(@Body() dto: CreateSoloRecordingDto) {
+    if (!dto.transcript) {
+      throw new BadRequestException(
+        'Không nhận được dữ liệu văn bản (Transcript rỗng)',
+      );
+    }
+
+    const data = await this.soloRecordingService.uploadAudioAndAnalyze(dto);
+    return {
+      message: 'Lưu transcript và phân tích AI thành công',
       data: data,
     };
   }

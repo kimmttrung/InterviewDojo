@@ -6,10 +6,8 @@ export const soloRecordingService = {
       headers: { 'Content-Type': 'multipart/form-data' },
     }),
 
-  uploadAudioAndAnalyze: (formData: FormData) =>
-    api.post('/solo-recordings/upload', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  updateVideoUrl: (recordingId: number, videoUrl: string) =>
-    api.patch(`/solo-recordings/${recordingId}/video`, { videoUrl }),
+  uploadAudioAndAnalyze: (payload: any) => api.post('/solo-recordings/upload', payload),
+
+  updateVideoUrl: (recordingId: number, videoUrl: string, publicId: string) =>
+    api.patch(`/solo-recordings/${recordingId}/video`, { videoUrl, publicId }),
 };

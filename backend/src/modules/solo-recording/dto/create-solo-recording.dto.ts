@@ -22,5 +22,9 @@ export class CreateSoloRecordingDto {
 
   @IsOptional()
   @IsString()
-  audioUrl?: string;
+  publicId?: string;
+
+  @IsOptional()
+  @IsString()
+  transcript?: string;
 }

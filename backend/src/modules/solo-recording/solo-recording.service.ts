@@ -56,54 +56,35 @@ export class SoloRecordingService {
     }
   }
   //Upload audio file for analysis
-  async uploadAudioAndAnalyze(
-    file: UploadedFileType,
-    dto: CreateSoloRecordingDto,
-  ) {
-    if (
-      !file ||
-      (!file.mimetype?.startsWith('audio/') &&
-        file.mimetype !== 'application/octet-stream')
-    ) {
-      throw new BadRequestException(Messages.SOLO_RECORDING.ERROR_AUDIO_FILE);
-    }
-    // log
-    console.log('=== UPLOAD AUDIO DEBUG ===');
-    console.log('mimetype:', file.mimetype);
-    console.log('originalname:', file.originalname);
-    console.log('=======================');
+  async uploadAudioAndAnalyze(dto: CreateSoloRecordingDto) {
+    const transcript = dto.transcript?.trim();
 
-    if (!file) {
+    if (!transcript) {
       throw new BadRequestException(
-        Messages.SOLO_RECORDING.UPLOAD_AUDIO_FAILED,
+        'Không nhận diện được giọng nói của bạn (Transcript rỗng).',
       );
     }
 
-    // Upload audio lên Cloudinary
-    const uploadedAudio = await this.cloudinaryService.uploadAudio(file);
+    console.log('=== BẮT ĐẦU CHẤM ĐIỂM AI VỚI TEXT ===');
+    console.log('Độ dài text:', transcript.length);
 
-    // Lưu Database
-    // Nếu có videoUrl từ bước uploadVideo, Client cần truyền nó qua dto.videoUrl
-    const recording = await this.prisma.soloRecording.create({
-      data: {
-        userId: Number(dto.userId),
-        videoUrl: dto.videoUrl || '',
-        audioUrl: uploadedAudio.secure_url,
-        publicId: uploadedAudio.public_id,
-        duration: dto.duration ? Number(dto.duration) : null,
-      },
-    });
-
-    // Chạy AI Analysis với URL của Audio
-    const transcript = await this.aiAnalysisService.transcribeFromAudioUrl(
-      uploadedAudio.secure_url,
-    );
-
+    // 1. Ném thẳng Text qua AI Groq Llama 3 để chấm điểm (Mất chưa tới 2 giây)
     const feedback = await this.aiAnalysisService.generateFeedback({
       transcript,
       question: dto.question,
     });
 
+    // 2. Lưu vào Database (Không còn trường audioUrl)
+    const recording = await this.prisma.soloRecording.create({
+      data: {
+        userId: Number(dto.userId),
+        videoUrl: dto.videoUrl || '',
+        publicId: dto.publicId || '',
+        duration: dto.duration ? Number(dto.duration) : null,
+      },
+    });
+
+    // 3. Lưu kết quả AI
     const aiAnalysis = await this.aiAnalysisService.saveSoloRecordingAnalysis({
       soloRecordingId: recording.id,
       transcript,
@@ -115,7 +96,6 @@ export class SoloRecordingService {
 
     return {
       recordingId: recording.id,
-      audioUrl: uploadedAudio.secure_url,
       videoUrl: recording.videoUrl,
       transcript,
       analysis: feedback,
@@ -132,10 +112,14 @@ export class SoloRecordingService {
     });
   }
 
-  async updateVideoUrl(recordingId: number, videoUrl: string) {
+  async updateVideoUrl(
+    recordingId: number,
+    videoUrl: string,
+    publicId: string,
+  ) {
     return this.prisma.soloRecording.update({
       where: { id: recordingId },
-      data: { videoUrl: videoUrl },
+      data: { videoUrl: videoUrl, publicId: publicId },
     });
   }
 }
