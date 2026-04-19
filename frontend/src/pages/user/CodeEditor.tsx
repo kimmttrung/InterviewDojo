@@ -3,11 +3,12 @@ import React, { useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
 import { api } from '../../../lib/api';
 import { useSocketStore } from '../../stores/useSocketStore';
+import { codingService } from '../../../services/coding.service';
 
 interface CodeEditorProps {
   roomId: string;
   userId: string;
-  currentQuestion: any; // Question từ useQuestions
+  currentQuestion: any;
 }
 
 const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion }) => {
@@ -16,7 +17,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState('63');
 
-  // Lấy socket store
   const { connect, joinRoom, emit, socket } = useSocketStore();
 
   const languages = [
@@ -29,26 +29,30 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
   useEffect(() => {
     if (!userId || !roomId) return;
 
-    // 1. Kết nối socket (chỉ tạo 1 lần duy nhất trong app)
     connect(userId);
-
-    // 2. Join vào room
     joinRoom(roomId);
 
-    // 3. Lắng nghe các event từ người kia
+    // ==================== CÁC LISTENER ====================
     const handleReceiveCode = (newCode: string) => setCode(newCode);
     const handleReceiveLanguage = (langId: string) => setSelectedLang(langId);
     const handleReceiveRunResult = (result: string) => setOutput(result);
 
+    // ★★★ LISTENER QUAN TRỌNG: Nhận kết quả submit từ người kia ★★★
+    const handleReceiveSubmitResult = (result: string) => {
+      setOutput(result); // Hiển thị kết quả người kia submit
+      console.log('📥 Nhận được kết quả submit từ đối phương');
+    };
+
     socket?.on('receive_code', handleReceiveCode);
     socket?.on('receive_language', handleReceiveLanguage);
     socket?.on('receive_run_result', handleReceiveRunResult);
+    socket?.on('receive_submit_result', handleReceiveSubmitResult); // ← Dòng này quan trọng
 
-    // Cleanup listeners khi component unmount
     return () => {
       socket?.off('receive_code', handleReceiveCode);
       socket?.off('receive_language', handleReceiveLanguage);
       socket?.off('receive_run_result', handleReceiveRunResult);
+      socket?.off('receive_submit_result', handleReceiveSubmitResult);
     };
   }, [userId, roomId, socket, connect, joinRoom]);
 
@@ -82,23 +86,23 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
         sourceCode: code,
       };
 
-      const response = await api.post('/coding/submit', payload);
-      const submission = response.data.data || response.data;
+      const submission = await codingService.submitCode(payload);
 
-      setOutput(
-        `✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`,
-      );
+      const initialMsg = `✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`;
+      setOutput(initialMsg);
 
       pollSubmission(submission.id);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Lỗi không xác định';
-      setOutput(`❌ Nộp bài thất bại: ${msg}`);
+      const errorMsg = `❌ Nộp bài thất bại: ${msg}`;
+      setOutput(errorMsg);
+      emit('send_submit_result', { roomId, result: errorMsg }); // Gửi lỗi cho người kia
     } finally {
       setLoading(false);
     }
   };
 
-  // Polling lấy kết quả submission
+  // Polling và gửi kết quả cho người kia
   const pollSubmission = (submissionId: number) => {
     let attempts = 0;
     const maxAttempts = 25;
@@ -131,20 +135,24 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
         ) {
           clearInterval(interval);
 
+          let finalResult = text;
           if (data.status === 'ACCEPTED') {
-            setOutput((prev) => prev + '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.');
+            finalResult += '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.';
           } else {
-            setOutput(
-              (prev) =>
-                prev +
-                `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`,
-            );
+            finalResult += `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`;
           }
+
+          setOutput(finalResult);
+
+          // ★★★ GỬI KẾT QUẢ CHO NGƯỜI KIA ★★★
+          emit('send_submit_result', { roomId, result: finalResult });
         }
 
         if (attempts >= maxAttempts) {
           clearInterval(interval);
-          setOutput((prev) => prev + '\n\n⏰ Quá thời gian chờ kết quả.');
+          const timeoutMsg = '⏰ Quá thời gian chờ kết quả.';
+          setOutput((prev) => prev + '\n\n' + timeoutMsg);
+          emit('send_submit_result', { roomId, result: timeoutMsg });
         }
       } catch (err) {
         console.error('Poll submission error:', err);
@@ -156,7 +164,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
 
   return (
     <div className="flex flex-col h-full bg-[#1e1e1e] text-white overflow-hidden">
-      {/* Toolbar */}
       <div className="p-3 flex gap-3 items-center bg-[#2d2d2d] border-b border-gray-700 z-10">
         <select
           className="bg-[#3c3c3c] px-3 py-1.5 rounded border border-gray-600 text-sm outline-none"
@@ -179,7 +186,6 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
         </button>
       </div>
 
-      {/* Editor */}
       <div className="flex-1 min-h-[200px]">
         <Editor
           height="100%"
@@ -196,13 +202,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
         />
       </div>
 
-      {/* Console Output */}
       <div
         className="bg-black border-t-2 border-gray-700 flex flex-col overflow-hidden"
         style={{ height: '35%', minHeight: '120px', resize: 'vertical' }}
       >
         <div className="bg-[#252526] px-4 py-2 text-xs font-bold text-gray-400 flex justify-between">
-          <span>CONSOLE / KẾT QUẢ CHẤM BÀI</span>
+          <span>CONSOLE / KẾT QUẢ CHẤM BÀI (Chia sẻ với đối phương)</span>
           <span className="opacity-50">(kéo để thay đổi chiều cao)</span>
         </div>
         <pre className="p-4 font-mono text-sm whitespace-pre-wrap flex-1 overflow-y-auto text-green-400 leading-relaxed">

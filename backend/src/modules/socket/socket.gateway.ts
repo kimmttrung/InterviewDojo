@@ -20,9 +20,12 @@ import { SocketService } from './socket.service';
 export class SocketGateway
   implements OnGatewayInit, OnGatewayConnection, OnGatewayDisconnect
 {
-  @WebSocketServer() server: Server;
+  @WebSocketServer()
+  server: Server;
 
-  constructor(private readonly socketService: SocketService) {}
+  constructor(private readonly socketService: SocketService) {
+    this.server = null as any; // hoặc để sau
+  }
 
   // Gán server vào service sau khi khởi tạo xong
   afterInit(server: Server) {
@@ -116,5 +119,14 @@ export class SocketGateway
   @SubscribeMessage('clear_whiteboard')
   handleClearWhiteboard(client: Socket, roomId: string) {
     client.to(roomId).emit('receive_clear_whiteboard');
+  }
+
+  @SubscribeMessage('send_submit_result')
+  handleSubmitResult(
+    client: Socket,
+    payload: { roomId: string; result: string },
+  ) {
+    client.to(payload.roomId).emit('receive_submit_result', payload.result);
+    console.log(`📤 Submit result shared in room ${payload.roomId}`);
   }
 }

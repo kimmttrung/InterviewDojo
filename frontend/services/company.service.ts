@@ -1,21 +1,21 @@
 import { api } from '../lib/api';
-import { API_ENPOINT } from '../lib/endpoints';
+import { API_ENDPOINT } from '../lib/endpoints';
 
 export const companyService = {
   getAll: async () => {
-    const res = await api.get(API_ENPOINT.COMPANIES.GET_ALL);
+    const res = await api.get(API_ENDPOINT.COMPANIES.GET_ALL);
     return res.data;
   },
   create: async (data: { name: string; logoUrl?: string }) => {
-    const res = await api.post(API_ENPOINT.COMPANIES.CREATE, data);
+    const res = await api.post(API_ENDPOINT.COMPANIES.CREATE, data);
     return res.data;
   },
   update: async (id: number, data: { name?: string; logoUrl?: string }) => {
-    const res = await api.put(API_ENPOINT.COMPANIES.UPDATE(id), data);
+    const res = await api.put(API_ENDPOINT.COMPANIES.UPDATE(id), data);
     return res.data;
   },
   delete: async (id: number) => {
-    const res = await api.delete(API_ENPOINT.COMPANIES.DELETE(id));
+    const res = await api.delete(API_ENDPOINT.COMPANIES.DELETE(id));
     return res.data;
   },
 };
