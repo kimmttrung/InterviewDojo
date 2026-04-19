@@ -50,7 +50,7 @@ export default function Login() {
         navigate('/admin/dashboard');
       } else if (userRole.role === 'MENTOR' && redirect === null) {
         navigate('/mentor/dashboard');
-      } else if (userRole.role === 'CANIDATE' && redirect === null) {
+      } else if (userRole.role === 'CANDIDATE' && redirect === null) {
         navigate('/');
       } else {
         navigate('/');
