@@ -12,7 +12,7 @@ export const questionService = {
     return await api.delete(API_ENPOINT.QUESTIONS.DELETE(id));
   },
 
-  getById: async (id: number) => {
-    return await api.get(`/questions/${id}`);
+  getById: async (id: string) => {
+    return await api.get(API_ENPOINT.QUESTIONS.GET_ONE(id));
   },
 };

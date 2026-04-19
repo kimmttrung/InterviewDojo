@@ -50,7 +50,7 @@ export class QuestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy 1 câu hỏi' })
   @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
-  findOne(@Param('id', ParseIntPipe) id: number) {
+  findOne(@Param('id') id: string) {
     return this.questionsService.findOne(id);
   }
 

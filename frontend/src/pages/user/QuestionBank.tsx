@@ -35,14 +35,15 @@ interface Question {
   difficulty?: string;
   typeQuestion?: string;
   answersCount?: number;
-  data?: any;
+  description?: any;
   categories?: string[];
   companies?: string[];
   slug?: string;
+  source: 'CODING' | 'NORMAL';
 }
 
 interface PaginationMeta {
-  totalItems: number;
+  total: number;
   itemCount: number;
   itemsPerPage: number;
   totalPages: number;
@@ -59,6 +60,7 @@ export default function QuestionBank() {
   const [page, setPage] = useState(1);
   const [difficulty, setDifficulty] = useState<string | undefined>();
   const [typeQuestion, setTypeQuestion] = useState<string | undefined>();
+  const [source, setSource] = useState<string | undefined>();
 
   const debouncedKeyword = useDebounce(keyword, 500);
 
@@ -71,9 +73,10 @@ export default function QuestionBank() {
         limit: 10,
         keyword: debouncedKeyword, // Dùng cái đã debounce để tránh gọi API liên tục
         difficulty: difficulty,
-        typeQuestion: typeQuestion,
+        typeQuestion: typeQuestion || undefined,
         sortBy: 'createdAt',
         sortOrder: 'desc',
+        source: source,
       };
       const res = await questionService.getAll(params);
 
@@ -114,9 +117,7 @@ export default function QuestionBank() {
             <h1 className="text-4xl font-extrabold tracking-tight text-slate-900">
               Interview Questions
             </h1>
-            <p className="text-slate-500 text-lg">
-              Review {meta?.totalItems || 0} verified questions.
-            </p>
+            <p className="text-slate-500 text-lg">Review {meta?.total || 0} verified questions.</p>
           </div>
           <Button className="bg-indigo-600 hover:bg-indigo-700">+ Share interview</Button>
         </div>
@@ -143,23 +144,49 @@ export default function QuestionBank() {
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="outline" className="rounded-lg border-indigo-600 text-indigo-600">
-                  {typeQuestion || 'Category'} <ChevronDown className="ml-2 w-4 h-4" />
+                  {source === 'CODING' ? 'CODING' : typeQuestion || 'Category'}
+                  <ChevronDown className="ml-2 w-4 h-4" />
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="bg-white w-56">
-                <DropdownMenuItem onClick={() => setTypeQuestion(undefined)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTypeQuestion(undefined);
+                    setSource(undefined);
+                  }}
+                >
                   All Categories
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeQuestion('CODING')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTypeQuestion(undefined);
+                    setSource('CODING');
+                  }}
+                >
                   <Code className="w-4 h-4 mr-2 text-blue-500" /> Coding
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeQuestion('SYSTEM_DESIGN')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTypeQuestion('SYSTEM_DESIGN');
+                    setSource('NORMAL');
+                  }}
+                >
                   <Brain className="w-4 h-4 mr-2 text-pink-500" /> System Design
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeQuestion('BEHAVIORAL')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTypeQuestion('BEHAVIORAL');
+                    setSource('NORMAL');
+                  }}
+                >
                   <MessageCircle className="w-4 h-4 mr-2 text-purple-500" /> Behavioral
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTypeQuestion('TECHNICAL')}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    setTypeQuestion('TECHNICAL');
+                    setSource('NORMAL');
+                  }}
+                >
                   <MessageCircle className="w-4 h-4 mr-2 text-green-500" /> Technical
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -188,7 +215,7 @@ export default function QuestionBank() {
                       tags={[q.typeQuestion, q.difficulty].filter(Boolean)}
                       answers={q.answersCount || 0}
                       hasVideo={false}
-                      codeSnippet={q.data || ''}
+                      codeSnippet={q.description || ''}
                       slug={q.slug}
                     />
                   ))}

@@ -24,6 +24,7 @@ export const API_ENPOINT = {
     CREATE: '/questions',
     UPDATE: (id: number) => `/questions/${id}`,
     DELETE: (id: number) => `/questions/${id}`,
+    GET_ONE: (id: string) => `/questions/${id}`,
   },
   CATEGORIES: {
     GET_ALL: '/categories',

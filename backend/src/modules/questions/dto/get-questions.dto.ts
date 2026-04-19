@@ -43,4 +43,8 @@ export class GetQuestionsDto {
   @IsOptional()
   @IsEnum(TypeQuestion)
   typeQuestion?: TypeQuestion;
+
+  @IsOptional()
+  @IsEnum(['CODING', 'NORMAL'])
+  source?: 'CODING' | 'NORMAL';
 }
