@@ -7,8 +7,7 @@ import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Difficulty, TypeQuestion } from '@prisma/client';
 
-/* eslint-disable @typescript-eslint/unbound-method */
-/* eslint-disable prettier/prettier */
+ 
 
 describe('QuestionsService', () => {
   let service: QuestionsService;
@@ -46,8 +45,14 @@ describe('QuestionsService', () => {
       typeQuestion: TypeQuestion.SYSTEM_DESIGN,
       isPublished: true,
       createdAt: new Date(),
-      categories: [{ category: { name: 'Backend' } }, { category: { name: 'Cloud' } }],
-      companies: [{ company: { name: 'Amazon' } }, { company: { name: 'Netflix' } }],
+      categories: [
+        { category: { name: 'Backend' } },
+        { category: { name: 'Cloud' } },
+      ],
+      companies: [
+        { company: { name: 'Amazon' } },
+        { company: { name: 'Netflix' } },
+      ],
     },
   ];
 
@@ -71,7 +76,9 @@ describe('QuestionsService', () => {
     it('nên trả về đầy đủ 3 bản ghi và mapping đúng categories/companies', async () => {
       const query: GetQuestionsDto = { page: 1, limit: 10 };
 
-      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue(mockPrismaQuestions);
+      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue(
+        mockPrismaQuestions,
+      );
       (prisma.question.count as unknown as jest.Mock).mockResolvedValue(3);
 
       const result = await service.findAll(query);
@@ -85,7 +92,9 @@ describe('QuestionsService', () => {
 
     it('nên format keyword nhiều từ thành định dạng Postgres FTS (A & B)', async () => {
       const query: GetQuestionsDto = { keyword: 'nest js' };
-      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue([mockPrismaQuestions[0]]);
+      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue([
+        mockPrismaQuestions[0],
+      ]);
       (prisma.question.count as unknown as jest.Mock).mockResolvedValue(1);
 
       await service.findAll(query);
@@ -108,7 +117,9 @@ describe('QuestionsService', () => {
         typeQuestion: TypeQuestion.TECHNICAL,
       };
 
-      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue([mockPrismaQuestions[1]]);
+      (prisma.question.findMany as unknown as jest.Mock).mockResolvedValue([
+        mockPrismaQuestions[1],
+      ]);
       (prisma.question.count as unknown as jest.Mock).mockResolvedValue(1);
 
       const result = await service.findAll(query);
@@ -153,7 +164,10 @@ describe('QuestionsService', () => {
         companyIds: [10],
       } as any;
 
-      (prisma.question.create as unknown as jest.Mock).mockResolvedValue({ id: 99, ...createDto } as unknown as any);
+      (prisma.question.create as unknown as jest.Mock).mockResolvedValue({
+        id: 99,
+        ...createDto,
+      } as unknown as any);
 
       await service.create(createDto);
 
@@ -176,7 +190,7 @@ describe('QuestionsService', () => {
       const updateDto: UpdateQuestionDto = {
         categoryIds: [99],
       };
-      
+
       await service.update(1, updateDto);
 
       expect(prisma.question.update).toHaveBeenCalledWith({

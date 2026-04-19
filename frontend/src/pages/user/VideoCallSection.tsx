@@ -107,7 +107,7 @@ export function VideoCallSection() {
         <button
           onClick={async () => {
             await call.leave();
-            navigate('/dashboard');
+            navigate('/practice/matching');
           }}
           className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
         >

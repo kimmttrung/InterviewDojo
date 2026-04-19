@@ -6,7 +6,7 @@ import { UpdateCompanyDto } from './dto/update-company.dto';
 
 @Injectable()
 export class CompaniesService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async create(createCompanyDto: CreateCompanyDto) {
     return await this.prisma.company.create({

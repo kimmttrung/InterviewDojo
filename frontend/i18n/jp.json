@@ -1,129 +1,129 @@
 {
-    "navbar": {
-        "logo": "InterviewDojo",
-        "welcomeBack": "おかえりなさい！"
+  "navbar": {
+    "logo": "InterviewDojo",
+    "welcomeBack": "おかえりなさい！"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "jp": "日本語"
+  },
+  "theme": {
+    "light": "ライト",
+    "dark": "ダーク",
+    "system": "システム"
+  },
+  "sidebar": {
+    "dashboard": "ダッシュボード",
+    "practice": "練習",
+    "peerInterview": "ピア面接",
+    "questionBank": "問題銀行",
+    "feedback": "フィードバック確認",
+    "analytics": "分析",
+    "profile": "プロフィール",
+    "logout": "ログアウト"
+  },
+  "auth": {
+    "welcome": "InterviewDojoへようこそ",
+    "description": "このプラットフォームで技術面接のスキルを効果的に練習できます",
+    "googleSignIn": "Googleでログイン",
+    "githubSignIn": "GitHubでログイン",
+    "or": "または",
+    "signIn": "ログイン",
+    "email": "メールアドレス",
+    "password": "パスワード",
+    "forgotPassword": "パスワードを忘れましたか？",
+    "processing": "処理中...",
+    "loginNow": "ログイン",
+    "continueWith": "または次の方法で続行",
+    "noAccount": "アカウントをお持ちではありませんか？",
+    "createAccount": "アカウントを作成"
+  },
+  "register": {
+    "title": "新しいアカウントを作成",
+    "subtitle": "私たちと一緒にTech Jobへの挑戦を始めましょう",
+    "fullName": "氏名",
+    "fullNamePlaceholder": "山田 太郎",
+    "email": "仕事用メール",
+    "password": "パスワード",
+    "confirmPassword": "パスワード確認",
+    "registerNow": "登録する",
+    "creatingAccount": "アカウント作成中...",
+    "haveAccount": "すでにアカウントをお持ちですか？",
+    "loginHere": "ログインはこちら",
+    "passwordMismatch": "パスワードが一致しません",
+    "registerSuccess": "登録成功！ログインしてください"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "welcome": "おかえりなさい、{{name}}さん！",
+    "stats": {
+      "totalInterviews": "総面接数",
+      "completed": "完了",
+      "averageScore": "平均スコア",
+      "practiceStreak": "練習ストリーク",
+      "days": "日",
+      "weakestSkill": "最も弱いスキル",
+      "improved": "改善"
     },
-    "language": {
-        "en": "English",
-        "vi": "Tiếng Việt",
-        "jp": "日本語"
-    },
-    "theme": {
-        "light": "ライト",
-        "dark": "ダーク",
-        "system": "システム"
-    },
-    "sidebar": {
-        "dashboard": "ダッシュボード",
-        "practice": "練習",
-        "peerInterview": "ピア面接",
-        "questionBank": "問題銀行",
-        "feedback": "フィードバック確認",
-        "analytics": "分析",
-        "profile": "プロフィール",
-        "logout": "ログアウト"
-    },
-    "auth": {
-        "welcome": "InterviewDojoへようこそ",
-        "description": "このプラットフォームで技術面接のスキルを効果的に練習できます",
-        "googleSignIn": "Googleでログイン",
-        "githubSignIn": "GitHubでログイン",
-        "or": "または",
-        "signIn": "ログイン",
-        "email": "メールアドレス",
-        "password": "パスワード",
-        "forgotPassword": "パスワードを忘れましたか？",
-        "processing": "処理中...",
-        "loginNow": "ログイン",
-        "continueWith": "または次の方法で続行",
-        "noAccount": "アカウントをお持ちではありませんか？",
-        "createAccount": "アカウントを作成"
-    },
-    "register": {
-        "title": "新しいアカウントを作成",
-        "subtitle": "私たちと一緒にTech Jobへの挑戦を始めましょう",
-        "fullName": "氏名",
-        "fullNamePlaceholder": "山田 太郎",
-        "email": "仕事用メール",
-        "password": "パスワード",
-        "confirmPassword": "パスワード確認",
-        "registerNow": "登録する",
-        "creatingAccount": "アカウント作成中...",
-        "haveAccount": "すでにアカウントをお持ちですか？",
-        "loginHere": "ログインはこちら",
-        "passwordMismatch": "パスワードが一致しません",
-        "registerSuccess": "登録成功！ログインしてください"
-    },
-    "dashboard": {
-        "title": "ダッシュボード",
-        "welcome": "おかえりなさい、{{name}}さん！",
-        "stats": {
-            "totalInterviews": "総面接数",
-            "completed": "完了",
-            "averageScore": "平均スコア",
-            "practiceStreak": "練習ストリーク",
-            "days": "日",
-            "weakestSkill": "最も弱いスキル",
-            "improved": "改善"
-        },
-        "progress": "進捗",
-        "recentSessions": "最近のセッション"
-    },
-    "practice": {
-        "title": "ソロ練習",
-        "startRecording": "録音開始",
-        "stopRecording": "録音停止",
-        "submitAnswer": "回答を送信",
-        "timeRemaining": "残り時間",
-        "question": "質問",
-        "difficulty": "難易度"
-    },
-    "peerInterview": {
-        "title": "ピア面接",
-        "findPeer": "ピアを見つける",
-        "matchingStatus": "マッチング状態",
-        "searching": "ピアを検索中...",
-        "waiting": "接続を待機中..."
-    },
-    "questionBank": {
-        "title": "問題銀行",
-        "searchPlaceholder": "問題を検索...",
-        "filterByCategory": "カテゴリーで絞り込む",
-        "filterByDifficulty": "難易度で絞り込む",
-        "allCategories": "すべてのカテゴリー",
-        "allDifficulties": "すべての難易度",
-        "easy": "簡単",
-        "medium": "中程度",
-        "hard": "難しい",
-        "noQuestions": "問題が見つかりません",
-        "questions": "問題"
-    },
-    "feedback": {
-        "title": "フィードバック確認",
-        "sessions": "面接セッション",
-        "feedbackScore": "フィードバックスコア",
-        "comments": "コメント",
-        "date": "日付",
-        "noSessions": "面接セッションはまだありません"
-    },
-    "profile": {
-        "title": "プロフィール",
-        "userInfo": "ユーザー情報",
-        "targetRole": "目標職",
-        "experienceYears": "経験年数",
-        "languagePreference": "言語設定",
-        "editProfile": "プロフィール編集",
-        "save": "変更を保存"
-    },
-    "common": {
-        "loading": "読み込み中...",
-        "error": "エラー",
-        "success": "成功",
-        "cancel": "キャンセル",
-        "save": "保存",
-        "delete": "削除",
-        "edit": "編集",
-        "close": "閉じる",
-        "back": "戻る"
-    }
+    "progress": "進捗",
+    "recentSessions": "最近のセッション"
+  },
+  "practice": {
+    "title": "ソロ練習",
+    "startRecording": "録音開始",
+    "stopRecording": "録音停止",
+    "submitAnswer": "回答を送信",
+    "timeRemaining": "残り時間",
+    "question": "質問",
+    "difficulty": "難易度"
+  },
+  "peerInterview": {
+    "title": "ピア面接",
+    "findPeer": "ピアを見つける",
+    "matchingStatus": "マッチング状態",
+    "searching": "ピアを検索中...",
+    "waiting": "接続を待機中..."
+  },
+  "questionBank": {
+    "title": "問題銀行",
+    "searchPlaceholder": "問題を検索...",
+    "filterByCategory": "カテゴリーで絞り込む",
+    "filterByDifficulty": "難易度で絞り込む",
+    "allCategories": "すべてのカテゴリー",
+    "allDifficulties": "すべての難易度",
+    "easy": "簡単",
+    "medium": "中程度",
+    "hard": "難しい",
+    "noQuestions": "問題が見つかりません",
+    "questions": "問題"
+  },
+  "feedback": {
+    "title": "フィードバック確認",
+    "sessions": "面接セッション",
+    "feedbackScore": "フィードバックスコア",
+    "comments": "コメント",
+    "date": "日付",
+    "noSessions": "面接セッションはまだありません"
+  },
+  "profile": {
+    "title": "プロフィール",
+    "userInfo": "ユーザー情報",
+    "targetRole": "目標職",
+    "experienceYears": "経験年数",
+    "languagePreference": "言語設定",
+    "editProfile": "プロフィール編集",
+    "save": "変更を保存"
+  },
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "back": "戻る"
+  }
 }

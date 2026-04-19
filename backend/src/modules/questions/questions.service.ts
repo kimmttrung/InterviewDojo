@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException  } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
@@ -7,7 +7,7 @@ import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class QuestionsService {
-  constructor(private readonly prisma: PrismaService) { }
+  constructor(private readonly prisma: PrismaService) {}
 
   async findAll(query: GetQuestionsDto) {
     const {

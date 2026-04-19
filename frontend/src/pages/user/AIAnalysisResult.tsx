@@ -1,14 +1,12 @@
 import { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import axios from 'axios';
+import { aiAnalysisService } from '../../../services/aiAnalysis.service';
 import {
   ArrowLeft,
   Brain,
-  CalendarClock,
   CircleCheck,
   CircleAlert,
   Lightbulb,
-  FileText,
   Sparkles,
   Video,
   RefreshCw,
@@ -31,8 +29,6 @@ type AnalysisResponse = {
   };
 };
 
-const API_BASE = 'http://localhost:3000/api/v1';
-
 export default function AIAnalysisResult() {
   const { recordingId } = useParams();
   const navigate = useNavigate();
@@ -48,12 +44,11 @@ export default function AIAnalysisResult() {
         if (!isRefreshing) setLoading(true);
         else setIsRefreshingVideo(true);
 
-        const res = await axios.get(`${API_BASE}/ai-analysis/solo-recording/${recordingId}`);
+        if (!recordingId) return;
 
-        // Bóc vỏ an toàn 3 lớp như đã bàn
-        let finalData = res?.data || res;
-        if (finalData?.data) finalData = finalData.data;
-        if (finalData?.data) finalData = finalData.data;
+        const res = await aiAnalysisService.getSoloRecording(recordingId);
+
+        const finalData = res.data?.data ?? res.data;
 
         console.log('📦 Dữ liệu đổ lên UI:', finalData);
 

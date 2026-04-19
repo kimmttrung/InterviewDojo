@@ -11,7 +11,7 @@ export class CodingService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('code-execution') private executionQueue: Queue,
-  ) { }
+  ) {}
 
   async submitCode(
     userId: number,
@@ -71,10 +71,10 @@ export class CodingService {
         },
         submissions: userId
           ? {
-            where: { userId },
-            orderBy: { submittedAt: 'desc' },
-            take: 5,
-          }
+              where: { userId },
+              orderBy: { submittedAt: 'desc' },
+              take: 5,
+            }
           : false, // không lấy submissions nếu không có userId
       },
     });

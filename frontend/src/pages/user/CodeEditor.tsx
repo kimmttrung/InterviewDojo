@@ -11,7 +11,7 @@ interface CodeEditorProps {
 }
 
 const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
-  const [code, setCode] = useState('// Viết code tại đây...');
+  const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState('63');

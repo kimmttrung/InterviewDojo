@@ -10,4 +10,4 @@ import { AiAnalysisController } from './ai-analysis.controller';
   providers: [AiAnalysisService],
   exports: [AiAnalysisService],
 })
-export class AiAnalysisModule { }
+export class AiAnalysisModule {}

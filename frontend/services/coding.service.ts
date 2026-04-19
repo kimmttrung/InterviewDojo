@@ -34,7 +34,7 @@ export const codingService = {
 
   // Nộp bài coding (quan trọng nhất)
   submitCode: async (data: SubmitCodeDto): Promise<CodeSubmission> => {
-    const response = await api.post('/coding/submit', data);   // hoặc dùng API_ENPOINT nếu bạn thêm
+    const response = await api.post('/coding/submit', data); // hoặc dùng API_ENPOINT nếu bạn thêm
     return response.data.data || response.data;
   },
 

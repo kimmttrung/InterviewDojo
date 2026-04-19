@@ -14,17 +14,17 @@ export class RegisterPage {
 
   constructor(page: Page) {
     this.page = page;
-    
+
     this.nameInput = page.getByRole('textbox', { name: 'Name' });
     this.emailInput = page.getByRole('textbox', { name: 'Email' });
     this.passwordInput = page.getByRole('textbox', { name: 'Password', exact: true });
     this.confirmPasswordInput = page.getByRole('textbox', { name: 'Confirm Password' });
-    
+
     this.candidateRoleBtn = page.getByRole('button', { name: 'CANDIDATE' });
     this.mentorRoleBtn = page.getByRole('button', { name: 'MENTOR' });
-    
+
     this.submitBtn = page.getByRole('button', { name: 'Register Now' });
-    this.backBtn = page.locator('text=Back'); 
+    this.backBtn = page.locator('text=Back');
     this.loginLink = page.locator('text=Login here');
   }
 
