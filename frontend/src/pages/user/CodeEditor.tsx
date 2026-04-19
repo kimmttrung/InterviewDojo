@@ -1,8 +1,8 @@
 // src/pages/user/CodeEditor.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
 import Editor from '@monaco-editor/react';
-import { io, Socket } from 'socket.io-client';
-import { api } from '../../../lib/api'; // dùng api instance của bạn
+import { api } from '../../../lib/api';
+import { useSocketStore } from '../../stores/useSocketStore';
 
 interface CodeEditorProps {
   roomId: string;
@@ -10,13 +10,14 @@ interface CodeEditorProps {
   currentQuestion: any; // Question từ useQuestions
 }
 
-const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion }) => {
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState('63');
 
-  const socketRef = useRef<Socket | null>(null);
+  // Lấy socket store
+  const { connect, joinRoom, emit, socket } = useSocketStore();
 
   const languages = [
     { name: 'Node.js', value: '63', monaco: 'javascript' },
@@ -24,32 +25,44 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
     { name: 'C++', value: '54', monaco: 'cpp' },
   ];
 
-  // ====================== SOCKET ======================
+  // ====================== SOCKET CONNECTION ======================
   useEffect(() => {
-    if (!userId) return;
+    if (!userId || !roomId) return;
 
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, { query: { userId } });
-    socketRef.current.emit('join_room', roomId);
+    // 1. Kết nối socket (chỉ tạo 1 lần duy nhất trong app)
+    connect(userId);
 
-    socketRef.current.on('receive_code', (newCode: string) => setCode(newCode));
-    socketRef.current.on('receive_language', (langId: string) => setSelectedLang(langId));
-    socketRef.current.on('receive_run_result', (result: string) => setOutput(result));
+    // 2. Join vào room
+    joinRoom(roomId);
 
+    // 3. Lắng nghe các event từ người kia
+    const handleReceiveCode = (newCode: string) => setCode(newCode);
+    const handleReceiveLanguage = (langId: string) => setSelectedLang(langId);
+    const handleReceiveRunResult = (result: string) => setOutput(result);
+
+    socket?.on('receive_code', handleReceiveCode);
+    socket?.on('receive_language', handleReceiveLanguage);
+    socket?.on('receive_run_result', handleReceiveRunResult);
+
+    // Cleanup listeners khi component unmount
     return () => {
-      socketRef.current?.disconnect();
+      socket?.off('receive_code', handleReceiveCode);
+      socket?.off('receive_language', handleReceiveLanguage);
+      socket?.off('receive_run_result', handleReceiveRunResult);
     };
-  }, [currentQuestion?.id]);
+  }, [userId, roomId, socket, connect, joinRoom]);
 
+  // ====================== EDITOR HANDLERS ======================
   const handleEditorChange = (value: string | undefined) => {
     const newCode = value || '';
     setCode(newCode);
-    socketRef.current?.emit('send_code', { roomId, code: newCode });
+    emit('send_code', { roomId, code: newCode });
   };
 
   const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newLangId = e.target.value;
     setSelectedLang(newLangId);
-    socketRef.current?.emit('send_language', { roomId, languageId: newLangId });
+    emit('send_language', { roomId, languageId: newLangId });
   };
 
   // ====================== SUBMIT CODE ======================
@@ -76,7 +89,6 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
         `✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`,
       );
 
-      // Bắt đầu polling kết quả
       pollSubmission(submission.id);
     } catch (err: any) {
       const msg = err.response?.data?.message || err.message || 'Lỗi không xác định';
@@ -103,13 +115,10 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
         text += `Passed: ${data.passedTestCases || 0} / ${data.totalTestCases || '?'}\n`;
         text += `Thời gian: ${data.executionTime || 0}ms | Memory: ${data.memoryUsed || 0}KB\n`;
 
-        if (data.errorMessage) {
-          text += `\n❌ Error: ${data.errorMessage}`;
-        }
+        if (data.errorMessage) text += `\n❌ Error: ${data.errorMessage}`;
 
         setOutput(text);
 
-        // Kết thúc polling khi có kết quả cuối
         if (
           [
             'ACCEPTED',
@@ -140,7 +149,7 @@ const CodeEditor = ({ roomId, userId, currentQuestion }: CodeEditorProps) => {
       } catch (err) {
         console.error('Poll submission error:', err);
       }
-    }, 1800); // poll mỗi 1.8 giây
+    }, 1800);
   };
 
   const currentMonacoLang = languages.find((l) => l.value === selectedLang)?.monaco || 'javascript';

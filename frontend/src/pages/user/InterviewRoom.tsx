@@ -1,8 +1,9 @@
 // src/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
+
 import { useVideoCall } from '../../hooks/useVideoCall';
 import { useQuestions } from '../../hooks/useQuestions';
 import { InterviewHeader } from './InterviewHeader';
@@ -10,7 +11,8 @@ import { QuestionPanel } from './QuestionPanel';
 import { WorkspaceTabs } from './WorkspaceTabs';
 import { VideoCallSection } from './VideoCallSection';
 import { ChatAndNotes } from './ChatAndNotes';
-import { io } from 'socket.io-client';
+
+import { useSocketStore } from '../../stores/useSocketStore';
 import { WorkMode } from '../../types/interview';
 
 export default function InterviewRoom() {
@@ -21,9 +23,9 @@ export default function InterviewRoom() {
   const currentUser = userStore ? JSON.parse(userStore) : null;
   const userId = currentUser?.id?.toString() || searchParams.get('userId') || 'guest';
   const token = searchParams.get('token');
-  const socketRef = useRef<any>(null);
 
   const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+
   const {
     codingQuestions,
     currentQuestion,
@@ -40,70 +42,73 @@ export default function InterviewRoom() {
     'code',
   );
 
+  // Lấy các hàm từ Zustand Socket Store
+  const { connect, joinRoom, emit, socket } = useSocketStore();
+
+  // ==================== SOCKET CONNECTION ====================
   useEffect(() => {
     if (!userId || !roomId) return;
 
-    // Khởi tạo socket
-    socketRef.current = io(import.meta.env.VITE_SOCKET_URL, {
-      query: { userId },
-    });
+    // 1. Kết nối socket (chỉ tạo 1 lần duy nhất trong toàn app)
+    connect(userId);
 
-    // Tham gia phòng
-    socketRef.current.emit('join_room', roomId);
+    // 2. Join vào room phỏng vấn
+    joinRoom(roomId);
 
-    // LẮNG NGHE KHI NGƯỜI KIA ĐỔI CÂU HỎI
-    socketRef.current.on('receive_question', (data: { question: any; mode: 'code' | 'theory' }) => {
+    // 3. Lắng nghe sự kiện từ người kia
+    const handleReceiveQuestion = (data: { question: any; mode: 'code' | 'theory' }) => {
       setCurrentQuestion(data.question);
       setQuestionMode(data.mode);
       setWorkMode(data.mode === 'code' ? 'code' : 'theory');
-    });
-
-    return () => {
-      socketRef.current?.disconnect();
     };
-  }, [roomId, userId]);
+
+    socket?.on('receive_question', handleReceiveQuestion);
+
+    // Cleanup listener khi component unmount
+    return () => {
+      socket?.off('receive_question', handleReceiveQuestion);
+    };
+  }, [userId, roomId, socket, connect, joinRoom, setCurrentQuestion, setQuestionMode, setWorkMode]);
 
   // Tải danh sách câu hỏi
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  // Random câu hỏi
+  // Random câu hỏi + gửi cho người kia
   const handleRandom = useCallback(
     (type: 'code' | 'theory') => {
       const question = getRandomQuestion(type);
-      if (question) {
-        setCurrentQuestion(question);
-        setQuestionMode(type);
-        setWorkMode(type === 'code' ? 'code' : 'theory');
+      if (!question) return;
 
-        // 2. GỬI CHO NGƯỜI KIA QUA SOCKET
-        socketRef.current?.emit('send_question', {
-          roomId,
-          question: question,
-          mode: type,
-        });
-      }
+      setCurrentQuestion(question);
+      setQuestionMode(type);
+      setWorkMode(type === 'code' ? 'code' : 'theory');
+
+      // Gửi qua socket (dùng emit từ store)
+      emit('send_question', {
+        roomId,
+        question,
+        mode: type,
+      });
     },
-    [getRandomQuestion, setCurrentQuestion, setWorkMode, setQuestionMode, roomId],
+    [getRandomQuestion, setCurrentQuestion, setQuestionMode, setWorkMode, emit, roomId],
   );
 
-  // EFFECT DỌN DẸP KHI THOÁT PHÒNG
+  // Dọn dẹp localStorage khi rời phòng
   useEffect(() => {
-    // Hàm này sẽ chạy khi component bị Unmount (người dùng rời khỏi InterviewRoom)
     return () => {
-      console.log('🧹 Đang dọn dẹp dữ liệu phòng phỏng vấn...');
+      console.log('🧹 Dọn dẹp dữ liệu phòng phỏng vấn...');
       localStorage.removeItem('workMode');
       localStorage.removeItem('questionMode');
-      // Nếu bạn có lưu các bản nháp code hay whiteboard thì xóa ở đây luôn
       localStorage.removeItem('whiteboard_shapes');
     };
-  }, []); // Array rỗng để chỉ chạy 1 lần khi mount và 1 lần khi unmount
+  }, []);
 
-  // Loading khi chưa kết nối
   if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
+
   return (
     <StreamVideo client={client}>
       <StreamCall call={call}>
@@ -127,9 +132,7 @@ export default function InterviewRoom() {
             />
 
             <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-              {/* <VideoErrorBoundary> */}
               <VideoCallSection />
-              {/* </VideoErrorBoundary> */}
               <ChatAndNotes />
             </aside>
           </main>
@@ -139,7 +142,7 @@ export default function InterviewRoom() {
   );
 }
 
-// Component loading riêng
+// Component loading
 function InterviewLoading({ roomId }: { roomId?: string }) {
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
@@ -150,7 +153,7 @@ function InterviewLoading({ roomId }: { roomId?: string }) {
   );
 }
 
-// Custom hook cho localStorage
+// Custom hook localStorage (giữ nguyên)
 function useLocalStorage<T>(key: string, initialValue: T): [T, (value: T) => void] {
   const [storedValue, setStoredValue] = useState<T>(() => {
     try {

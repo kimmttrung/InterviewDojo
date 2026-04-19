@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { io, Socket } from 'socket.io-client';
+import { useSocketStore } from '../../stores/useSocketStore';
 
 type WBTool =
   | 'pen'
@@ -34,7 +34,8 @@ interface WhiteboardProps {
 
 export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const socketRef = useRef<Socket | null>(null);
+
+  const { connect, joinRoom, emit, socket } = useSocketStore();
 
   // States
   const [tool, setTool] = useState<WBTool>('pen');
@@ -75,10 +76,7 @@ export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
 
   // Helper: Đồng bộ danh sách hình qua Socket
   const emitShapes = (newShapes: WBShape[]) => {
-    socketRef.current?.emit('send_whiteboard_shapes', {
-      roomId,
-      shapes: newShapes,
-    });
+    emit('send_whiteboard_shapes', { roomId, shapes: newShapes });
   };
 
   const getPos = (e: any): Point => {
@@ -211,18 +209,19 @@ export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
 
   // --- Logic Socket ---
   useEffect(() => {
-    const socket = io(import.meta.env.VITE_SOCKET_URL, { query: { userId } });
-    socketRef.current = socket;
-    socket.emit('join_room', roomId);
+    if (!userId || !roomId) return;
 
-    socket.on('receive_whiteboard_shapes', (remoteShapes: WBShape[]) => {
+    connect(userId);
+    joinRoom(roomId);
+
+    socket?.on('receive_whiteboard_shapes', (remoteShapes: WBShape[]) => {
       setShapes(remoteShapes);
       redraw(remoteShapes);
       setHistory((prev) => [...prev, remoteShapes]);
       setHistoryIndex((h) => h + 1);
     });
 
-    socket.on('receive_clear_whiteboard', () => {
+    socket?.on('receive_clear_whiteboard', () => {
       setShapes([]);
       redraw([]);
       setHistory([[]]);
@@ -230,9 +229,10 @@ export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
     });
 
     return () => {
-      socket.disconnect();
+      socket?.off('receive_whiteboard_shapes');
+      socket?.off('receive_clear_whiteboard');
     };
-  }, [roomId, userId, redraw]);
+  }, [roomId, userId, socket, connect, joinRoom, redraw]);
 
   // --- Logic Resize ---
   useEffect(() => {
@@ -342,7 +342,7 @@ export default function Whiteboard({ roomId, userId }: WhiteboardProps) {
     setHistory([[]]);
     setHistoryIndex(0);
     redraw([]);
-    socketRef.current?.emit('clear_whiteboard', roomId);
+    emit('clear_whiteboard', roomId);
   };
 
   return (
