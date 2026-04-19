@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
@@ -9,6 +13,39 @@ import { Prisma } from '@prisma/client';
 export class QuestionsService {
   constructor(private readonly prisma: PrismaService) {}
 
+  // chuẩn hóa dữ liệu về format chung cho câu hỏi normal và coding
+  private mapNormalQuestion(q: any) {
+    return {
+      id: `q_${q.id}`,
+      title: q.title,
+      slug: q.slug,
+      difficulty: q.difficulty,
+      typeQuestion: q.typeQuestion,
+      description: q.data?.question || '',
+      isPublished: q.isPUblished,
+      createdAt: q.createdAt,
+      updatedAt: q.updatedAt,
+      categories: q.categories.map((c) => c.category?.name || '') || [],
+      companies: q.companies.map((c) => c.company?.name || '') || [],
+    };
+  }
+
+  private mapCodingQuestion(cq: any) {
+    return {
+      id: `cq_${cq.id}`,
+      title: cq.title,
+      slug: cq.slug,
+      typeQuestion: 'CODING',
+      difficulty: cq.difficulty,
+      description: cq.description,
+      isPublished: cq.isPublished,
+      createdAt: cq.createdAt,
+      updatedAt: cq.updatedAt,
+      categories: cq.categories?.map((c) => c.category?.name || '') || [],
+      companies: cq.companies?.map((c) => c.company?.name || '') || [],
+    };
+  }
+
   async findAll(query: GetQuestionsDto) {
     const {
       keyword,
@@ -18,61 +55,100 @@ export class QuestionsService {
       sortOrder = 'desc',
       difficulty,
       typeQuestion,
+      source,
     } = query;
 
     const skip = (page - 1) * limit;
+    const itemsToFetch = skip + limit;
 
-    // Build query điều kiện
-    const where: Prisma.QuestionWhereInput = {
-      isPublished: true, // Mặc định chỉ lấy câu hỏi đã publish
-    };
+    const whereQ: Prisma.QuestionWhereInput = { isPublished: true };
+    const whereCQ: Prisma.CodingQuestionWhereInput = { isPublished: true };
 
-    // 1. Xử lý Full-Text Search
     if (keyword) {
-      // Postgres FTS yêu cầu định dạng: "word1 & word2"
       const formattedKeyword = keyword.trim().split(/\s+/).join(' & ');
 
-      where.OR = [
+      whereQ.OR = [
         { title: { search: formattedKeyword } },
-        // Fallback dùng contains để bắt các chuỗi con không hoàn chỉnh (partial match)
+        { title: { contains: keyword, mode: 'insensitive' } },
+      ];
+      whereCQ.OR = [
+        { title: { search: formattedKeyword } },
         { title: { contains: keyword, mode: 'insensitive' } },
       ];
     }
 
-    // 2. Xử lý Filters
-    if (difficulty) where.difficulty = difficulty;
-    if (typeQuestion) where.typeQuestion = typeQuestion;
+    if (difficulty) {
+      whereQ.difficulty = difficulty;
+      whereCQ.difficulty = difficulty;
+    }
 
-    // 3. Thực thi Query song song để tối ưu hiệu năng
-    const [questions, total] = await Promise.all([
-      this.prisma.question.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: {
-          [sortBy]: sortOrder,
-        },
-        // Include thêm các bảng liên quan để trả về đầy đủ context
-        include: {
-          categories: {
-            include: { category: true },
-          },
-          companies: {
-            include: { company: true },
-          },
-        },
-      }),
-      this.prisma.question.count({ where }),
-    ]);
+    let questionsPromise: any = Promise.resolve([[], 0]);
+    let codingPromise: any = Promise.resolve([[], 0]);
 
-    // 4. Định dạng lại Response
+    if (!source || source === 'NORMAL') {
+      if (typeQuestion) whereQ.typeQuestion = typeQuestion;
+      questionsPromise = Promise.all([
+        this.prisma.question.findMany({
+          where: whereQ,
+          take: itemsToFetch,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            categories: { include: { category: true } },
+            companies: { include: { company: true } },
+          },
+        }),
+        this.prisma.question.count({ where: whereQ }),
+      ]);
+    }
+
+    if (!source || source === 'CODING') {
+      codingPromise = Promise.all([
+        this.prisma.codingQuestion.findMany({
+          where: whereCQ,
+          take: itemsToFetch,
+          orderBy: { [sortBy]: sortOrder },
+          include: {
+            categories: { include: { category: true } },
+            companies: { include: { company: true } },
+          },
+        }),
+        this.prisma.codingQuestion.count({ where: whereCQ }),
+      ]);
+    }
+
+    // 4. Thực thi Query song song
+    const [[questions, totalQ], [codingQuestions, totalCQ]] = await Promise.all(
+      [questionsPromise, codingPromise],
+    );
+
+    // 5. Chuẩn hóa & Gộp Data
+    const formattedQuestions = questions.map((q) => this.mapNormalQuestion(q));
+    const formattedCoding = codingQuestions.map((cq) =>
+      this.mapCodingQuestion(cq),
+    );
+
+    const combined = [...formattedQuestions, ...formattedCoding];
+
+    // 6. Sắp xếp mảng đã gộp bằng JavaScript
+    combined.sort((a, b) => {
+      let valA = a[sortBy];
+      let valB = b[sortBy];
+
+      // Nếu field là Date (createdAt, updatedAt)
+      if (valA instanceof Date) valA = valA.getTime();
+      if (valB instanceof Date) valB = valB.getTime();
+
+      if (valA < valB) return sortOrder === 'desc' ? 1 : -1;
+      if (valA > valB) return sortOrder === 'desc' ? -1 : 1;
+      return 0;
+    });
+
+    // 7. Cắt data tương ứng với trang hiện tại
+    const paginatedData = combined.slice(skip, skip + limit);
+    const total = totalQ + totalCQ;
+
     return {
-      data: questions.map((q) => ({
-        ...q,
-        // Làm phẳng (flatten) mảng categories và companies cho FE dễ dùng
-        categories: q.categories.map((c) => c.category.name),
-        companies: q.companies.map((c) => c.company.name),
-      })),
+      data: paginatedData,
       meta: {
         total,
         page,
@@ -82,34 +158,62 @@ export class QuestionsService {
     };
   }
 
-  async findOne(id: number) {
-    const question = await this.prisma.question.findUnique({
-      where: {
-        id,
-        isPublished: true, // đảm bảo chỉ lấy câu đã publish
-      },
-      include: {
-        categories: {
-          include: { category: true },
-        },
-        companies: {
-          include: { company: true },
-        },
-        // nếu có answers thì thêm luôn
-        // answers: true,
-      },
-    });
-
-    if (!question) {
-      throw new NotFoundException('Question not found');
+  async findOne(idString: string) {
+    if (!idString || typeof idString !== 'string') {
+      throw new BadRequestException(
+        'ID format must be a string (e.g., q_1 or cq_1)',
+      );
     }
 
-    // format lại giống findAll cho FE dễ dùng
-    return {
-      ...question,
-      categories: question.categories.map((c) => c.category.name),
-      companies: question.companies.map((c) => c.company.name),
-    };
+    // Phân tích ID để biết cần gọi vào bảng nào
+    if (idString.startsWith('cq_')) {
+      // 1. Logic cho Coding Question
+      const id = parseInt(idString.replace('cq_', ''), 10);
+      const rawCq = await this.prisma.codingQuestion.findUnique({
+        where: { id, isPublished: true },
+        include: {
+          categories: { include: { category: true } },
+          companies: { include: { company: true } },
+          testCases: true, // Thêm testCases vì giao diện Code thường sẽ cần cái này
+        },
+      });
+
+      if (!rawCq) {
+        throw new NotFoundException('Coding Question not found');
+      }
+
+      // Trả về nguyên bản, chỉ làm phẳng categories và companies
+      return {
+        ...rawCq,
+        isCodingQuestion: true, // (Tuỳ chọn) Gửi kèm 1 cờ để FE dễ điều hướng giao diện
+        categories: rawCq.categories.map((c) => c.category?.name || ''),
+        companies: rawCq.companies.map((c) => c.company?.name || ''),
+      };
+    } else if (idString.startsWith('q_')) {
+      // 2. Logic cho Question thường
+      const id = parseInt(idString.replace('q_', ''), 10);
+      const rawQ = await this.prisma.question.findUnique({
+        where: { id, isPublished: true },
+        include: {
+          categories: { include: { category: true } },
+          companies: { include: { company: true } },
+        },
+      });
+
+      if (!rawQ) {
+        throw new NotFoundException('Question not found');
+      }
+
+      // Trả về nguyên bản, chỉ làm phẳng categories và companies
+      return {
+        ...rawQ,
+        isCodingQuestion: false,
+        categories: rawQ.categories.map((c) => c.category?.name || ''),
+        companies: rawQ.companies.map((c) => c.company?.name || ''),
+      };
+    } else {
+      throw new BadRequestException('Invalid ID format. Prefix with q_ or cq_');
+    }
   }
 
   async create(createDto: CreateQuestionDto) {

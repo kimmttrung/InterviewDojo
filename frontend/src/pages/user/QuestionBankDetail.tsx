@@ -7,19 +7,18 @@ import { Button } from '../../../components/ui/button';
 import { Badge } from '../../../components/ui/badge';
 import { Input } from '../../../components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
+import CodeEditor from '../user/CodeEditor';
+
 import {
   ChevronLeft,
   Star,
   PlusCircle,
   Share,
-  Flag,
+  MessageCircle,
+  Loader2,
   Sparkles,
   ChevronDown,
-  BookOpen,
-  MessageCircle,
   MoreHorizontal,
-  Info,
-  Loader2,
   Lightbulb,
   KeyRound,
   HelpCircle,
@@ -44,35 +43,29 @@ const MOCK_ANSWERS = [
 ];
 
 export default function QuestionDetail() {
-  const { id } = useParams(); // Lấy ID từ URL
+  const { id } = useParams();
   const [question, setQuestion] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [myAnswer, setMyAnswer] = useState('');
 
-  // Fetch API khi component mount hoặc khi id thay đổi
   useEffect(() => {
-    const fetchQuestionDetail = async () => {
+    const fetch = async () => {
       try {
         setLoading(true);
-        // Giả sử service của bạn có hàm getById
-        const res = await questionService.getById(Number(id));
-
-        // Tùy theo cấu trúc BE trả về, có thể là res.data hoặc res.data.data
-        const data = res?.data?.data || res?.data || res;
-        console.log('Fetched question detail:', data);
+        const res = await questionService.getById(id as string);
+        const data = res?.data?.data || res?.data;
         setQuestion(data);
-      } catch (error) {
-        console.error('Failed to fetch question detail:', error);
+      } catch (err) {
+        console.error(err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (id) {
-      fetchQuestionDetail();
-    }
+    if (id) fetch();
   }, [id]);
 
+  // ================= LOADING =================
   if (loading) {
     return (
       <Layout>
@@ -97,9 +90,87 @@ export default function QuestionDetail() {
     );
   }
 
-  // Fallback an toàn cho các trường dữ liệu
+  // ================= 🎯 CODING UI (GIỮ NGUYÊN) =================
+  if (question.isCodingQuestion) {
+    return (
+      <div className="h-screen flex overflow-hidden bg-white">
+        {/* LEFT */}
+        <div className="w-1/2 overflow-y-auto p-6 border-r">
+          <Link to="/question-bank" className="text-sm text-indigo-600 flex items-center mb-4">
+            <ChevronLeft className="w-4 h-4 mr-1" /> Back
+          </Link>
+
+          <h1 className="text-2xl font-bold mb-3">{question.title}</h1>
+
+          <div className="flex gap-2 mb-4">
+            <Badge>{question.difficulty}</Badge>
+            {question.tags?.map((t: string) => (
+              <Badge key={t} variant="outline">
+                {t}
+              </Badge>
+            ))}
+          </div>
+
+          {/* DESCRIPTION */}
+          <div className="mb-6 whitespace-pre-line text-slate-700">{question.description}</div>
+
+          {/* CONSTRAINTS */}
+          <div className="mb-6">
+            <h3 className="font-semibold mb-2">Constraints</h3>
+            <pre className="bg-slate-100 p-3 rounded text-sm whitespace-pre-wrap">
+              {question.constraints}
+            </pre>
+          </div>
+
+          {/* HINTS */}
+          {question.hints?.length > 0 && (
+            <div className="mb-6">
+              <h3 className="font-semibold mb-2">Hints</h3>
+              <ul className="list-disc ml-5 text-sm">
+                {question.hints.map((h: string, i: number) => (
+                  <li key={i}>{h}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {/* TEST CASE */}
+          <div>
+            <h3 className="font-semibold mb-3">Sample Test Cases</h3>
+            {question.testCases
+              ?.filter((tc: any) => tc.isSample)
+              .map((tc: any) => (
+                <div key={tc.id} className="mb-4 bg-slate-50 p-3 rounded border">
+                  <div>
+                    <b>Input:</b>
+                    <pre>{tc.input}</pre>
+                  </div>
+                  <div>
+                    <b>Output:</b>
+                    <pre>{tc.expectedOutput}</pre>
+                  </div>
+                </div>
+              ))}
+          </div>
+        </div>
+
+        {/* RIGHT */}
+        <div className="w-1/2 h-full">
+          <CodeEditor
+            roomId={`question_${question.id}`}
+            userId={'user_1'}
+            currentQuestion={question}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // ================= 🧠 NORMAL UI (CẬP NHẬT GIAO DIỆN MỚI) =================
+
   const companyName = question.companies?.[0] || 'Unknown';
   const companyInitial = companyName !== 'Unknown' ? companyName[0].toUpperCase() : '?';
+
   const formattedDate = question.createdAt
     ? new Date(question.createdAt).toLocaleDateString()
     : 'Unknown time';
@@ -113,6 +184,7 @@ export default function QuestionDetail() {
       console.error('Lỗi parse question.data:', error);
     }
   }
+
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8 bg-white min-h-screen">
@@ -128,7 +200,7 @@ export default function QuestionDetail() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          {/* LETS COLUMN: MAIN CONTENT */}
+          {/* LEFT COLUMN: MAIN CONTENT */}
           <div className="lg:col-span-8 space-y-8">
             <div className="space-y-4">
               <h1 className="text-3xl font-extrabold tracking-tight text-slate-900 leading-tight">
@@ -152,8 +224,8 @@ export default function QuestionDetail() {
                 </div>
               </div>
 
-              {/* Mổ tả chi tiết câu hỏi (nếu backend có trả về) */}
-              {parsedData && (
+              {/* Mô tả chi tiết câu hỏi */}
+              {parsedData ? (
                 <div className="mt-6 flex flex-col gap-4">
                   {/* 1. Question */}
                   {parsedData.question && (
@@ -225,10 +297,14 @@ export default function QuestionDetail() {
                     </div>
                   )}
                 </div>
+              ) : (
+                <div className="mt-4 p-5 bg-slate-50 border border-slate-100 rounded-xl text-slate-800 whitespace-pre-line leading-relaxed font-medium text-[15px]">
+                  {question.description || 'No description available'}
+                </div>
               )}
 
               <div className="flex flex-wrap items-center gap-3 pt-2">
-                <ActionButton icon={<Star className="w-4 h-4 mr-2" />} label={`Save`} />
+                <ActionButton icon={<Star className="w-4 h-4 mr-2" />} label="Save" />
                 <ActionButton
                   icon={<PlusCircle className="w-4 h-4 mr-2" />}
                   label="I was asked this"
@@ -261,7 +337,6 @@ export default function QuestionDetail() {
             {/* Answer Input Area */}
             <Card className="p-4 border-slate-100 shadow-sm rounded-2xl flex items-center gap-4">
               <Avatar className="h-10 w-10 border border-slate-200">
-                <AvatarImage src="" />
                 <AvatarFallback className="bg-slate-100 text-slate-600 font-semibold">
                   You
                 </AvatarFallback>
@@ -290,7 +365,7 @@ export default function QuestionDetail() {
                 </Button>
               </div>
 
-              {/* Tạm thời dùng Mock Answers, sau này có API answers thì map từ question.answers */}
+              {/* Dùng Mock Answers */}
               {MOCK_ANSWERS.map((answer) => (
                 <AnswerCard key={answer.id} answer={answer} />
               ))}
@@ -300,14 +375,20 @@ export default function QuestionDetail() {
           {/* RIGHT COLUMN: SIDEBAR */}
           <div className="lg:col-span-4">
             <div className="sticky top-24 space-y-8">
-              {/* Lấy categories thực tế từ API đổ vào */}
               <SidebarSection title="Interview Details">
                 <DetailRow label="Difficulty" items={[question.difficulty || 'N/A']} />
                 <DetailRow
                   label="Categories"
-                  items={question.categories || [question.typeQuestion] || ['N/A']}
+                  items={
+                    question.categories?.length
+                      ? question.categories
+                      : [question.typeQuestion || 'N/A']
+                  }
                 />
-                <DetailRow label="Companies" items={question.companies || ['N/A']} />
+                <DetailRow
+                  label="Companies"
+                  items={question.companies?.length ? question.companies : ['N/A']}
+                />
               </SidebarSection>
             </div>
           </div>
@@ -317,7 +398,7 @@ export default function QuestionDetail() {
   );
 }
 
-// --- SUB COMPONENTS ---
+// ================= SUB COMPONENTS =================
 
 function ActionButton({ icon, label }: { icon: React.ReactNode; label: string }) {
   return (
