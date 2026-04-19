@@ -329,7 +329,6 @@ model SoloRecording {
   id        Int      @id @default(autoincrement())
   userId    Int      @map("user_id")
   videoUrl  String   @map("video_url")
-  audioUrl  String   @map("audio_url")
   publicId  String   @map("public_id")
   duration  Int?
   createdAt DateTime @default(now()) @map("created_at")

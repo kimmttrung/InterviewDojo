@@ -1,15 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PrismaService } from '../../prisma/prisma.service';
-// import axios from 'axios';
-import * as fs from 'fs';
-import * as os from 'os';
-import * as path from 'path';
-import axios from 'axios';
 import Groq from 'groq-sdk';
 
 type FeedbackResult = {
@@ -43,137 +34,12 @@ export class AiAnalysisService {
       this.configService.get<string>('GROQ_MODEL') ?? 'llama-3.3-70b-versatile';
   }
 
-  private getExtensionFromUrl(url: string): string {
-    const cleanUrl = url.split('?')[0];
-    const ext = path.extname(cleanUrl).replace('.', '').toLowerCase();
-    return ext || 'webm';
-  }
-
-  private async downloadAudioToTempFile(audioUrl: string): Promise<string> {
-    const ext = this.getExtensionFromUrl(audioUrl);
-    const inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
-
-    const response = await axios.get(audioUrl, {
-      responseType: 'arraybuffer',
-      timeout: 30000,
-    });
-
-    fs.writeFileSync(inputPath, Buffer.from(response.data));
-    return inputPath;
-  }
-
   async getSoloRecordingAnalysis(recordingId: number) {
     return this.prisma.aiAnalysis.findUnique({
       where: { soloRecordingId: recordingId },
       include: { soloRecording: true },
     });
   }
-
-  async transcribeFromAudioUrl(audioUrl: string): Promise<string> {
-    let inputPath: string | null = null;
-
-    try {
-      console.log('audioUrl:', audioUrl);
-
-      inputPath = await this.downloadAudioToTempFile(audioUrl);
-
-      if (!fs.existsSync(inputPath)) {
-        throw new InternalServerErrorException(
-          'Không tải được file audio tạm thời',
-        );
-      }
-
-      const stats = fs.statSync(inputPath);
-      console.log('inputPath:', inputPath);
-      console.log('input size:', stats.size);
-
-      if (stats.size === 0) {
-        throw new BadRequestException('File audio rỗng');
-      }
-
-      const transcription = await this.groq.audio.transcriptions.create({
-        file: fs.createReadStream(inputPath),
-        model: this.groqSttModel,
-        language: 'vi',
-        temperature: 0,
-      });
-
-      const transcript = transcription.text?.trim() ?? '';
-
-      console.log('Groq transcript:', transcript);
-
-      if (!transcript) {
-        throw new BadRequestException('Transcript rỗng');
-      }
-
-      return transcript;
-    } catch (error) {
-      console.error('Groq STT error:', error);
-
-      if (
-        error instanceof BadRequestException ||
-        error instanceof InternalServerErrorException
-      ) {
-        throw error;
-      }
-
-      throw new InternalServerErrorException(
-        'Không thể chuyển audio sang text bằng Groq Whisper',
-      );
-    } finally {
-      if (inputPath && fs.existsSync(inputPath)) {
-        fs.unlinkSync(inputPath);
-      }
-    }
-  }
-  // async transcribeAudioBuffer(
-  //   buffer: Buffer,
-  //   originalname: string,
-  // ): Promise<string> {
-  //   let inputPath: string | null = null;
-
-  //   try {
-  //     // 1. Lấy đúng đuôi file Frontend gửi lên (VD: audio.wav -> wav)
-  //     const ext =
-  //       path
-  //         .extname(originalname || '')
-  //         .replace('.', '')
-  //         .toLowerCase() || 'wav';
-  //     inputPath = path.join(os.tmpdir(), `solo-input-${Date.now()}.${ext}`);
-
-  //     // 2. Ghi thẳng buffer từ RAM ra file tạm (Không thông qua Cloudinary)
-  //     fs.writeFileSync(inputPath, buffer);
-
-  //     const stats = fs.statSync(inputPath);
-  //     if (stats.size === 0) {
-  //       throw new BadRequestException('File audio rỗng (0 bytes)');
-  //     }
-
-  //     // 3. Đưa cho Groq xử lý
-  //     const transcription = await this.groq.audio.transcriptions.create({
-  //       file: fs.createReadStream(inputPath),
-  //       model: this.groqSttModel,
-  //       language: 'vi',
-  //       temperature: 0,
-  //     });
-
-  //     const transcript = transcription.text?.trim() ?? '';
-  //     if (!transcript)
-  //       throw new BadRequestException('Groq trả về transcript rỗng');
-
-  //     return transcript;
-  //   } catch (error) {
-  //     console.error('Groq STT error:', error);
-  //     throw new InternalServerErrorException(
-  //       'Lỗi AI không thể phân tích âm thanh',
-  //     );
-  //   } finally {
-  //     // 4. Luôn dọn rác server
-  //     if (inputPath && fs.existsSync(inputPath)) {
-  //       fs.unlinkSync(inputPath);
-  //     }
-  //   }
-  // }
 
   async generateFeedback(params: {
     transcript: string;
