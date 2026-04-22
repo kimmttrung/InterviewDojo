@@ -1,17 +1,26 @@
-// src/pages/user/CodeEditor.tsx
-import React, { useEffect, useState } from 'react';
+// src/components/editor/CodeEditor.tsx   ← Đề xuất chuyển ra components/editor để tái sử dụng dễ hơn
+import React, { useEffect, useState, useCallback } from 'react';
 import Editor from '@monaco-editor/react';
 import { api } from '../../../lib/api';
 import { useSocketStore } from '../../stores/useSocketStore';
 import { codingService } from '../../../services/coding.service';
 
+type EditorMode = 'solo' | 'peer';
 interface CodeEditorProps {
-  roomId: string;
+  mode: EditorMode;
+  roomId?: string; // Chỉ dùng khi mode = 'peer'
   userId: string;
   currentQuestion: any;
+  onSubmitSuccess?: (result: any) => void; // callback khi submit thành công
 }
 
-const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion }) => {
+const CodeEditor: React.FC<CodeEditorProps> = ({
+  mode,
+  roomId,
+  userId,
+  currentQuestion,
+  onSubmitSuccess,
+}) => {
   const [code, setCode] = useState('');
   const [output, setOutput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -19,34 +28,30 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
 
   const { connect, joinRoom, emit, socket } = useSocketStore();
 
+  const isPeerMode = mode === 'peer';
+
   const languages = [
     { name: 'Node.js', value: '63', monaco: 'javascript' },
     { name: 'Python 3', value: '71', monaco: 'python' },
     { name: 'C++', value: '54', monaco: 'cpp' },
   ];
 
-  // ====================== SOCKET CONNECTION ======================
+  // ====================== SOCKET (CHỈ BẬT KHI LÀ PEER MODE) ======================
   useEffect(() => {
-    if (!userId || !roomId) return;
+    if (!isPeerMode || !userId || !roomId) return;
 
     connect(userId);
     joinRoom(roomId);
 
-    // ==================== CÁC LISTENER ====================
     const handleReceiveCode = (newCode: string) => setCode(newCode);
     const handleReceiveLanguage = (langId: string) => setSelectedLang(langId);
     const handleReceiveRunResult = (result: string) => setOutput(result);
-
-    // ★★★ LISTENER QUAN TRỌNG: Nhận kết quả submit từ người kia ★★★
-    const handleReceiveSubmitResult = (result: string) => {
-      setOutput(result); // Hiển thị kết quả người kia submit
-      console.log('📥 Nhận được kết quả submit từ đối phương');
-    };
+    const handleReceiveSubmitResult = (result: string) => setOutput(result);
 
     socket?.on('receive_code', handleReceiveCode);
     socket?.on('receive_language', handleReceiveLanguage);
     socket?.on('receive_run_result', handleReceiveRunResult);
-    socket?.on('receive_submit_result', handleReceiveSubmitResult); // ← Dòng này quan trọng
+    socket?.on('receive_submit_result', handleReceiveSubmitResult);
 
     return () => {
       socket?.off('receive_code', handleReceiveCode);
@@ -54,20 +59,26 @@ const CodeEditor: React.FC<CodeEditorProps> = ({ roomId, userId, currentQuestion
       socket?.off('receive_run_result', handleReceiveRunResult);
       socket?.off('receive_submit_result', handleReceiveSubmitResult);
     };
-  }, [userId, roomId, socket, connect, joinRoom]);
+  }, [isPeerMode, userId, roomId, socket, connect, joinRoom]);
 
-  // ====================== EDITOR HANDLERS ======================
-  const handleEditorChange = (value: string | undefined) => {
-    const newCode = value || '';
-    setCode(newCode);
-    emit('send_code', { roomId, code: newCode });
-  };
+  // ====================== HANDLERS ======================
+  const handleEditorChange = useCallback(
+    (value?: string) => {
+      const newCode = value || '';
+      setCode(newCode);
+      if (isPeerMode) emit('send_code', { roomId, code: newCode });
+    },
+    [isPeerMode, roomId, emit],
+  );
 
-  const handleLanguageChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newLangId = e.target.value;
-    setSelectedLang(newLangId);
-    emit('send_language', { roomId, languageId: newLangId });
-  };
+  const handleLanguageChange = useCallback(
+    (e: React.ChangeEvent<HTMLSelectElement>) => {
+      const newLangId = e.target.value;
+      setSelectedLang(newLangId);
+      if (isPeerMode) emit('send_language', { roomId, languageId: newLangId });
+    },
+    [isPeerMode, roomId, emit],
+  );
 
   // ====================== SUBMIT CODE ======================
   const submitCode = async () => {

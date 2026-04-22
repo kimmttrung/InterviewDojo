@@ -69,7 +69,12 @@ export function WorkspaceTabs({
 
       <div className="flex-1 relative overflow-hidden">
         {workMode === 'code' && (
-          <CodeEditor roomId={roomId} userId={userId} currentQuestion={currentQuestion} />
+          <CodeEditor
+            mode="peer"
+            roomId={roomId}
+            userId={userId}
+            currentQuestion={currentQuestion}
+          />
         )}
 
         {workMode === 'theory' && (
