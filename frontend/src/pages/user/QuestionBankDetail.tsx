@@ -157,6 +157,7 @@ export default function QuestionDetail() {
         {/* RIGHT */}
         <div className="w-1/2 h-full">
           <CodeEditor
+            mode="solo"
             roomId={`question_${question.id}`}
             userId={'user_1'}
             currentQuestion={question}
