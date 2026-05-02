@@ -1,5 +1,5 @@
 import { useRef, useState, useCallback, useEffect } from 'react';
-import { useSocketStore } from '../../../stores/useSocketStore';
+import { useSocketStore } from '../../../../../../stores/useSocketStore';
 
 type WBTool =
   | 'pen'

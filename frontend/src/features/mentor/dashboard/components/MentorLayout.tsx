@@ -1,5 +1,5 @@
-import { MentorSidebar } from '../../src/pages/mentor/MentorSidebar';
-import { MentorNavbar } from '../../../../shared/components/mentor/MentorNavbar';
+import { MentorNavbar } from './MentorNavbar';
+import { MentorSidebar } from './MentorSidebar';
 
 interface Props {
   children: React.ReactNode;

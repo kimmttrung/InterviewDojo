@@ -1,9 +1,9 @@
-import { MentorLayout } from '../../../components/mentor/MentorLayout';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { MentorLayout } from '../../dashboard/components/MentorLayout';
+import { Card } from '../../../../shared/components/ui/card';
+import { Button } from '../../../../shared/components/ui/button';
+import { Input } from '../../../../shared/components/ui/input';
 
 function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate();

@@ -1,11 +1,12 @@
 // src/pages/PeerMatchingPage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Layout } from '../../../components/Layout';
-import { Button } from '../../../components/ui/button';
+
 import { Loader2, Users, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 import { matchingService } from '../services/matching.service';
-import { useSocketStore } from '../../../stores/useSocketStore';
+import { useSocketStore } from '../../../../../../stores/useSocketStore';
+import { Layout } from '../../../../../../shared/components/layout/Layout';
+import { Button } from '../../../../../../shared/components/ui/button';
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();

@@ -1,5 +1,5 @@
-import { api } from '../lib/api';
-import { API_ENDPOINT } from '../lib/endpoints';
+import { api } from '../../../../shared/lib/api';
+import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
 
 // DTO cho dữ liệu gửi lên
 export interface ExecuteCodeDto {

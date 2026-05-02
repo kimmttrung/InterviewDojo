@@ -1,12 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
 import { FileText, Award, ArrowRight, Loader2 } from 'lucide-react';
 import { showToast } from '../../../../shared/lib/toast';
-import { userService } from '../../../candidate/profile/services/profile.service';
+import { userService } from '../../../candidate/profile/services/user.service';
+import { useNavigate } from 'react-router-dom';
+import { Card } from '../../../../shared/components/ui/card';
+import { Label } from '../../../../shared/components/ui/label';
+import { Input } from '../../../../shared/components/ui/input';
+import { Button } from '../../../../shared/components/ui/button';
 
 export default function MentorSetup() {
   const navigate = useNavigate();

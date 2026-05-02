@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Question } from '../../../shared/types/interview';
+import { Question } from '../../../../../../shared/types/interview';
 
 interface QuestionPanelProps {
   question: Question | null;

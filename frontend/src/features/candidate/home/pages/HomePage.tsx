@@ -1,9 +1,8 @@
-import { Layout } from '../../../components/Layout';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-
 import { Share2, Code2, Brain, Users, BookOpen, MessageCircle, Target } from 'lucide-react';
+import { Layout } from '../../../../shared/components/layout/Layout';
+import { Card } from '../../../../shared/components/ui/card';
+import { Badge } from '../../../../shared/components/ui/badge';
+import { Button } from '../../../../shared/components/ui/button';
 
 export default function HomePage() {
   const features = [

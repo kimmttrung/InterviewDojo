@@ -1,5 +1,4 @@
-import { Question } from '../../../shared/types/interview';
-
+import { Question } from '../../../../shared/types/interview';
 interface QuestionDetailProps {
   question: Question;
   mode: 'code' | 'theory';

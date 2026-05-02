@@ -1,10 +1,10 @@
-import { MentorLayout } from '../../../components/mentor/MentorLayout';
-import { Card } from '../../../components/ui/card';
-import { Input } from '../../../components/ui/input';
-import { Button } from '../../../components/ui/button';
-import { Textarea } from '../../../components/ui/textarea';
 import { useState } from 'react';
 import { Eye } from 'lucide-react';
+import { MentorLayout } from '../../dashboard/components/MentorLayout';
+import { Card } from '../../../../shared/components/ui/card';
+import { Input } from '../../../../shared/components/ui/input';
+import { Textarea } from '../../../../shared/components/ui/textarea';
+import { Button } from '../../../../shared/components/ui/button';
 
 export default function MentorProfile() {
   const [form, setForm] = useState({

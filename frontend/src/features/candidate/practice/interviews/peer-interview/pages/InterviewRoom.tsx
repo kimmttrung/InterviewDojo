@@ -1,6 +1,6 @@
 // src/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 
@@ -9,12 +9,11 @@ import { QuestionPanel } from '../components/QuestionPanel';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { VideoCallSection } from '../components/VideoCallSection';
 import { ChatAndNotes } from '../components/ChatAndNotes';
-
-import { useSocketStore } from '../../../stores/useSocketStore';
-import { WorkMode } from '../../../shared/types/interview';
-import { useLocalStorage } from '../../../hooks/useLocalStorage';
-import { useVideoCall } from '../../../hooks/useVideoCall';
-import { useQuestions } from '../../../hooks/useQuestions';
+import { useVideoCall } from '../../../../../../hooks/useVideoCall';
+import { useQuestions } from '../../../../../../hooks/useQuestions';
+import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
+import { useSocketStore } from '../../../../../../stores/useSocketStore';
+import { WorkMode } from '../../../../../../shared/types/interview';
 
 export default function InterviewRoom() {
   const { roomId } = useParams<{ roomId: string }>();

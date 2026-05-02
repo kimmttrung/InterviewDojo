@@ -1,24 +1,24 @@
-import { Layout } from '../../../components/Layout';
-import { Footer } from '../../../components/Footer';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '../../../components/ui/accordion';
+} from '../../../shared/components/ui/accordion';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
-} from '../../../components/ui/dialog';
+} from '../../../shared/components/ui/dialog';
 import { Calendar, Users, MessageSquare, Loader2, Bot, Users2 } from 'lucide-react';
-import CodeEditer from '../../assets/img/CodeEditer.png';
+import CodeEditer from '../../../assets/img/CodeEditer.png';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { Button } from '../../../shared/components/ui/button';
+import { Layout } from '../../../shared/components/layout/Layout';
+import { Card } from '../../../shared/components/ui/card';
+import { Footer } from '../../../shared/components/layout/Footer';
 
 export default function PracticePage() {
   const navigate = useNavigate();

@@ -1,4 +1,3 @@
-import { useTheme } from '../../contexts/ThemeContext';
 import { Moon, Sun, LogOut, UserIcon } from 'lucide-react';
 import { Button } from '../../../../shared/components/ui/button';
 import { useNavigate } from 'react-router-dom';
@@ -13,6 +12,7 @@ import {
 } from '../../../../shared/components/ui/dropdown-menu';
 
 import { Avatar, AvatarImage, AvatarFallback } from '../../../../shared/components/ui/avatar';
+import { useTheme } from '../../../../contexts/ThemeContext';
 
 export function MentorNavbar() {
   const { theme, setTheme } = useTheme();

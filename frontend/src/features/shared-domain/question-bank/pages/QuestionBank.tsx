@@ -1,18 +1,16 @@
 import { useState, useEffect } from 'react';
 import { questionService } from '../services/question.service';
-import { useDebounce } from '../../../shared/hooks/use-debounce';
-import { Layout } from '../../../components/Layout';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-import { Input } from '../../../components/ui/input';
+import { Card } from '../../../../shared/components/ui/card';
+import { Button } from '../../../../shared/components/ui/button';
+import { Badge } from '../../../../shared/components/ui/badge';
+import { Input } from '../../../../shared/components/ui/input';
 import { useNavigate } from 'react-router-dom';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '../../../components/ui/dropdown-menu';
+} from '../../../../shared/components/ui/dropdown-menu';
 import {
   ChevronDown,
   Search,
@@ -26,6 +24,8 @@ import {
   Loader2,
   PlayCircle,
 } from 'lucide-react';
+import { useDebounce } from '../../../../hooks/use-debounce';
+import { Layout } from '../../../../shared/components/layout/Layout';
 
 // --- TYPES ---
 interface Question {

@@ -1,5 +1,4 @@
 import { useTranslation } from 'react-i18next';
-import { useTheme } from '../contexts/ThemeContext';
 import { Moon, Sun, Globe, Search, Sparkles, UserIcon, LogOut } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
@@ -17,6 +16,7 @@ import {
 
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
 import { useState, useEffect } from 'react';
+import { useTheme } from '../../../contexts/ThemeContext';
 
 export function Navbar() {
   const { t, i18n } = useTranslation();

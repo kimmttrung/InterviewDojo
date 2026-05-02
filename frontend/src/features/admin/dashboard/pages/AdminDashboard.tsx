@@ -1,9 +1,6 @@
-// pages/admin/AdminDashboard.tsx
-
-import AdminLayout from '../../../components/admin/AdminLayout';
-
 import { Users, FileText, Activity, Code } from 'lucide-react';
-import { Card } from '../../../components/ui/card';
+import { Card } from '../../../../shared/components/ui/card';
+import AdminLayout from '../components/AdminLayout';
 
 const stats = [
   { label: 'Users', value: 1240, icon: Users },

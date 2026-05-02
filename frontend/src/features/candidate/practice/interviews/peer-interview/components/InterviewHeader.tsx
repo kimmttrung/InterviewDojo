@@ -1,4 +1,3 @@
-// src/components/interview/InterviewHeader.tsx
 interface InterviewHeaderProps {
   roomId: string;
 }

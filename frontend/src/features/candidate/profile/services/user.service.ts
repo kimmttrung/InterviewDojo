@@ -9,7 +9,7 @@ export interface UpdateProfileDto {
   avatar_url?: string;
 }
 
-export const profileService = {
+export const userService = {
   updateProfile: async (data: UpdateProfileDto) => {
     const res = await api.put(API_ENDPOINT.USER.UPDATE_ME, data);
     return res.data;

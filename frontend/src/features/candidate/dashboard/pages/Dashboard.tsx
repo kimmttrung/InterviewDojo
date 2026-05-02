@@ -1,7 +1,5 @@
 import { useTranslation } from 'react-i18next';
-import { Layout } from '../../../components/Layout';
-import { Card } from '../../../components/ui/card';
-import { Badge } from '../../../components/ui/badge';
+
 import {
   LineChart,
   Line,
@@ -12,6 +10,9 @@ import {
   ResponsiveContainer,
 } from 'recharts';
 import { Activity, TrendingUp, Flame, AlertCircle } from 'lucide-react';
+import { Layout } from '../../../../shared/components/layout/Layout';
+import { Card } from '../../../../shared/components/ui/card';
+import { Badge } from '../../../../shared/components/ui/badge';
 
 const chartData = [
   { date: 'Jan', score: 65 },

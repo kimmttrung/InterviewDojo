@@ -1,7 +1,5 @@
 import { useState, useEffect } from 'react';
-import AdminLayout from '../../../components/admin/AdminLayout';
 import { companyService } from '../services/company.service';
-import { Card } from '../../../components/ui/card';
 import {
   Table,
   TableBody,
@@ -9,18 +7,20 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../../components/ui/table';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
+} from '../../../../shared/components/ui/table';
+import { Button } from '../../../../shared/components/ui/button';
+import { Input } from '../../../../shared/components/ui/input';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogFooter,
-} from '../../../components/ui/dialog';
+} from '../../../../shared/components/ui/dialog';
 import { Plus, Search, Edit2, Trash2, Loader2, Building2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
+import AdminLayout from '../../dashboard/components/AdminLayout';
+import { Card } from '../../../../shared/components/ui/card';
 
 export default function CompaniesPage() {
   // --- States ---

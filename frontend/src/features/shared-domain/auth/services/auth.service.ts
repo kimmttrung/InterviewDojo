@@ -1,5 +1,5 @@
-import { api } from '../../../shared/lib/api';
-import { API_ENDPOINT } from '../../../shared/lib/endpoints';
+import { api } from '../../../../shared/lib/api';
+import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
 
 export interface LoginDto {
   email: string;

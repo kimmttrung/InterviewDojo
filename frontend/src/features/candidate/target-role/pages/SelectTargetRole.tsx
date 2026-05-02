@@ -1,7 +1,4 @@
-import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
 import {
   Code2,
   Database,
@@ -14,9 +11,10 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { showToast } from '../../../../shared/lib/toast';
-import { userService } from '../../profile/services/profile.service';
 import { useEffect, useState } from 'react';
-import { targetRoleService } from '../../../services/target-role.service';
+import { targetRoleService } from '../services/target-role.service';
+import { userService } from '../../profile/services/user.service';
+import { Card } from '../../../../shared/components/ui/card';
 
 interface RoleFromAPI {
   id: number;
@@ -30,7 +28,6 @@ interface RoleUI extends RoleFromAPI {
 }
 
 export default function SelectTargetRole() {
-  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const roleUIMap = [

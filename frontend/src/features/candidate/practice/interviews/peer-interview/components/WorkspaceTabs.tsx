@@ -1,9 +1,8 @@
-// src/components/interview/WorkspaceTabs.tsx
-import CodeEditor from '../../code-editor/pages/CodeEditor';
+import { Question } from '../../../../../../shared/types/interview';
+import { useSocketStore } from '../../../../../../stores/useSocketStore';
+import CodeEditor from '../../../../../shared-domain/code-editor/pages/CodeEditor';
 import Whiteboard from './Whiteboard';
-import { Question } from '../../../shared/types/interview';
 import { useEffect } from 'react';
-import { useSocketStore } from '../../../stores/useSocketStore';
 
 type WorkMode = 'code' | 'theory' | 'whiteboard';
 

@@ -1,14 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { questionService } from '../services/question.service';
-import { Layout } from '../../../components/Layout';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-import { Input } from '../../../components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
-import CodeEditor from '../../shared-domain/code-editor/pages/CodeEditor';
-
 import {
   ChevronLeft,
   Star,
@@ -25,6 +17,13 @@ import {
   CheckCircle2,
   ArrowRight,
 } from 'lucide-react';
+import { Layout } from '../../../../shared/components/layout/Layout';
+import { Button } from '../../../../shared/components/ui/button';
+import { Badge } from '../../../../shared/components/ui/badge';
+import CodeEditor from '../../code-editor/pages/CodeEditor';
+import { Card } from '../../../../shared/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../../shared/components/ui/avatar';
+import { Input } from '../../../../shared/components/ui/input';
 
 // --- MOCK DATA (Dùng tạm cho phần chưa có API) ---
 const MOCK_ANSWERS = [

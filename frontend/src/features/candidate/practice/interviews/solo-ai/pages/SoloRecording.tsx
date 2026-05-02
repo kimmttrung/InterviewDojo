@@ -16,12 +16,12 @@ import {
   Pause,
   Play,
 } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Card } from '../../../components/ui/card';
-import { Layout } from '../../../components/Layout';
 import { soloRecordingService } from '../services/solo-recording.service';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
+import { Layout } from '../../../../../../shared/components/layout/Layout';
+import { Card } from '../../../../../../shared/components/ui/card';
+import { Button } from '../../../../../../shared/components/ui/button';
 
 const MOCK_QUESTIONS = [
   'Giới thiệu về bản thân bạn.',

@@ -1,5 +1,10 @@
 // src/components/interview/ChatAndNotes.tsx
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../../components/ui/tabs';
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from '../../../../../../shared/components/ui/tabs';
 import { useState } from 'react';
 
 export function ChatAndNotes() {

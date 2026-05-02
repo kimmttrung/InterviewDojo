@@ -1,12 +1,10 @@
 import { useEffect, useState } from 'react';
-import { Layout } from '../../../components/Layout';
-import { Card } from '../../../components/ui/card';
-import { Button } from '../../../components/ui/button';
-import { Badge } from '../../../components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../components/ui/avatar';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Textarea } from '../../../components/ui/textarea';
+import { Card } from '../../../../shared/components/ui/card';
+import { Badge } from '../../../../shared/components/ui/badge';
+import { Avatar, AvatarFallback, AvatarImage } from '../../../../shared/components/ui/avatar';
+import { Input } from '../../../../shared/components/ui/input';
+import { Label } from '../../../../shared/components/ui/label';
+import { Textarea } from '../../../../shared/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -14,14 +12,14 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '../../../components/ui/dialog';
+} from '../../../../shared/components/ui/dialog';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '../../../components/ui/select';
+} from '../../../../shared/components/ui/select';
 import {
   User,
   Target,
@@ -39,9 +37,11 @@ import {
   Zap,
   Loader2,
 } from 'lucide-react';
-import { userService } from '../services/profile.service';
 import { showToast } from '../../../../shared/lib/toast';
-import { targetRoleService } from '../../../../../services/target-role.service';
+import { Button } from '../../../../shared/components/ui/button';
+import { targetRoleService } from '../../target-role/services/target-role.service';
+import { userService } from '../services/user.service';
+import { Layout } from '../../../../shared/components/layout/Layout';
 
 const ROLE_UI_MAP: any = {
   'Backend Development': { icon: Database, color: 'text-blue-500' },

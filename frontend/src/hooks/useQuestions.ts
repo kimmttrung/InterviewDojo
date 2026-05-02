@@ -1,8 +1,7 @@
 // src/hooks/useQuestions.ts
 import { useState, useCallback, useEffect } from 'react';
-import { Question, QuestionAPI, TheoryQuestion } from '../types/interview';
-import { api } from '../../lib/api';
-import { codingService } from '../../services/coding.service';
+import { Question, QuestionAPI, TheoryQuestion } from '../shared/types/interview';
+import { codingService } from '../features/shared-domain/code-editor/services/coding.service';
 
 const THEORY_QUESTIONS: TheoryQuestion[] = [
   {
