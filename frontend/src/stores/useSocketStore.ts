@@ -4,7 +4,8 @@ import { io, Socket } from 'socket.io-client';
 interface SocketState {
   socket: Socket | null;
   isConnected: boolean;
-  joinedRooms: Set<string>;
+  joinedRooms: Set<string>; // Theo dõi các room đã join để tránh lặp
+
   connect: (userId: string) => void;
   disconnect: () => void;
   joinRoom: (roomId: string) => void;
@@ -16,15 +17,18 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   isConnected: false,
   joinedRooms: new Set(),
 
+  // ====================== CONNECT ======================
   connect: (userId: string) => {
-    const currentSocket = get().socket;
+    const current = get().socket;
 
-    if (currentSocket?.connected && currentSocket?.id) {
+    // Nếu đã connect rồi thì không tạo mới (tránh infinite loop)
+    if (current?.connected) {
       return;
     }
 
-    if (currentSocket) {
-      currentSocket.disconnect();
+    // Disconnect socket cũ nếu tồn tại
+    if (current) {
+      current.disconnect();
     }
 
     const newSocket = io(import.meta.env.VITE_SOCKET_URL, {
@@ -36,37 +40,48 @@ export const useSocketStore = create<SocketState>((set, get) => ({
     });
 
     newSocket.on('connect', () => {
+      console.log(`✅ Socket connected: ${newSocket.id}`);
       set({ socket: newSocket, isConnected: true });
     });
 
     newSocket.on('disconnect', () => {
+      console.log('🔌 Socket disconnected');
       set({ isConnected: false });
     });
 
-    set({ socket: newSocket, joinedRooms: new Set() });
+    // Reset danh sách room khi tạo socket mới
+    set({
+      socket: newSocket,
+      isConnected: false,
+      joinedRooms: new Set(),
+    });
   },
 
+  // ====================== DISCONNECT ======================
   disconnect: () => {
     const { socket } = get();
     if (socket) {
       socket.disconnect();
-      set({ socket: null, isConnected: false });
+      set({ socket: null, isConnected: false, joinedRooms: new Set() });
     }
   },
 
+  // ====================== JOIN ROOM ======================
   joinRoom: (roomId: string) => {
     const { socket, joinedRooms } = get();
 
     if (!socket?.connected) return;
-    if (joinedRooms.has(roomId)) return; // ← Quan trọng: Không join lại nếu đã join
+    if (joinedRooms.has(roomId)) return;
 
     socket.emit('join_room', roomId);
+    console.log(`Joined room: ${roomId}`);
 
     set((state) => ({
       joinedRooms: new Set(state.joinedRooms).add(roomId),
     }));
   },
 
+  // ====================== EMIT ======================
   emit: (event: string, data: any) => {
     const { socket } = get();
     if (socket?.connected) {
