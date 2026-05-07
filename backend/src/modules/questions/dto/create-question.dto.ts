@@ -6,9 +6,36 @@ import {
   IsObject,
   IsArray,
   IsNumber,
+  ValidateNested,
 } from 'class-validator';
-import { Difficulty, TypeQuestion } from '@prisma/client';
+import { Type } from 'class-transformer';
+import { Difficulty, QuestionType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+export class CodingDataDto {
+  @ApiProperty({ example: 'Viết hàm tính tổng 2 số...' })
+  @IsString()
+  description: string;
+
+  @ApiPropertyOptional({ example: '0 <= N <= 10^5' })
+  @IsOptional()
+  @IsString()
+  constraints?: string;
+
+  @ApiPropertyOptional({ example: 2000 })
+  @IsOptional()
+  @IsNumber()
+  timeLimit?: number;
+
+  @ApiPropertyOptional({ example: 256000 })
+  @IsOptional()
+  @IsNumber()
+  memoryLimit?: number;
+
+  @ApiPropertyOptional({ example: 'https://codeforces.com/...' })
+  @IsOptional()
+  @IsString()
+  codeforcesLink?: string;
+}
 
 export class CreateQuestionDto {
   @ApiProperty({ example: 'Two Sum' })
@@ -23,18 +50,14 @@ export class CreateQuestionDto {
   @IsEnum(Difficulty)
   difficulty: Difficulty;
 
-  @ApiProperty({ enum: TypeQuestion })
-  @IsEnum(TypeQuestion)
-  typeQuestion: TypeQuestion;
+  @ApiProperty({ enum: QuestionType })
+  @IsEnum(QuestionType)
+  type: QuestionType;
 
   @ApiPropertyOptional({ default: false })
   @IsOptional()
   @IsBoolean()
   isPublished?: boolean;
-
-  @ApiProperty({ example: { content: '...', sampleAnswer: '...' } })
-  @IsObject()
-  data: Record<string, any>; // chứa json
 
   @ApiPropertyOptional({ type: [Number], example: [1, 2] })
   @IsOptional()
@@ -47,4 +70,23 @@ export class CreateQuestionDto {
   @IsArray()
   @IsNumber({}, { each: true })
   companyIds?: number[];
+
+  @ApiPropertyOptional({ type: [Number], example: [1, 3] })
+  @IsOptional()
+  @IsArray()
+  @IsNumber({}, { each: true })
+  jobRoleIds?: number[];
+
+  @ApiPropertyOptional({
+    example: { question: 'NodeJS là gì?', sampleAnswer: 'Là runtime...' },
+  })
+  @IsOptional()
+  @IsObject()
+  theoryData?: Record<string, any>;
+
+  @ApiPropertyOptional({ type: CodingDataDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CodingDataDto)
+  codingData?: CodingDataDto;
 }

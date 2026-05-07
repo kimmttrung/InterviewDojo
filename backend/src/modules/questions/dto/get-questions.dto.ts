@@ -1,4 +1,3 @@
-// src/modules/questions/dto/get-questions.dto.ts
 import {
   IsOptional,
   IsString,
@@ -8,7 +7,7 @@ import {
   IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { Difficulty, TypeQuestion } from '@prisma/client';
+import { Difficulty, QuestionType } from '@prisma/client';
 
 export class GetQuestionsDto {
   @IsOptional()
@@ -41,8 +40,8 @@ export class GetQuestionsDto {
   difficulty?: Difficulty;
 
   @IsOptional()
-  @IsEnum(TypeQuestion)
-  typeQuestion?: TypeQuestion;
+  @IsEnum(QuestionType)
+  questionType?: QuestionType;
 
   @IsOptional()
   @IsEnum(['CODING', 'NORMAL'])

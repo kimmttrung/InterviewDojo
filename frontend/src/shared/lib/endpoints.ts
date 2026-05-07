@@ -56,7 +56,6 @@ export const API_ENDPOINT = {
     UPDATE_VIDEO_URL: (recordingId: number) => `/solo-recordings/${recordingId}/video`,
   },
   AI_ANALYSIS: {
-    GET_SOLO_RECORDING: (recordingId: number | string) =>
-      `/ai-analysis/solo-recording/${recordingId}`,
+    GET_SOLO_RECORDING: (sessionId: number | string) => `/ai-analysis/session/${sessionId}`,
   },
 };

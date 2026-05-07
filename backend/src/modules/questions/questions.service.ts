@@ -1,48 +1,33 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
-import { Prisma } from '@prisma/client';
+import { Prisma, QuestionType } from '@prisma/client';
 
 @Injectable()
 export class QuestionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // chuẩn hóa dữ liệu về format chung cho câu hỏi normal và coding
-  private mapNormalQuestion(q: any) {
+  // Chuẩn hóa dữ liệu đầu ra chung cho cả Theory và Coding
+  private mapQuestion(q: any) {
+    const isCoding = q.type === QuestionType.CODING;
+    const specificData = isCoding ? q.codingQuestion : q.theoryQuestion;
+
     return {
-      id: `q_${q.id}`,
+      id: q.id,
       title: q.title,
       slug: q.slug,
       difficulty: q.difficulty,
-      typeQuestion: q.typeQuestion,
-      description: q.data?.question || '',
-      isPublished: q.isPUblished,
+      questionType: q.type,
+      isPublished: q.isPublished,
       createdAt: q.createdAt,
-      updatedAt: q.updatedAt,
-      categories: q.categories.map((c) => c.category?.name || '') || [],
-      companies: q.companies.map((c) => c.company?.name || '') || [],
-    };
-  }
-
-  private mapCodingQuestion(cq: any) {
-    return {
-      id: `cq_${cq.id}`,
-      title: cq.title,
-      slug: cq.slug,
-      typeQuestion: 'CODING',
-      difficulty: cq.difficulty,
-      description: cq.description,
-      isPublished: cq.isPublished,
-      createdAt: cq.createdAt,
-      updatedAt: cq.updatedAt,
-      categories: cq.categories?.map((c) => c.category?.name || '') || [],
-      companies: cq.companies?.map((c) => c.company?.name || '') || [],
+      description: isCoding
+        ? specificData?.description || ''
+        : specificData?.data?.question || '',
+      categories: q.categories?.map((c: any) => c.category?.name || '') || [],
+      companies: q.companies?.map((c: any) => c.company?.name || '') || [],
+      jobRoles: q.jobRoles?.map((j: any) => j.jobRole?.name || '') || [],
     };
   }
 
@@ -54,101 +39,53 @@ export class QuestionsService {
       sortBy = 'createdAt',
       sortOrder = 'desc',
       difficulty,
-      typeQuestion,
-      source,
+      questionType,
     } = query;
 
     const skip = (page - 1) * limit;
-    const itemsToFetch = skip + limit;
 
-    const whereQ: Prisma.QuestionWhereInput = { isPublished: true };
-    const whereCQ: Prisma.CodingQuestionWhereInput = { isPublished: true };
+    // 1. Build query điều kiện
+    const where: Prisma.QuestionWhereInput = { isPublished: true };
 
     if (keyword) {
       const formattedKeyword = keyword.trim().split(/\s+/).join(' & ');
-
-      whereQ.OR = [
-        { title: { search: formattedKeyword } },
-        { title: { contains: keyword, mode: 'insensitive' } },
-      ];
-      whereCQ.OR = [
+      where.OR = [
         { title: { search: formattedKeyword } },
         { title: { contains: keyword, mode: 'insensitive' } },
       ];
     }
 
     if (difficulty) {
-      whereQ.difficulty = difficulty;
-      whereCQ.difficulty = difficulty;
+      where.difficulty = difficulty;
     }
 
-    let questionsPromise: any = Promise.resolve([[], 0]);
-    let codingPromise: any = Promise.resolve([[], 0]);
-
-    if (!source || source === 'NORMAL') {
-      if (typeQuestion) whereQ.typeQuestion = typeQuestion;
-      questionsPromise = Promise.all([
-        this.prisma.question.findMany({
-          where: whereQ,
-          take: itemsToFetch,
-          orderBy: { [sortBy]: sortOrder },
-          include: {
-            categories: { include: { category: true } },
-            companies: { include: { company: true } },
-          },
-        }),
-        this.prisma.question.count({ where: whereQ }),
-      ]);
+    if (questionType) {
+      where.type = questionType;
     }
 
-    if (!source || source === 'CODING') {
-      codingPromise = Promise.all([
-        this.prisma.codingQuestion.findMany({
-          where: whereCQ,
-          take: itemsToFetch,
-          orderBy: { [sortBy]: sortOrder },
-          include: {
-            categories: { include: { category: true } },
-            companies: { include: { company: true } },
-          },
-        }),
-        this.prisma.codingQuestion.count({ where: whereCQ }),
-      ]);
-    }
+    // 2. Thực thi Database Query (DB tự xử lý Pagination và Sorting)
+    const [questions, total] = await Promise.all([
+      this.prisma.question.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { [sortBy]: sortOrder },
+        include: {
+          categories: { include: { category: true } },
+          companies: { include: { company: true } },
+          jobRoles: { include: { jobRole: true } }, // Bổ sung jobRoles từ schema mới
+          theoryQuestion: true,
+          codingQuestion: true,
+        },
+      }),
+      this.prisma.question.count({ where }),
+    ]);
 
-    // 4. Thực thi Query song song
-    const [[questions, totalQ], [codingQuestions, totalCQ]] = await Promise.all(
-      [questionsPromise, codingPromise],
-    );
-
-    // 5. Chuẩn hóa & Gộp Data
-    const formattedQuestions = questions.map((q) => this.mapNormalQuestion(q));
-    const formattedCoding = codingQuestions.map((cq) =>
-      this.mapCodingQuestion(cq),
-    );
-
-    const combined = [...formattedQuestions, ...formattedCoding];
-
-    // 6. Sắp xếp mảng đã gộp bằng JavaScript
-    combined.sort((a, b) => {
-      let valA = a[sortBy];
-      let valB = b[sortBy];
-
-      // Nếu field là Date (createdAt, updatedAt)
-      if (valA instanceof Date) valA = valA.getTime();
-      if (valB instanceof Date) valB = valB.getTime();
-
-      if (valA < valB) return sortOrder === 'desc' ? 1 : -1;
-      if (valA > valB) return sortOrder === 'desc' ? -1 : 1;
-      return 0;
-    });
-
-    // 7. Cắt data tương ứng với trang hiện tại
-    const paginatedData = combined.slice(skip, skip + limit);
-    const total = totalQ + totalCQ;
+    // 3. Map format trả về
+    const formattedQuestions = questions.map((q) => this.mapQuestion(q));
 
     return {
-      data: paginatedData,
+      data: formattedQuestions,
       meta: {
         total,
         page,
@@ -158,114 +95,140 @@ export class QuestionsService {
     };
   }
 
-  async findOne(idString: string) {
-    if (!idString || typeof idString !== 'string') {
-      throw new BadRequestException(
-        'ID format must be a string (e.g., q_1 or cq_1)',
-      );
+  async findOne(id: number) {
+    // 1. Lấy toàn bộ thông tin câu hỏi dựa trên ID duy nhất
+    const rawQ = await this.prisma.question.findUnique({
+      where: { id, isPublished: true },
+      include: {
+        categories: { include: { category: true } },
+        companies: { include: { company: true } },
+        jobRoles: { include: { jobRole: true } },
+        theoryQuestion: true,
+        codingQuestion: {
+          include: { testCases: { orderBy: { order: 'asc' } } }, // Load test cases nếu là coding
+        },
+      },
+    });
+
+    if (!rawQ) {
+      throw new NotFoundException('Question not found');
     }
 
-    // Phân tích ID để biết cần gọi vào bảng nào
-    if (idString.startsWith('cq_')) {
-      // 1. Logic cho Coding Question
-      const id = parseInt(idString.replace('cq_', ''), 10);
-      const rawCq = await this.prisma.codingQuestion.findUnique({
-        where: { id, isPublished: true },
-        include: {
-          categories: { include: { category: true } },
-          companies: { include: { company: true } },
-          testCases: true, // Thêm testCases vì giao diện Code thường sẽ cần cái này
-        },
-      });
+    const isCoding = rawQ.type === QuestionType.CODING;
 
-      if (!rawCq) {
-        throw new NotFoundException('Coding Question not found');
-      }
-
-      // Trả về nguyên bản, chỉ làm phẳng categories và companies
-      return {
-        ...rawCq,
-        isCodingQuestion: true, // (Tuỳ chọn) Gửi kèm 1 cờ để FE dễ điều hướng giao diện
-        categories: rawCq.categories.map((c) => c.category?.name || ''),
-        companies: rawCq.companies.map((c) => c.company?.name || ''),
-      };
-    } else if (idString.startsWith('q_')) {
-      // 2. Logic cho Question thường
-      const id = parseInt(idString.replace('q_', ''), 10);
-      const rawQ = await this.prisma.question.findUnique({
-        where: { id, isPublished: true },
-        include: {
-          categories: { include: { category: true } },
-          companies: { include: { company: true } },
-        },
-      });
-
-      if (!rawQ) {
-        throw new NotFoundException('Question not found');
-      }
-
-      // Trả về nguyên bản, chỉ làm phẳng categories và companies
-      return {
-        ...rawQ,
-        isCodingQuestion: false,
-        categories: rawQ.categories.map((c) => c.category?.name || ''),
-        companies: rawQ.companies.map((c) => c.company?.name || ''),
-      };
-    } else {
-      throw new BadRequestException('Invalid ID format. Prefix with q_ or cq_');
-    }
+    // 2. Trả về format chi tiết dùng cho trang Question Detail
+    return {
+      ...rawQ,
+      isCodingQuestion: isCoding,
+      categories: rawQ.categories.map((c) => c.category?.name || ''),
+      companies: rawQ.companies.map((c) => c.company?.name || ''),
+      jobRoles: rawQ.jobRoles.map((j) => j.jobRole?.name || ''),
+      // Loại bỏ các property quan hệ nguyên bản để data trả về sạch sẽ hơn
+      theoryQuestion: undefined,
+      codingQuestion: undefined,
+      // Gắn dữ liệu đặc thù vào root object
+      ...(isCoding ? rawQ.codingQuestion : rawQ.theoryQuestion),
+    };
   }
 
   async create(createDto: CreateQuestionDto) {
-    const { categoryIds, companyIds, ...questionData } = createDto;
+    // Lấy riêng các ID quan hệ và dữ liệu đặc thù
+    const {
+      categoryIds,
+      companyIds,
+      jobRoleIds,
+      type,
+      theoryData, // Payload cho Theory
+      codingData, // Payload cho Coding
+      ...baseQuestionData
+    } = createDto;
 
     return this.prisma.question.create({
       data: {
-        ...questionData,
-        // Insert vào bảng trung gian CategoryQuestion
+        ...baseQuestionData,
+        type: type,
+        // Insert vào các bảng trung gian
         ...(categoryIds && {
-          categories: {
-            create: categoryIds.map((id) => ({ categoryId: id })),
-          },
+          categories: { create: categoryIds.map((id) => ({ categoryId: id })) },
         }),
-        // Insert vào bảng trung gian QuestionCompany
         ...(companyIds && {
-          companies: {
-            create: companyIds.map((id) => ({ companyId: id })),
-          },
+          companies: { create: companyIds.map((id) => ({ companyId: id })) },
         }),
+        ...(jobRoleIds && {
+          jobRoles: { create: jobRoleIds.map((id) => ({ jobRoleId: id })) },
+        }),
+        // Tạo Polymorphic Relation tương ứng
+        ...(type !== QuestionType.CODING &&
+          theoryData && {
+            theoryQuestion: { create: { data: theoryData } },
+          }),
+        ...(type === QuestionType.CODING &&
+          codingData && {
+            codingQuestion: {
+              create: {
+                description: codingData.description,
+                constraints: codingData.constraints,
+                timeLimit: codingData.timeLimit,
+                memoryLimit: codingData.memoryLimit,
+                codeforcesLink: codingData.codeforcesLink,
+              },
+            },
+          }),
       },
     });
   }
 
   async update(id: number, updateDto: UpdateQuestionDto) {
-    const { categoryIds, companyIds, ...questionData } = updateDto;
+    const {
+      categoryIds,
+      companyIds,
+      jobRoleIds,
+      theoryData,
+      codingData,
+      ...baseQuestionData
+    } = updateDto;
+
+    const question = await this.prisma.question.findUnique({ where: { id } });
+    if (!question) throw new NotFoundException('Question not found');
 
     return this.prisma.question.update({
       where: { id },
       data: {
-        ...questionData,
-        // Nếu có truyền categoryIds mới -> Xóa list cũ đi, nối list mới vào
+        ...baseQuestionData,
         ...(categoryIds && {
           categories: {
-            deleteMany: {}, // Xóa các record trong bảng category_question có questionId này
-            create: categoryIds.map((id) => ({ categoryId: id })),
+            deleteMany: {}, // Xóa mapping cũ
+            create: categoryIds.map((catId) => ({ categoryId: catId })), // Tạo mới
           },
         }),
-        // Tương tự cho companies
         ...(companyIds && {
           companies: {
             deleteMany: {},
-            create: companyIds.map((id) => ({ companyId: id })),
+            create: companyIds.map((compId) => ({ companyId: compId })),
           },
         }),
+        ...(jobRoleIds && {
+          jobRoles: {
+            deleteMany: {},
+            create: jobRoleIds.map((roleId) => ({ jobRoleId: roleId })),
+          },
+        }),
+        // Update dữ liệu đặc thù
+        ...(question.type !== QuestionType.CODING &&
+          theoryData && {
+            theoryQuestion: { update: { data: theoryData } },
+          }),
+        ...(question.type === QuestionType.CODING &&
+          codingData && {
+            codingQuestion: { update: codingData },
+          }),
       },
     });
   }
 
   async remove(id: number) {
-    // Vì Schema bạn đã set onDelete: Cascade ở các bảng trung gian,
-    // nên chỉ cần xóa Question, Prisma/Postgres sẽ tự dọn dẹp các rác liên quan.
+    // Chỉ cần xóa ở bảng Question.
+    // Các bảng TheoryQuestion, CodingQuestion và các bảng Junction sẽ tự bay màu nhờ onDelete: Cascade
     return this.prisma.question.delete({
       where: { id },
     });

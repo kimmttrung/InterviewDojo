@@ -11,21 +11,8 @@ datasource db {
 
 enum Role {
   CANDIDATE
-  ADMIN
   MENTOR
-  STAFF
-}
-
-enum Difficulty {
-  EASY
-  MEDIUM
-  HARD
-}
-
-enum TypeQuestion {
-  BEHAVIORAL
-  SYSTEM_DESIGN
-  TECHNICAL
+  ADMIN
 }
 
 enum ApprovalStatus {
@@ -34,12 +21,28 @@ enum ApprovalStatus {
   REJECTED
 }
 
+enum SlotStatus {
+  AVAILABLE
+  BLOCKED
+}
+
 enum BookingStatus {
   PENDING
-  ACCEPTED
-  REJECTED
-  COMPLETED
+  CONFIRMED
   CANCELLED
+}
+
+enum Difficulty {
+  EASY
+  MEDIUM
+  HARD
+}
+
+enum QuestionType {
+  SYSTEM_DESIGN
+  BEHAVIORAL
+  TECHNICAL
+  CODING
 }
 
 enum SubmissionStatus {
@@ -54,6 +57,32 @@ enum SubmissionStatus {
   COMPILE_ERROR
 }
 
+enum SessionMode {
+  SOLO
+  MEET
+}
+
+enum SkillType {
+  SOFTSKILL
+  HARDSKILL
+  LANGUAGE
+}
+
+enum SkillLevel {
+  LEARNING
+  PRACTICED
+  PERSONAL_PROJECT
+  PRODUCTION_READY
+  EXPERT
+}
+
+enum SessionStatus {
+  SCHEDULED
+  ONGOING
+  COMPLETED
+  CANCELLED
+}
+
 // ==================== USER & PROFILE ====================
 
 model User {
@@ -63,81 +92,182 @@ model User {
   name            String?
   bio             String?
   experienceYears Int      @default(0) @map("experience_years")
-  status          String   @default("offline")
   avatarUrl       String?  @map("avatar_url")
   creditBalance   Float    @default(0.0) @map("credit_balance")
-  createdAt       DateTime @default(now()) @map("created_at")
-  targetRoleId    Int?     @map("target_role_id")
   role            Role     @default(CANDIDATE)
+  status          String   @default("ACTIVE")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  targetRoleId    Int?     @map("target_role_id")
 
-  targetRole           TargetRole?              @relation(fields: [targetRoleId], references: [id])
-  mentorProfile        MentorProfile?
-  feedbacksGotten      Feedback[]               @relation("RevieweeFeedbacks")
-  feedbacksGiven       Feedback[]               @relation("ReviewerFeedbacks")
-  isInterviewed        MockSession[]            @relation("IntervieweeSessions")
-  interviews           MockSession[]            @relation("InterviewerSessions")
-  attempts             QuestionAttempt[]
-  soloRecordings       SoloRecording[]
-  savedQuestions       UserBookmark[]
-  skills               UserSkill[]
-  bookings             Booking[]                @relation("CandidateBookings")
-  codeSubmissions      CodeSubmission[]
-  savedCodingQuestions CodingQuestionBookmark[]
+  targetRole        JobRole?         @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
+  mentorProfile       MentorProfile?
+  slots               Slot[]           @relation("MentorSlots")
+  bookingsAsCandidate Booking[]        @relation("CandidateBookings")
+  codeSubmissions     CodeSubmission[]
+  skills              UserSkill[]
+  bookmarks           UserBookmark[]
+  mockSessions        MockSession[]    @relation("IntervieweeSessions")
+  feedbacksGiven      Feedback[]       @relation("ReviewerFeedbacks")
+  feedbacksReceived   Feedback[]       @relation("RevieweeFeedbacks")
 
   @@map("users")
 }
 
 model MentorProfile {
-  id             Int            @id @default(autoincrement())
-  userId         Int            @unique @map("user_id")
+  userId         Int            @id @map("user_id")
   cvUrl          String?        @map("cv_url")
   certificateUrl String?        @map("certificate_url")
   approvalStatus ApprovalStatus @default(PENDING) @map("approval_status")
   createdAt      DateTime       @default(now()) @map("created_at")
   updatedAt      DateTime       @updatedAt @map("updated_at")
 
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  availabilities Availability[]
-  bookings       Booking[]      @relation("MentorBookings")
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences         Experience[]     @relation("MentorExperiences")
 
   @@map("mentor_profiles")
 }
 
-// ==================== QUESTION (BEHAVIORAL / SYSTEM_DESIGN / TECHNICAL) ====================
+// ==================== EXPERIENCE & COMPANY ====================
 
-model Question {
-  id           Int          @id @default(autoincrement())
-  title        String
-  slug         String       @unique
-  typeQuestion TypeQuestion @map("type_question")
-  difficulty   Difficulty
-  data         Json
-  isPublished  Boolean      @default(false) @map("is_published")
-  createdAt    DateTime     @default(now()) @map("created_at")
-  updatedAt    DateTime     @updatedAt @map("updated_at")
+model Experience {
+  id          Int       @id @default(autoincrement())
+  mentorId    Int       @map("mentor_id")
+  companyId   Int       @map("company_id")
+  jobRoleId   Int       @map("job_role_id")
+  description String?
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  isCurrent   Boolean   @default(false) @map("is_current")
 
-  categories   CategoryQuestion[]
-  targetRoles  TargetRoleQuestion[]
-  companies    QuestionCompany[]
-  mockSessions MockSessionQuestion[]
-  attempts     QuestionAttempt[]
-  savedByUsers UserBookmark[]
+  mentor  MentorProfile @relation("MentorExperiences", fields: [mentorId], references: [userId], onDelete: Cascade)
+  company Company       @relation(fields: [companyId], references: [id])
+  jobRole JobRole       @relation(fields: [jobRoleId], references: [id])
 
-  @@map("questions")
+  @@map("experiences")
 }
+
+model Company {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  logoUrl  String? @map("logo_url")
+  industry String?
+
+  experiences Experience[]
+  questions   QuestionCompany[]
+
+  @@map("companies")
+}
+
+model JobRole {
+  id          Int     @id @default(autoincrement())
+  name        String  @unique
+  description String?
+
+  experiences Experience[]
+  questions   QuestionJobRole[]
+  candidates  User[]            @relation("CandidateTargetRole")
+
+  @@map("job_roles")
+}
+
+// ==================== SCHEDULING & BOOKING ====================
+
+model Slot {
+  id        Int        @id @default(autoincrement())
+  mentorId  Int        @map("mentor_id")
+  startTime DateTime   @map("start_time")
+  endTime   DateTime   @map("end_time")
+  status    SlotStatus @default(AVAILABLE)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  mentor   User      @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
+  booking  Booking?
+
+  @@map("slots")
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  slotId      Int           @unique @map("slot_id") 
+  candidateId Int           @map("candidate_id")
+  price       Float         @default(0.0)
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  slot Slot                 @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  candidate   User          @relation("CandidateBookings", fields: [candidateId], references: [id])
+
+  mockSessions MockSession[]
+
+  @@index([candidateId])
+  @@map("bookings")
+}
+
+// ==================== QUESTION CORE ====================
 
 model Category {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
 
-  questions       CategoryQuestion[]
-  codingQuestions CodingCategoryQuestion[]
+  questions QuestionCategory[]
 
   @@map("categories")
 }
 
-model CategoryQuestion {
+model Question {
+  id          Int          @id @default(autoincrement())
+  title       String
+  slug        String       @unique
+  difficulty  Difficulty   @default(MEDIUM)
+  type        QuestionType
+  isPublished Boolean      @default(false) @map("is_published")
+  createdAt   DateTime     @default(now()) @map("created_at")
+  updated_at  DateTime     @updatedAt @map("updated_at")
+
+  categories   QuestionCategory[]
+  companies    QuestionCompany[]
+  jobRoles     QuestionJobRole[]
+  bookmarks    UserBookmark[]
+  mockSessions MockSessionQuestion[]
+
+  // Polymorphic relations
+  theoryQuestion TheoryQuestion?
+  codingQuestion CodingQuestion?
+
+  @@map("questions")
+}
+
+model TheoryQuestion {
+  questionId Int  @id @map("question_id")
+  data       Json // Cấu trúc json tự do cho trắc nghiệm / tự luận
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("theory_questions")
+}
+
+model CodingQuestion {
+  questionId     Int     @id @map("question_id")
+  description    String
+  constraints    String?
+  hints          String[]
+  tags           String[]
+  timeLimit      Int     @default(2000) @map("time_limit") // ms
+  memoryLimit    Int     @default(256000) @map("memory_limit") // KB
+  codeforcesLink String? @map("codeforces_link")
+
+  question    Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  testCases   TestCase[]
+  submissions CodeSubmission[]
+
+  @@map("coding_questions")
+}
+
+// ---- Junction Tables cho Question ----
+
+model QuestionCategory {
   questionId Int @map("question_id")
   categoryId Int @map("category_id")
 
@@ -145,40 +275,7 @@ model CategoryQuestion {
   category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
 
   @@id([questionId, categoryId])
-  @@map("category_question")
-}
-
-model TargetRole {
-  id   Int    @id @default(autoincrement())
-  name String @unique
-
-  questions       TargetRoleQuestion[]
-  codingQuestions CodingTargetRoleQuestion[]
-  users           User[]
-
-  @@map("target_roles")
-}
-
-model TargetRoleQuestion {
-  targetRoleId Int @map("target_role_id")
-  questionId   Int @map("question_id")
-
-  question   Question   @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  targetRole TargetRole @relation(fields: [targetRoleId], references: [id], onDelete: Cascade)
-
-  @@id([targetRoleId, questionId])
-  @@map("target_role_question")
-}
-
-model Company {
-  id      Int     @id @default(autoincrement())
-  name    String  @unique
-  logoUrl String? @map("logo_url")
-
-  questions       QuestionCompany[]
-  codingQuestions CodingQuestionCompany[]
-
-  @@map("companies")
+  @@map("question_categories")
 }
 
 model QuestionCompany {
@@ -192,212 +289,18 @@ model QuestionCompany {
   @@map("question_companies")
 }
 
-model UserBookmark {
-  userId     Int      @map("user_id")
-  questionId Int      @map("question_id")
-  savedAt    DateTime @default(now()) @map("saved_at")
+model QuestionJobRole {
+  questionId Int @map("question_id")
+  jobRoleId  Int @map("job_role_id")
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jobRole  JobRole  @relation(fields: [jobRoleId], references: [id], onDelete: Cascade)
 
-  @@id([userId, questionId])
-  @@map("user_questions")
+  @@id([questionId, jobRoleId])
+  @@map("question_job_roles")
 }
 
-model QuestionAttempt {
-  id         Int      @id @default(autoincrement())
-  userId     Int      @map("user_id")
-  questionId Int      @map("question_id")
-  status     String   @default("completed")
-  score      Float?   @default(0)
-  userAnswer Json?    @map("user_answer")
-  duration   Int?
-  createdAt  DateTime @default(now()) @map("created_at")
-
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@map("question_attempts")
-}
-
-// ==================== SKILL ====================
-
-model Skill {
-  id       Int     @id @default(autoincrement())
-  name     String  @unique
-  category String?
-
-  users UserSkill[]
-
-  @@map("skills")
-}
-
-model UserSkill {
-  userId  Int   @map("user_id")
-  skillId Int   @map("skill_id")
-  score   Float @default(0)
-
-  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
-  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  @@id([userId, skillId])
-  @@map("user_skills")
-}
-
-// ==================== MOCK SESSION ====================
-
-model MockSession {
-  id              Int      @id @default(autoincrement())
-  interviewerId   Int      @map("interviewer_id")
-  intervieweeId   Int      @map("interviewee_id")
-  scheduledAt     DateTime @default(now()) @map("scheduled_at")
-  durationMinutes Int      @map("duration_minutes")
-  status          String   @default("scheduled")
-  recordingUrl    String?  @map("recording_url")
-  meetingLink     String?  @map("meeting_link")
-
-  interviewee            User                        @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
-  interviewer            User                        @relation("InterviewerSessions", fields: [interviewerId], references: [id])
-  aiAnalysis             AiAnalysis?
-  feedbacks              Feedback[]
-  sessionQuestions       MockSessionQuestion[]
-  sessionCodingQuestions MockSessionCodingQuestion[]
-
-  @@map("mock_sessions")
-}
-
-model MockSessionQuestion {
-  mockSessionId Int @map("mock_session_id")
-  questionId    Int @map("question_id")
-
-  mockSession MockSession @relation(fields: [mockSessionId], references: [id], onDelete: Cascade)
-  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
-
-  @@id([mockSessionId, questionId])
-  @@map("mock_session_questions")
-}
-
-model MockSessionCodingQuestion {
-  mockSessionId    Int @map("mock_session_id")
-  codingQuestionId Int @map("coding_question_id")
-
-  mockSession    MockSession    @relation(fields: [mockSessionId], references: [id], onDelete: Cascade)
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-
-  @@id([mockSessionId, codingQuestionId])
-  @@map("mock_session_coding_questions")
-}
-
-model Feedback {
-  id             Int      @id @default(autoincrement())
-  sessionId      Int      @map("session_id")
-  reviewerId     Int      @map("reviewer_id")
-  revieweeId     Int      @map("reviewee_id")
-  communication  Int
-  technical      Int
-  problemSolving Int      @map("problem_solving")
-  comment        String?
-  createdAt      DateTime @default(now()) @map("created_at")
-
-  reviewee User        @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
-  reviewer User        @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
-  session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-
-  @@map("feedbacks")
-}
-
-// ==================== AI ANALYSIS ====================
-
-model AiAnalysis {
-  id              Int      @id @default(autoincrement())
-  sessionId       Int?     @unique @map("session_id")
-  soloRecordingId Int?     @unique @map("solo_recording_id")
-  transcript      String?
-  strengths       Json?
-  weaknesses      Json?
-  suggestions     Json?
-  overallScore    Float    @map("overall_score")
-  processedAt     DateTime @default(now()) @map("processed_at")
-
-  session       MockSession?   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  soloRecording SoloRecording? @relation(fields: [soloRecordingId], references: [id], onDelete: Cascade)
-
-  @@map("ai_analyses")
-}
-
-model SoloRecording {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  videoUrl  String   @map("video_url")
-  publicId  String   @map("public_id")
-  duration  Int?
-  createdAt DateTime @default(now()) @map("created_at")
-
-  user       User        @relation(fields: [userId], references: [id], onDelete: Cascade)
-  aiAnalysis AiAnalysis?
-
-  @@map("solo_recordings")
-}
-
-// ==================== AVAILABILITY & BOOKING ====================
-
-model Availability {
-  id              Int      @id @default(autoincrement())
-  mentorProfileId Int      @map("mentor_profile_id")
-  startTime       DateTime @map("start_time")
-  endTime         DateTime @map("end_time")
-  isBooked        Boolean  @default(false) @map("is_booked")
-  createdAt       DateTime @default(now()) @map("created_at")
-
-  mentor MentorProfile @relation(fields: [mentorProfileId], references: [id], onDelete: Cascade)
-
-  @@map("availabilities")
-}
-
-model Booking {
-  id          Int           @id @default(autoincrement())
-  mentorId    Int           @map("mentor_id")
-  candidateId Int           @map("candidate_id")
-  startTime   DateTime      @map("start_time")
-  status      BookingStatus @default(PENDING)
-  price       Float         @default(0.0)
-  createdAt   DateTime      @default(now()) @map("created_at")
-  updatedAt   DateTime      @updatedAt @map("updated_at")
-
-  candidate User          @relation("CandidateBookings", fields: [candidateId], references: [id])
-  mentor    MentorProfile @relation("MentorBookings", fields: [mentorId], references: [id])
-
-  @@map("bookings")
-}
-
-// ==================== CODING INTERVIEW FEATURE ====================
-
-model CodingQuestion {
-  id             Int        @id @default(autoincrement())
-  title          String
-  slug           String     @unique
-  description    String
-  difficulty     Difficulty
-  tags           String[] // ["array", "dp", "two-pointers"]
-  constraints    String?
-  hints          String[]
-  timeLimit      Int        @default(2000) @map("time_limit") // ms
-  memoryLimit    Int        @default(256000) @map("memory_limit") // KB
-  codeforcesLink String?    @map("codeforces_link")
-  isPublished    Boolean    @default(false) @map("is_published")
-  createdAt      DateTime   @default(now()) @map("created_at")
-  updatedAt      DateTime   @updatedAt @map("updated_at")
-
-  testCases    TestCase[]
-  submissions  CodeSubmission[]
-  categories   CodingCategoryQuestion[]
-  targetRoles  CodingTargetRoleQuestion[]
-  companies    CodingQuestionCompany[]
-  savedByUsers CodingQuestionBookmark[]
-  mockSessions MockSessionCodingQuestion[]
-
-  @@map("coding_questions")
-}
+// ==================== CODING EXECUTION ====================
 
 model TestCase {
   id               Int     @id @default(autoincrement())
@@ -410,7 +313,7 @@ model TestCase {
   order            Int     @default(0)
   explanation      String? // giải thích khi sai
 
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
+  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [questionId], onDelete: Cascade)
 
   @@unique([codingQuestionId, order])
   @@map("test_cases")
@@ -434,55 +337,121 @@ model CodeSubmission {
   submittedAt      DateTime         @default(now()) @map("submitted_at")
   judgedAt         DateTime?        @map("judged_at")
 
-  user           User           @relation(fields: [userId], references: [id])
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id])
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [questionId], onDelete: Cascade)
 
   @@map("code_submissions")
 }
 
-// ---- Junction tables riêng cho CodingQuestion ----
+// ==================== SKILL ====================
 
-model CodingCategoryQuestion {
-  codingQuestionId Int @map("coding_question_id")
-  categoryId       Int @map("category_id")
+model Skill {
+  id   Int       @id @default(autoincrement())
+  name String    @unique
+  type SkillType
 
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-  category       Category       @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  userSkills UserSkill[]
 
-  @@id([codingQuestionId, categoryId])
-  @@map("coding_category_questions")
+  @@map("skills")
 }
 
-model CodingTargetRoleQuestion {
-  codingQuestionId Int @map("coding_question_id")
-  targetRoleId     Int @map("target_role_id")
+model UserSkill {
+  userId  Int        @map("user_id")
+  skillId Int        @map("skill_id")
+  timeUse Int        @map("time_use") // Calculated by month
+  level   SkillLevel
 
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-  targetRole     TargetRole     @relation(fields: [targetRoleId], references: [id], onDelete: Cascade)
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
 
-  @@id([codingQuestionId, targetRoleId])
-  @@map("coding_target_role_questions")
+  @@id([userId, skillId])
+  @@map("user_skills")
 }
 
-model CodingQuestionCompany {
-  codingQuestionId Int @map("coding_question_id")
-  companyId        Int @map("company_id")
+// ==================== INTERACTION & BOOKMARK ====================
 
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
-  company        Company        @relation(fields: [companyId], references: [id], onDelete: Cascade)
+model UserBookmark {
+  id         Int      @id @default(autoincrement())
+  userId     Int      @map("user_id")
+  questionId Int      @map("question_id")
+  createdAt  DateTime @default(now()) @map("created_at")
 
-  @@id([codingQuestionId, companyId])
-  @@map("coding_question_companies")
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, questionId])
+  @@map("user_bookmarks")
 }
 
-model CodingQuestionBookmark {
-  userId           Int      @map("user_id")
-  codingQuestionId Int      @map("coding_question_id")
-  savedAt          DateTime @default(now()) @map("saved_at")
+// ==================== MOCK SESSION ====================
 
-  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  codingQuestion CodingQuestion @relation(fields: [codingQuestionId], references: [id], onDelete: Cascade)
+model MockSession {
+  id              Int           @id @default(autoincrement())
+  bookingId       Int           @unique @map("booking_id")
+  intervieweeId   Int           @map("interviewee_id")
+  scheduledAt     DateTime      @map("scheduled_at")
+  durationMinutes Int           @map("duration_minutes")
+  status          SessionStatus @default(SCHEDULED)
+  recordingUrl    String?       @map("recording_url")
+  meetingLink     String?       @map("meeting_link")
+  mode            SessionMode
 
-  @@id([userId, codingQuestionId])
-  @@map("coding_question_bookmarks")
+  booking     Booking               @relation(fields: [bookingId], references: [id])
+  interviewee User                  @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
+  soloSession SoloSession?
+  meetSession MeetSession?
+  feedbacks   Feedback[]
+  questions   MockSessionQuestion[]
+
+  @@map("mock_sessions")
+}
+
+model SoloSession {
+  id        Int      @id @default(autoincrement())
+  sessionId Int      @unique @map("session_id")
+  script    Json?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  session MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("solo_sessions")
+}
+
+model MeetSession {
+  id        Int @id @default(autoincrement())
+  sessionId Int @unique @map("session_id")
+
+  session MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@map("meet_sessions")
+}
+
+model MockSessionQuestion {
+  mockSessionId Int @map("mock_session_id")
+  questionId    Int @map("question_id")
+
+  mockSession MockSession @relation(fields: [mockSessionId], references: [id], onDelete: Cascade)
+  question    Question    @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@id([mockSessionId, questionId])
+  @@map("mock_session_questions")
+}
+
+model Feedback {
+  id           Int      @id @default(autoincrement())
+  sessionId    Int      @map("session_id")
+  reviewerId   Int?     @map("reviewer_id")
+  revieweeId   Int      @map("reviewee_id")
+  strengths    Json?
+  weaknesses   Json?
+  suggestions  Json?
+  overallScore Float    @map("overall_score")
+  comment      String?
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  reviewer User?        @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
+  reviewee User?        @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
+
+  @@map("feedbacks")
 }
