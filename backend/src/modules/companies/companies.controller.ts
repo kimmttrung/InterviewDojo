@@ -28,7 +28,7 @@ export class CompaniesController {
   constructor(private readonly companiesService: CompaniesService) {}
 
   @Get()
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
   @ApiOperation({ summary: 'Lấy danh sách công ty' })
   async findAll() {
     const data = await this.companiesService.findAll();
@@ -40,7 +40,7 @@ export class CompaniesController {
   }
 
   @Post()
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Tạo công ty mới' })
   async create(@Body() createCompanyDto: CreateCompanyDto) {
     const data = await this.companiesService.create(createCompanyDto);
@@ -52,7 +52,7 @@ export class CompaniesController {
   }
 
   @Put(':id')
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Cập nhật công ty' })
   async update(
     @Param('id', ParseIntPipe) id: number,
@@ -67,7 +67,7 @@ export class CompaniesController {
   }
 
   @Delete(':id')
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Xóa công ty' })
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.companiesService.remove(id);

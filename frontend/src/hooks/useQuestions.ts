@@ -1,10 +1,11 @@
 // src/hooks/useQuestions.ts
 import { useState, useCallback, useEffect } from 'react';
-import { Question, QuestionAPI, TheoryQuestion } from '../shared/types/interview';
+import { Question, QuestionAPI } from '../shared/types/interview';
 import { codingService } from '../features/shared-domain/code-editor/services/coding.service';
 
-const THEORY_QUESTIONS: TheoryQuestion[] = [
+const THEORY_QUESTIONS: Question[] = [
   {
+    id: 1,
     title: 'Giải thích React Virtual DOM',
     difficulty: 'Medium',
     tags: ['React'],
@@ -13,6 +14,7 @@ const THEORY_QUESTIONS: TheoryQuestion[] = [
     examples: [],
   },
   {
+    id: 2,
     title: 'Difference between let, const, and var',
     difficulty: 'Easy',
     tags: ['JavaScript'],
@@ -21,6 +23,7 @@ const THEORY_QUESTIONS: TheoryQuestion[] = [
     examples: [],
   },
   {
+    id: 3,
     title: 'Explain Closure in JavaScript',
     difficulty: 'Medium',
     tags: ['JavaScript'],
@@ -35,29 +38,31 @@ export function useQuestions() {
   const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
+  // ================= FETCH =================
   const fetchQuestions = useCallback(async () => {
     try {
-      const response = await codingService.getAllQuestions(); // ← sửa dòng này
-      console.log('check questions', response);
+      const response = await codingService.getAllQuestions();
       setCodingQuestions(response.data);
     } catch (error) {
       console.error('Lỗi tải danh sách câu hỏi:', error);
     }
   }, []);
 
-  const transformCodeQuestion = useCallback((selected: QuestionAPI): Question => {
-    // Lấy các test case mẫu (isSample = true)
+  // ================= TRANSFORM =================
+  const transformCodeQuestion = useCallback((selected: any): Question => {
+    // ✅ FIX: Lấy object codingQuestion con từ data API trả về
+    const details = selected.codingQuestion;
+
     const sampleTestCases =
-      selected.testCases
-        ?.filter((tc) => tc.isSample)
-        .map((tc) => ({
+      details?.testCases
+        ?.filter((tc: any) => tc.isSample)
+        .map((tc: any) => ({
           input: tc.input.trim(),
           output: tc.expectedOutput.trim(),
           explanation: tc.explanation || undefined,
         })) || [];
 
-    // Format difficulty
-    const difficultyMap = {
+    const difficultyMap: Record<string, 'Easy' | 'Medium' | 'Hard'> = {
       EASY: 'Easy',
       MEDIUM: 'Medium',
       HARD: 'Hard',
@@ -66,17 +71,23 @@ export function useQuestions() {
     return {
       id: selected.id,
       title: selected.title,
-      difficulty: difficultyMap[selected.difficulty] || 'Medium',
-      tags: selected.tags,
-      content: selected.description,
+      difficulty: difficultyMap[selected.difficulty],
+      // ✅ FIX: trỏ vào details (tức là selected.codingQuestion)
+      tags: details?.tags || [],
+      content: details?.description || '',
       examples: sampleTestCases,
-      constraints: selected.constraints,
-      hints: selected.hints,
-      timeLimit: selected.timeLimit,
-      memoryLimit: selected.memoryLimit,
+
+      codingQuestion: {
+        // ✅ FIX: trỏ vào details
+        constraints: details?.constraints || '',
+        hints: details?.hints || [],
+        timeLimit: details?.timeLimit || 2000,
+        memoryLimit: details?.memoryLimit || 256000,
+      },
     };
   }, []);
 
+  // ================= RANDOM =================
   const getRandomQuestion = useCallback(
     (type: 'code' | 'theory') => {
       setIsLoading(true);
@@ -86,28 +97,28 @@ export function useQuestions() {
           setIsLoading(false);
           return null;
         }
+        console.log('Danh sách câu hỏi coding:', codingQuestions);
         const selected = codingQuestions[Math.floor(Math.random() * codingQuestions.length)];
+
         const question = transformCodeQuestion(selected);
+        // setCurrentQuestion(question);
         setIsLoading(false);
         return question;
-      } else {
-        const random = THEORY_QUESTIONS[Math.floor(Math.random() * THEORY_QUESTIONS.length)];
-        const theoryQuestion: Question = {
-          id: Date.now(), // temporary id
-          title: random.title,
-          difficulty: random.difficulty,
-          tags: random.tags,
-          content: random.content,
-          examples: random.examples,
-        };
-        setIsLoading(false);
-        return theoryQuestion;
       }
+
+      // THEORY
+      const random = THEORY_QUESTIONS[Math.floor(Math.random() * THEORY_QUESTIONS.length)];
+
+      setIsLoading(false);
+      return {
+        ...random,
+        id: Date.now(), // tránh trùng id
+      };
     },
     [codingQuestions, transformCodeQuestion],
   );
 
-  // Tự động fetch questions khi hook được gọi
+  // ================= INIT =================
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);

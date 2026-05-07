@@ -423,7 +423,7 @@ export default function SoloRecording() {
       if (analysisData?.data) analysisData = analysisData.data;
 
       // Bắt chính xác ID của bản ghi để tý nữa gắn Video vào
-      const currentRecordingId = analysisData?.recordingId || analysisData?.id;
+      const currentRecordingId = analysisData?.sessionId || analysisData?.id;
 
       console.log('✅ Dữ liệu bóc được:', analysisData);
       console.log('✅ ID Bản ghi hiện tại:', currentRecordingId);

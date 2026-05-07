@@ -10,7 +10,7 @@ import { Button } from '../../../../../../shared/components/ui/button';
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();
-  const { connect, disconnect, socket } = useSocketStore();
+  const { connect, socket, isConnected } = useSocketStore();
 
   const [isSearching, setIsSearching] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -36,24 +36,33 @@ export default function PeerMatchingPage() {
   }, [isSearching]);
 
   // ==================== SOCKET CONNECTION ====================
+  // ==================== SOCKET CONNECT ====================
   useEffect(() => {
     if (!user?.id) return;
 
-    // Chỉ connect 1 lần, không phụ thuộc vào các state khác
+    // 🔥 FIX: luôn gọi connect (KHÔNG check socket ở đây)
     connect(user.id);
 
+    console.log('🔌 Connecting socket with user ID:', user.id);
+  }, [user?.id, connect]);
+
+  // ==================== LISTEN SOCKET ====================
+  useEffect(() => {
+    if (!socket) return;
+
     const handleMatchFound = (data: { roomId: string; token: string }) => {
+      console.log('🎯 MATCH FOUND:', data);
+
       setIsSearching(false);
       navigate(`/interview/${data.roomId}?token=${data.token}`);
     };
 
-    const currentSocket = useSocketStore.getState().socket;
-    currentSocket?.on('match_found', handleMatchFound);
+    socket.on('match_found', handleMatchFound);
 
     return () => {
-      currentSocket?.off('match_found', handleMatchFound);
+      socket.off('match_found', handleMatchFound);
     };
-  }, [user?.id, navigate, connect]);
+  }, [socket, navigate]);
 
   // ==================== START MATCHING ====================
   const handleStartMatching = async () => {
@@ -62,9 +71,28 @@ export default function PeerMatchingPage() {
       return;
     }
 
+    const { socket } = useSocketStore.getState();
+
+    // 🔥 FIX: đảm bảo socket CONNECTED trước khi gọi API
+    if (!socket?.connected) {
+      console.log('⏳ waiting for socket...');
+
+      await new Promise<void>((resolve) => {
+        socket?.once('connect', () => {
+          console.log('✅ socket connected (await)');
+          resolve();
+        });
+      });
+    }
+
+    console.log('🚀 socket ready → start matching');
+
+    setIsSearching(true);
+
     setIsSearching(true);
 
     try {
+      console.log(user.id, 'is joining the queue for level Junior');
       const { data } = await matchingService.join({
         userId: user.id,
         level: 'Junior',
@@ -131,6 +159,7 @@ export default function PeerMatchingPage() {
               <Button
                 size="lg"
                 className="h-16 px-12 text-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 transition-all"
+                // disabled={!isConnected}
                 onClick={handleStartMatching}
               >
                 Find a Partner Now

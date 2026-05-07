@@ -10,7 +10,7 @@ export class CreateSoloRecordingDto {
   @Type(() => Number)
   @IsInt()
   @Min(0)
-  duration?: number;
+  durationMinutes?: number;
 
   @IsOptional()
   @IsString()

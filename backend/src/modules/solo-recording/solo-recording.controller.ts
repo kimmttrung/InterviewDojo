@@ -4,6 +4,8 @@ import {
   Get,
   Post,
   Patch,
+  Param,
+  ParseIntPipe,
   UploadedFile,
   UseInterceptors,
   BadRequestException,
@@ -14,7 +16,6 @@ import { SoloRecordingService } from './solo-recording.service';
 import { CreateSoloRecordingDto } from './dto/create-solo-recording.dto';
 import { UploadedFileType } from '../../common/types/uploaded-file.type';
 import { Messages } from '../../common/constants/messages.constant';
-import { Param, ParseIntPipe } from '@nestjs/common';
 
 @ApiTags('SoloRecording')
 @Controller('solo-recordings')
@@ -49,10 +50,11 @@ export class SoloRecordingController {
         ? `Buffer length: ${file.buffer.length}`
         : 'no buffer',
     });
+
     const data = await this.soloRecordingService.uploadVideo(file);
     return {
       message: Messages.SOLO_RECORDING.UPLOAD_VIDEO_SUCCESS,
-      data: data,
+      data,
     };
   }
 
@@ -60,16 +62,16 @@ export class SoloRecordingController {
   @ApiOperation({ summary: 'Lấy lịch sử bản ghi âm của người dùng' })
   async getByUser(@Param('userId', ParseIntPipe) userId: number) {
     const data = await this.soloRecordingService.findByUser(userId);
-
     return {
       message: Messages.SOLO_RECORDING.USER_RECORDINGS_FETCHED,
-
-      data: data,
+      data,
     };
   }
 
   @Patch(':id/video')
-  @ApiOperation({ summary: 'Cập nhật ngầm URL Video sau khi upload xong' })
+  @ApiOperation({
+    summary: 'Cập nhật URL Video sau khi upload Cloudinary xong',
+  })
   async updateVideoUrl(
     @Param('id', ParseIntPipe) id: number,
     @Body() body: { videoUrl: string; publicId: string },
@@ -81,7 +83,7 @@ export class SoloRecordingController {
     );
     return {
       message: 'Đã cập nhật Video URL thành công',
-      data: data,
+      data,
     };
   }
 
@@ -94,7 +96,7 @@ export class SoloRecordingController {
       type: 'object',
       properties: {
         userId: { type: 'number', example: 5 },
-        duration: { type: 'number', example: 90 },
+        durationMinutes: { type: 'number', example: 90 },
         question: { type: 'string', example: 'Tell me about yourself' },
         transcript: {
           type: 'string',
@@ -114,7 +116,7 @@ export class SoloRecordingController {
     const data = await this.soloRecordingService.uploadAudioAndAnalyze(dto);
     return {
       message: 'Lưu transcript và phân tích AI thành công',
-      data: data,
+      data,
     };
   }
 }

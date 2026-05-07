@@ -30,23 +30,20 @@ export interface QuestionAPI {
   testCases: TestCase[];
 }
 
+export interface CodingQuestion {
+  constraints?: string;
+  description?: string;
+  hints?: string[];
+  memoryLimit?: number;
+  timeLimit?: number;
+}
+
 export interface Question {
   id: number;
   title: string;
-  content: string;
+  content?: string;
   difficulty: 'Easy' | 'Medium' | 'Hard';
-  tags: string[];
-  examples: { input: string; output: string; explanation?: string }[];
-  constraints?: string;
-  hints?: string[];
-  timeLimit?: number;
-  memoryLimit?: number;
-}
-
-export interface TheoryQuestion {
-  title: string;
-  difficulty: 'Easy' | 'Medium' | 'Hard';
-  tags: string[];
-  content: string;
-  examples: { input: string; output: string }[];
+  tags?: string[];
+  examples?: { input: string; output: string; explanation?: string }[];
+  codingQuestion?: CodingQuestion;
 }

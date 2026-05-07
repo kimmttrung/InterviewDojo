@@ -34,7 +34,7 @@ export class QuestionsController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy danh sách câu hỏi' })
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
   async findAll(@Query() query: GetQuestionsDto) {
     const result = await this.questionsService.findAll(query);
 
@@ -49,15 +49,15 @@ export class QuestionsController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy 1 câu hỏi' })
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
-  findOne(@Param('id') id: string) {
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  findOne(@Param('id', ParseIntPipe) id: number) {
     return this.questionsService.findOne(id);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Create new question' })
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   async create(@Body() createQuestionDto: CreateQuestionDto) {
     const data = await this.questionsService.create(createQuestionDto);
     return {
@@ -70,7 +70,7 @@ export class QuestionsController {
   @Put(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Update question' })
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateQuestionDto: UpdateQuestionDto,
@@ -86,7 +86,7 @@ export class QuestionsController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Delete question' })
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.questionsService.remove(id);
     return {

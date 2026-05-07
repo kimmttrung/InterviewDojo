@@ -6,6 +6,7 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
+import { Role, ApprovalStatus, SkillLevel, SessionMode } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -15,7 +16,7 @@ export class UserService {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
-        targetRole: true, // Lấy thông tin từ bảng TargetRole
+        targetRole: true,
         skills: {
           include: { skill: true },
         },
@@ -29,16 +30,19 @@ export class UserService {
       email: user.email,
       name: user.name,
       bio: user.bio,
-      // Trả về tên của targetRole hoặc null
       target_role: user.targetRole?.name || null,
       experience_years: user.experienceYears,
       current_level: this.calculateLevel(user.experienceYears),
       avatar_url: user.avatarUrl,
+      credit_balance: user.creditBalance,
+      role: user.role,
+      status: user.status,
       skills: user.skills?.map((us) => ({
         id: us.skill.id,
         name: us.skill.name || 'Unknown',
-        score: us.score || 0,
-        category: us.skill.category || 'Unknown',
+        type: us.skill.type,
+        level: us.level,
+        time_use: us.timeUse,
       })),
     };
   }
@@ -48,13 +52,13 @@ export class UserService {
       throw new BadRequestException('Dữ liệu không được để trống');
     }
 
-    // Xử lý logic cập nhật Skills
     const skillsUpdateData = dto.skill_ids
       ? {
           deleteMany: {},
           create: dto.skill_ids.map((skillId) => ({
             skill: { connect: { id: skillId } },
-            score: 0,
+            timeUse: 0,
+            level: SkillLevel.LEARNING,
           })),
         }
       : undefined;
@@ -66,7 +70,6 @@ export class UserService {
         bio: dto.bio,
         avatarUrl: dto.avatar_url,
         experienceYears: dto.experience_years,
-        // CẬP NHẬT: Kết nối với bảng TargetRole thông qua ID
         ...(dto.target_role_id && {
           targetRole: { connect: { id: dto.target_role_id } },
         }),
@@ -89,11 +92,15 @@ export class UserService {
         experience_years: updatedUser.experienceYears,
         current_level: this.calculateLevel(updatedUser.experienceYears),
         avatar_url: updatedUser.avatarUrl,
+        credit_balance: updatedUser.creditBalance,
+        role: updatedUser.role,
+        status: updatedUser.status,
         skills: updatedUser.skills.map((us) => ({
           id: us.skill.id,
           name: us.skill.name,
-          score: us.score,
-          category: us.skill.category,
+          type: us.skill.type,
+          level: us.level,
+          time_use: us.timeUse,
         })),
       },
     };
@@ -103,16 +110,39 @@ export class UserService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
-    // Giữ nguyên mock data cho stats
+    // Query số liệu thực tế từ database
+    const soloSessionsCount = await this.prisma.mockSession.count({
+      where: { intervieweeId: userId, mode: SessionMode.SOLO },
+    });
+
+    const meetSessionsCount = await this.prisma.mockSession.count({
+      where: { intervieweeId: userId, mode: SessionMode.MEET },
+    });
+
+    const totalSubmissions = await this.prisma.codeSubmission.count({
+      where: { userId },
+    });
+
+    const feedbacks = await this.prisma.feedback.findMany({
+      where: { revieweeId: userId },
+      select: { overallScore: true },
+    });
+
+    const averageScore =
+      feedbacks.length > 0
+        ? feedbacks.reduce((acc, curr) => acc + curr.overallScore, 0) /
+          feedbacks.length
+        : 0;
+
     return {
-      total_questions_viewed: 145,
-      total_practice_sessions: 24,
+      total_code_submissions: totalSubmissions, // Thay total_questions_viewed bằng code submissions cho thực tế
+      total_practice_sessions: soloSessionsCount + meetSessionsCount,
       practice_breakdown: {
-        solo_mode: 18,
-        peer_mode: 6,
+        solo_mode: soloSessionsCount,
+        peer_mode: meetSessionsCount,
       },
-      average_score: 85.5,
-      streak_days: 5,
+      average_score: Number(averageScore.toFixed(1)),
+      streak_days: 5, // Tạm thời hardcode nếu bạn chưa có bảng tracking daily login
     };
   }
 
@@ -125,15 +155,18 @@ export class UserService {
       throw new NotFoundException('User không tồn tại');
     }
 
-    if (user.role !== 'CANDIDATE') {
-      throw new BadRequestException('CANIDATE mới được cập nhật target role');
+    if (user.role !== Role.CANDIDATE) {
+      throw new BadRequestException(
+        'Chỉ CANDIDATE mới được cập nhật target role',
+      );
     }
 
-    const role = await this.prisma.targetRole.findUnique({
+    const role = await this.prisma.jobRole.findUnique({
       where: { id: dto.target_role_id },
     });
+
     if (!role) {
-      throw new BadRequestException('Target role không tồn tại');
+      throw new BadRequestException('Target role (Job Role) không tồn tại');
     }
 
     const updatedUser = await this.prisma.user.update({
@@ -165,7 +198,7 @@ export class UserService {
       throw new NotFoundException('User không tồn tại');
     }
 
-    if (user.role !== 'MENTOR') {
+    if (user.role !== Role.MENTOR) {
       throw new BadRequestException('Bạn không phải mentor');
     }
 
@@ -182,7 +215,7 @@ export class UserService {
         userId,
         cvUrl: dto.cvUrl,
         certificateUrl: dto.certificateUrl,
-        approvalStatus: 'PENDING',
+        approvalStatus: ApprovalStatus.PENDING,
       },
     });
   }

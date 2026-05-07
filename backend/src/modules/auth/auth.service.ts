@@ -11,6 +11,7 @@ import { RegisterDto, UserRole } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
+import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuthService {
@@ -39,7 +40,7 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
-        role: dto.role ?? 'CANDIDATE',
+        role: (dto.role as Role) ?? Role.CANDIDATE,
       },
     });
 
@@ -55,7 +56,7 @@ export class AuthService {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       include: {
-        mentorProfile: true,
+        mentorProfile: true, // check để xem mentor đã setup chưa
       },
     });
 
@@ -75,11 +76,11 @@ export class AuthService {
 
     let redirect: RedirectPath = null;
 
-    if (user.role === 'MENTOR' && !user.mentorProfile) {
+    if (user.role === Role.MENTOR && !user.mentorProfile) {
       redirect = '/mentor/setup';
     }
 
-    if (user.role === 'CANDIDATE' && !user.targetRoleId) {
+    if (user.role === Role.CANDIDATE && !user.targetRoleId) {
       redirect = '/candidate/setup';
     }
 
@@ -145,7 +146,7 @@ export class AuthService {
         email: dto.email,
         password: hashedPassword,
         name: dto.name,
-        role: 'ADMIN',
+        role: Role.ADMIN,
       },
     });
 

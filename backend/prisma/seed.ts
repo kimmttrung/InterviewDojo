@@ -1,11 +1,20 @@
 import 'dotenv/config';
-import { PrismaClient, Difficulty } from '@prisma/client';
+import {
+  PrismaClient,
+  Difficulty,
+  QuestionType,
+} from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
 
-const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
-const adapter = new PrismaPg(pool);
-const prisma = new PrismaClient({ adapter });
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+});
+const prisma = new PrismaClient({
+  adapter: new PrismaPg(pool),
+});
+
+// ================= DATA =================
 
 const questions = [
   // ═══════════════════════════════════════════════
@@ -1123,95 +1132,98 @@ const questions = [
   },
 ];
 
-// ─────────────── SEED RUNNER ───────────────
 
+// ================= SEED =================
 async function main() {
-  console.log(
-    `🌱 Seeding ${questions.length} additional DSA coding questions...\n`,
+  console.log(`🌱 Seeding ${questions.length} questions...\n`);
+
+  // 1. UPSERT QUESTION
+  for (const q of questions) {
+    await prisma.question.upsert({
+      where: { slug: q.slug },
+      update: {
+        title: q.title,
+        difficulty: q.difficulty,
+        type: QuestionType.CODING,
+        isPublished: true,
+      },
+      create: {
+        title: q.title,
+        slug: q.slug,
+        difficulty: q.difficulty,
+        type: QuestionType.CODING,
+        isPublished: true,
+      },
+    });
+  }
+
+  // 2. MAP slug -> id
+  const saved = await prisma.question.findMany({
+    where: {
+      slug: { in: questions.map((q) => q.slug) },
+    },
+    select: { id: true, slug: true },
+  });
+
+  const slugToId = Object.fromEntries(
+    saved.map((q) => [q.slug, q.id]),
   );
 
-  await prisma.$transaction(
-    async (tx) => {
-      // Upsert questions
-      for (const q of questions) {
-        await tx.codingQuestion.upsert({
-          where: { slug: q.slug },
-          update: {
-            title: q.title,
-            description: q.description,
-            difficulty: q.difficulty,
-            tags: q.tags,
-            constraints: q.constraints ?? '',
-            hints: q.hints ?? [],
-            isPublished: true,
-          },
-          create: {
-            title: q.title,
-            slug: q.slug,
-            description: q.description,
-            difficulty: q.difficulty,
-            tags: q.tags,
-            constraints: q.constraints ?? '',
-            hints: q.hints ?? [],
-            isPublished: true,
-            timeLimit: 2000,
-            memoryLimit: 256000,
-          },
-        });
-      }
+  // 3. UPSERT CODING QUESTION
+  for (const q of questions) {
+    const questionId = slugToId[q.slug];
 
-      // Fetch IDs
-      const saved = await tx.codingQuestion.findMany({
-        where: { slug: { in: questions.map((q) => q.slug) } },
-        select: { id: true, slug: true },
-      });
-      const slugToId = Object.fromEntries(saved.map((q) => [q.slug, q.id]));
+    await prisma.codingQuestion.upsert({
+      where: { questionId },
+      update: {
+        description: q.description,
+        constraints: q.constraints ?? '',
+        tags: q.tags ?? [],
+        hints: q.hints ?? [],
+        timeLimit: 2000,
+        memoryLimit: 256000,
+      },
+      create: {
+        questionId,
+        description: q.description,
+        constraints: q.constraints ?? '',
+        tags: q.tags ?? [],
+        hints: q.hints ?? [],
+        timeLimit: 2000,
+        memoryLimit: 256000,
+      },
+    });
+  }
 
-      // Upsert test cases — delete existing for these questions then re-insert
-      const ids = Object.values(slugToId);
-      await tx.testCase.deleteMany({
-        where: { codingQuestionId: { in: ids } },
-      });
+  // 4. DELETE OLD TEST CASES
+  const ids = Object.values(slugToId);
 
-      const allTestCases = questions.flatMap((q) =>
-        (q.testCases ?? []).map((tc) => ({
-          codingQuestionId: slugToId[q.slug],
-          input: tc.input,
-          expectedOutput: tc.expectedOutput,
-          isSample: tc.isSample,
-          isHidden: false,
-          points: 1,
-          order: tc.order,
-        })),
-      );
-
-      await tx.testCase.createMany({ data: allTestCases });
+  await prisma.testCase.deleteMany({
+    where: {
+      codingQuestionId: { in: ids },
     },
-    {
-      maxWait: 30000, // 30 giây để bắt đầu transaction
-      timeout: 180000, // 3 phút để hoàn thành (tăng cao vì seed lớn)
-    },
+  });
+
+  // 5. CREATE TEST CASES
+  const allTestCases = questions.flatMap((q) =>
+    (q.testCases ?? []).map((tc) => ({
+      codingQuestionId: slugToId[q.slug],
+      input: tc.input,
+      expectedOutput: tc.expectedOutput,
+      isSample: tc.isSample,
+      isHidden: false,
+      points: 1,
+      order: tc.order,
+    })),
   );
 
-  // Summary
-  const counts = questions.reduce(
-    (acc, q) => {
-      acc[q.difficulty] = (acc[q.difficulty] ?? 0) + 1;
-      return acc;
-    },
-    {} as Record<string, number>,
-  );
+  if (allTestCases.length > 0) {
+    await prisma.testCase.createMany({
+      data: allTestCases,
+    });
+  }
 
-  console.log('✅ Done!\n');
-  console.log(`   EASY   : ${counts['EASY'] ?? 0} questions`);
-  console.log(`   MEDIUM : ${counts['MEDIUM'] ?? 0} questions`);
-  console.log(`   HARD   : ${counts['HARD'] ?? 0} questions`);
-  console.log(`   TOTAL  : ${questions.length} questions`);
+  console.log('✅ Seed completed!');
 }
 
 main()
-  .catch((e) => {
-    console.error('❌ Seed failed:', e);
-    process.exit(1);
-  })
-  .finally(() => prisma.$disconnect());

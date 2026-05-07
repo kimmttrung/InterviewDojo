@@ -12,21 +12,24 @@ import {
   RefreshCw,
 } from 'lucide-react';
 
+// 1. Cập nhật Type đúng với JSON thực tế
+type Feedback = {
+  id: number;
+  overallScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  suggestions: string[];
+  comment: string | null; // Đây là nội dung text/transcript
+  createdAt: string;
+};
+
 type AnalysisResponse = {
   id: number;
-  soloRecordingId: number;
-  transcript: string | null;
-  overallScore: number;
-  strengths: string[] | null;
-  weaknesses: string[] | null;
-  suggestions: string[] | null;
-  processedAt: string;
-  soloRecording?: {
-    id: number;
-    videoUrl: string;
-    duration?: number | null;
-    createdAt?: string;
-  };
+  recordingUrl: string | null;
+  feedbacks: Feedback[];
+  mode: string;
+  status: string;
+  // Các field khác nếu cần
 };
 
 export default function AIAnalysisResult() {
@@ -37,7 +40,6 @@ export default function AIAnalysisResult() {
   const [error, setError] = useState('');
   const [isRefreshingVideo, setIsRefreshingVideo] = useState(false);
 
-  // Tách hàm fetch để dùng chung cho lúc mở trang và lúc ấn nút Làm mới
   const fetchAnalysis = useCallback(
     async (isRefreshing = false) => {
       try {
@@ -47,11 +49,9 @@ export default function AIAnalysisResult() {
         if (!recordingId) return;
 
         const res = await aiAnalysisService.getSoloRecording(recordingId);
-
         const finalData = res.data?.data ?? res.data;
 
         console.log('📦 Dữ liệu đổ lên UI:', finalData);
-
         setData(finalData);
       } catch (err: any) {
         if (!isRefreshing) {
@@ -75,7 +75,7 @@ export default function AIAnalysisResult() {
         <div className="bg-white rounded-3xl shadow-sm border px-8 py-10 text-center">
           <Brain className="mx-auto h-10 w-10 mb-4 text-violet-600 animate-pulse" />
           <h2 className="text-2xl font-semibold">Loading AI analysis...</h2>
-          <p className="text-slate-500 mt-2">Hệ thống đang lấy kết quả đánh giá từ backend.</p>
+          <p className="text-slate-500 mt-2">Hệ thống đang lấy kết quả đánh giá.</p>
         </div>
       </div>
     );
@@ -99,10 +99,14 @@ export default function AIAnalysisResult() {
     );
   }
 
-  const score = Number(data.overallScore || 0);
-  const strengths = Array.isArray(data.strengths) ? data.strengths : [];
-  const weaknesses = Array.isArray(data.weaknesses) ? data.weaknesses : [];
-  const suggestions = Array.isArray(data.suggestions) ? data.suggestions : [];
+  // 2. Bóc tách dữ liệu từ feedback đầu tiên
+  const mainFeedback = data.feedbacks?.[0];
+  const score = mainFeedback?.overallScore || 0;
+  const strengths = Array.isArray(mainFeedback?.strengths) ? mainFeedback.strengths : [];
+  const weaknesses = Array.isArray(mainFeedback?.weaknesses) ? mainFeedback.weaknesses : [];
+  const suggestions = Array.isArray(mainFeedback?.suggestions) ? mainFeedback.suggestions : [];
+  const transcript = mainFeedback?.comment || 'Không có transcript';
+  const videoUrl = data.recordingUrl;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-violet-50 p-6 md:p-10">
@@ -115,8 +119,8 @@ export default function AIAnalysisResult() {
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* CỘT TRÁI: ĐIỂM SỐ & VIDEO */}
           <div className="lg:col-span-2 space-y-6">
+            {/* ĐIỂM SỐ */}
             <div className="bg-white border rounded-3xl shadow-sm p-6 md:p-8">
               <div className="flex items-start justify-between gap-4 flex-wrap">
                 <div>
@@ -124,7 +128,7 @@ export default function AIAnalysisResult() {
                     <Sparkles className="h-4 w-4" /> AI Interview Review
                   </div>
                   <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
-                    Kết quả đánh giá câu trả lời
+                    Kết quả đánh giá
                   </h1>
                 </div>
 
@@ -136,106 +140,101 @@ export default function AIAnalysisResult() {
               </div>
             </div>
 
+            {/* TRANSCRIPT */}
             <div className="bg-white border rounded-3xl shadow-sm p-6 md:p-8">
-              <h2 className="text-2xl font-semibold text-slate-900 mb-4">Transcript</h2>
-              <div className="rounded-2xl bg-slate-50 border p-5 text-slate-700 leading-7 whitespace-pre-wrap">
-                {data.transcript || 'Chưa có transcript'}
+              <h2 className="text-2xl font-semibold text-slate-900 mb-4">Nội dung trả lời</h2>
+              <div className="rounded-2xl bg-slate-50 border p-5 text-slate-700 leading-7 whitespace-pre-wrap italic">
+                "{transcript}"
               </div>
             </div>
 
-            {/* KHU VỰC VIDEO THÔNG MINH */}
+            {/* VIDEO */}
             <div className="bg-white border rounded-3xl shadow-sm p-6 md:p-8">
               <h2 className="text-2xl font-semibold text-slate-900 mb-4">Video Recording</h2>
-
-              {data.soloRecording?.videoUrl ? (
-                // Nếu đã có Video URL -> Render Video bình thường
+              {videoUrl ? (
                 <video
                   controls
+                  key={videoUrl} // Force re-render khi URL thay đổi
                   className="w-full rounded-2xl border bg-black shadow-inner"
-                  src={data.soloRecording.videoUrl}
+                  src={videoUrl}
                 />
               ) : (
-                // Nếu Video URL bị trống -> Render Màn hình chờ
                 <div className="w-full aspect-video rounded-2xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center text-center p-6">
                   <div className="bg-violet-100 p-4 rounded-full mb-4">
                     <Video className="h-8 w-8 text-violet-600 opacity-70" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-2">
-                    Video đang được xử lý ngầm
-                  </h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Video chưa sẵn sàng</h3>
                   <p className="text-slate-500 mb-6 max-w-sm">
-                    AI đã phân tích xong âm thanh, nhưng video định dạng cao vẫn đang được lưu trữ
-                    vào hệ thống. Bạn có thể đọc nhận xét bên cạnh trước.
+                    Hệ thống đang đồng bộ video từ Cloudinary.
                   </p>
                   <button
                     onClick={() => fetchAnalysis(true)}
                     disabled={isRefreshingVideo}
-                    className="flex items-center gap-2 bg-white border shadow-sm px-6 py-3 rounded-full text-sm font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-50 transition-all"
+                    className="flex items-center gap-2 bg-white border shadow-sm px-6 py-3 rounded-full text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
-                    <RefreshCw
-                      className={`h-4 w-4 ${isRefreshingVideo ? 'animate-spin text-violet-600' : ''}`}
-                    />
-                    {isRefreshingVideo ? 'Đang kiểm tra...' : 'Tải lại Video ngay'}
+                    <RefreshCw className={`h-4 w-4 ${isRefreshingVideo ? 'animate-spin' : ''}`} />
+                    Tải lại Video
                   </button>
                 </div>
               )}
             </div>
           </div>
 
-          {/* CỘT PHẢI: NHẬN XÉT (Giữ nguyên) */}
+          {/* NHẬN XÉT CỘT PHẢI */}
           <div className="space-y-6">
-            <div className="bg-white border rounded-3xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <CircleCheck className="h-5 w-5 text-green-600" />
-                <h3 className="text-xl font-semibold">Strengths</h3>
-              </div>
-              <div className="space-y-3">
-                {strengths.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl bg-green-50 border border-green-100 p-4 text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border rounded-3xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <CircleAlert className="h-5 w-5 text-amber-600" />
-                <h3 className="text-xl font-semibold">Weaknesses</h3>
-              </div>
-              <div className="space-y-3">
-                {weaknesses.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl bg-amber-50 border border-amber-100 p-4 text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white border rounded-3xl shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <Lightbulb className="h-5 w-5 text-violet-600" />
-                <h3 className="text-xl font-semibold">Suggestions</h3>
-              </div>
-              <div className="space-y-3">
-                {suggestions.map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="rounded-2xl bg-violet-50 border border-violet-100 p-4 text-slate-700"
-                  >
-                    {item}
-                  </div>
-                ))}
-              </div>
-            </div>
+            <Section
+              icon={<CircleCheck className="text-green-600" />}
+              title="Strengths"
+              items={strengths}
+              color="bg-green-50 border-green-100"
+            />
+            <Section
+              icon={<CircleAlert className="text-amber-600" />}
+              title="Weaknesses"
+              items={weaknesses}
+              color="bg-amber-50 border-amber-100"
+            />
+            <Section
+              icon={<Lightbulb className="text-violet-600" />}
+              title="Suggestions"
+              items={suggestions}
+              color="bg-violet-50 border-violet-100"
+            />
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// Component phụ cho gọn code
+function Section({
+  icon,
+  title,
+  items,
+  color,
+}: {
+  icon: any;
+  title: string;
+  items: string[];
+  color: string;
+}) {
+  return (
+    <div className="bg-white border rounded-3xl shadow-sm p-6">
+      <div className="flex items-center gap-2 mb-4">
+        {icon}
+        <h3 className="text-xl font-semibold">{title}</h3>
+      </div>
+      <div className="space-y-3">
+        {items.length > 0 ? (
+          items.map((item, idx) => (
+            <div key={idx} className={`rounded-2xl p-4 text-slate-700 border ${color}`}>
+              {item}
+            </div>
+          ))
+        ) : (
+          <p className="text-slate-400 italic">Không có dữ liệu</p>
+        )}
       </div>
     </div>
   );

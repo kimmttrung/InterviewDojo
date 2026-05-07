@@ -81,6 +81,8 @@ export default function InterviewRoom() {
       const question = getRandomQuestion(type);
       if (!question) return;
 
+      console.log('question:', question);
+
       setCurrentQuestion(question);
       setQuestionMode(type);
       setWorkMode(type === 'code' ? 'code' : 'theory');
