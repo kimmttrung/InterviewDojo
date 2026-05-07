@@ -30,7 +30,7 @@ jobs:
         uses: neondatabase/create-branch-action@v5
         with:
           project_id: ${{ secrets.NEON_PROJECT_ID }}
-          parent_id: main
+          parent_branch: db-new
           branch_name: test-branch-${{ github.event.pull_request.number || 'local' }}
           api_key: ${{ secrets.NEON_API_KEY }}
 
@@ -50,6 +50,7 @@ jobs:
       - name: Run Prisma Migrate
         run: |
           cd backend
+          npx prisma migrate reset --force
           npx prisma migrate deploy
         env:
           DATABASE_URL: ${{ steps.create-db-branch.outputs.db_url }}

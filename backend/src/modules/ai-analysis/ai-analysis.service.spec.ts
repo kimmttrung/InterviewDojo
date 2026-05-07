@@ -1,154 +1,227 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { AiAnalysisService } from './ai-analysis.service';
-import { ConfigService } from '@nestjs/config';
-import { PrismaService } from '../../prisma/prisma.service';
-import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import { BadRequestException } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AiAgentService } from './ai-agent.service';
 import Groq from 'groq-sdk';
 
-// Chỉ cần mock Groq, không cần mock axios và fs nữa vì đã bỏ Audio STT
 jest.mock('groq-sdk');
 
-describe('AiAnalysisService', () => {
-  let service: AiAnalysisService;
-  let prismaService: DeepMocked<PrismaService>;
+describe('AiAgentService', () => {
+  let service: AiAgentService;
 
-  const mockGroq = {
-    chat: {
-      completions: {
-        create: jest.fn(),
-      },
-    },
-  };
+  const mockCreate = jest.fn();
 
   beforeEach(async () => {
-    // Inject mockGroq mỗi khi instance Groq được tạo
-    (Groq as unknown as jest.Mock).mockImplementation(() => mockGroq);
     jest.clearAllMocks();
+
+    (Groq as unknown as jest.Mock).mockImplementation(() => ({
+      chat: {
+        completions: {
+          create: mockCreate,
+        },
+      },
+    }));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        AiAnalysisService,
+        AiAgentService,
         {
           provide: ConfigService,
           useValue: {
             get: jest.fn((key: string) => {
               const config: Record<string, string> = {
-                GROQ_API_KEY: 'fake-groq-key',
+                GROQ_API_KEY: 'fake-api-key',
                 GROQ_MODEL: 'llama-3.3-70b-versatile',
               };
-              return config[key] ?? null;
+
+              return config[key];
             }),
           },
-        },
-        {
-          provide: PrismaService,
-          useValue: createMock<PrismaService>(),
         },
       ],
     }).compile();
 
-    service = module.get<AiAnalysisService>(AiAnalysisService);
-    prismaService = module.get(PrismaService);
+    service = module.get<AiAgentService>(AiAgentService);
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  describe('getSoloRecordingAnalysis', () => {
-    it('should call prisma findUnique', async () => {
-      prismaService.aiAnalysis.findUnique.mockResolvedValue(null);
-      await service.getSoloRecordingAnalysis(1);
-      expect(prismaService.aiAnalysis.findUnique).toHaveBeenCalledWith({
-        where: { soloRecordingId: 1 },
-        include: { soloRecording: true },
-      });
-    });
-  });
-
   describe('generateFeedback', () => {
-    it('should return parsed feedback when Groq returns valid JSON', async () => {
-      const mockJsonResponse = {
-        overallScore: 8,
-        strengths: ['Điểm mạnh 1', 'Điểm mạnh 2', 'Điểm mạnh 3'],
-        weaknesses: ['Điểm yếu 1', 'Điểm yếu 2', 'Điểm yếu 3'],
-        suggestions: ['Gợi ý 1', 'Gợi ý 2', 'Gợi ý 3'],
-      };
-
-      mockGroq.chat.completions.create.mockResolvedValue({
+    it('should return parsed AI feedback successfully', async () => {
+      mockCreate.mockResolvedValue({
         choices: [
           {
             message: {
-              content: `\`\`\`json\n${JSON.stringify(mockJsonResponse)}\n\`\`\``,
+              content: JSON.stringify({
+                overallScore: 8,
+                strengths: ['Strong 1', 'Strong 2', 'Strong 3'],
+                weaknesses: ['Weak 1', 'Weak 2', 'Weak 3'],
+                suggestions: ['Sug 1', 'Sug 2', 'Sug 3'],
+              }),
             },
           },
         ],
       });
 
       const result = await service.generateFeedback({
-        transcript: 'Em đã có kinh nghiệm làm Nodejs...',
+        transcript: 'Tôi có kinh nghiệm NestJS',
         question: 'Giới thiệu bản thân',
       });
 
       expect(result.overallScore).toBe(8);
-      expect(result.strengths[0]).toBe('Điểm mạnh 1');
-      expect(mockGroq.chat.completions.create).toHaveBeenCalled();
+
+      expect(result.strengths).toHaveLength(3);
+      expect(result.weaknesses).toHaveLength(3);
+      expect(result.suggestions).toHaveLength(3);
+
+      expect(mockCreate).toHaveBeenCalled();
     });
 
-    it('should return fallback values when Groq returns invalid JSON', async () => {
-      mockGroq.chat.completions.create.mockResolvedValue({
-        choices: [{ message: { content: 'Đây không phải là JSON' } }],
+    it('should clean markdown json response', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: `
+\`\`\`json
+{
+  "overallScore": 7,
+  "strengths": ["A", "B", "C"],
+  "weaknesses": ["D", "E", "F"],
+  "suggestions": ["G", "H", "I"]
+}
+\`\`\`
+              `,
+            },
+          },
+        ],
       });
 
       const result = await service.generateFeedback({
-        transcript: 'Em đã có kinh nghiệm làm Nodejs...',
-        question: 'Giới thiệu bản thân',
+        transcript: 'Test transcript',
       });
 
-      // Kiểm tra các giá trị fallback (có trong block catch parseError của service)
+      expect(result.overallScore).toBe(7);
+      expect(result.strengths).toEqual(['A', 'B', 'C']);
+    });
+
+    it('should normalize score to max 10', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                overallScore: 99,
+                strengths: ['A', 'B', 'C'],
+                weaknesses: ['D', 'E', 'F'],
+                suggestions: ['G', 'H', 'I'],
+              }),
+            },
+          },
+        ],
+      });
+
+      const result = await service.generateFeedback({
+        transcript: 'Test',
+      });
+
+      expect(result.overallScore).toBe(10);
+    });
+
+    it('should normalize score to min 0', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                overallScore: -5,
+                strengths: ['A', 'B', 'C'],
+                weaknesses: ['D', 'E', 'F'],
+                suggestions: ['G', 'H', 'I'],
+              }),
+            },
+          },
+        ],
+      });
+
+      const result = await service.generateFeedback({
+        transcript: 'Test',
+      });
+
+      expect(result.overallScore).toBe(0);
+    });
+
+    it('should use fallback when parse json failed', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: 'invalid json response',
+            },
+          },
+        ],
+      });
+
+      const result = await service.generateFeedback({
+        transcript: 'Test',
+      });
+
       expect(result.overallScore).toBe(5);
-      expect(result.weaknesses[0]).toContain('chưa được chuẩn hóa hoàn toàn');
+
+      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
+      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
+      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
+    });
+
+    it('should use fallback arrays when AI arrays are invalid', async () => {
+      mockCreate.mockResolvedValue({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                overallScore: 6,
+                strengths: ['A'],
+                weaknesses: 'invalid',
+                suggestions: [],
+              }),
+            },
+          },
+        ],
+      });
+
+      const result = await service.generateFeedback({
+        transcript: 'Test',
+      });
+
+      expect(result.overallScore).toBe(6);
+
+      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
+      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
+      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
     });
 
     it('should throw BadRequestException if transcript is empty', async () => {
       await expect(
-        service.generateFeedback({ transcript: '   ' }),
+        service.generateFeedback({
+          transcript: '   ',
+        }),
       ).rejects.toThrow(BadRequestException);
     });
-  });
 
-  describe('saveSoloRecordingAnalysis', () => {
-    it('should upsert aiAnalysis', async () => {
-      // Mock object trả về của Prisma để tránh lỗi Type Strict của TypeScript
-      const mockAiAnalysis = {
-        id: 1,
-        sessionId: null,
-        soloRecordingId: 1,
-        transcript: 'test',
-        strengths: ['s1'],
-        weaknesses: ['w1'],
-        suggestions: ['su1'],
-        overallScore: 7,
-        processedAt: new Date(),
-      };
+    it('should return fallback response when groq throws error', async () => {
+      mockCreate.mockRejectedValue(new Error('Groq API Error'));
 
-      prismaService.aiAnalysis.upsert.mockResolvedValue(mockAiAnalysis);
-
-      await service.saveSoloRecordingAnalysis({
-        soloRecordingId: 1,
-        transcript: 'test',
-        overallScore: 7,
-        strengths: ['s1'],
-        weaknesses: ['w1'],
-        suggestions: ['su1'],
+      const result = await service.generateFeedback({
+        transcript: 'Test transcript',
       });
 
-      expect(prismaService.aiAnalysis.upsert).toHaveBeenCalledWith(
-        expect.objectContaining({
-          where: { soloRecordingId: 1 },
-        }),
-      );
+      expect(result.overallScore).toBe(4);
+
+      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
+      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
+      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
     });
   });
 });

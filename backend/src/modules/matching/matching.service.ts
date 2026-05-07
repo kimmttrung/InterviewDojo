@@ -32,6 +32,7 @@ export class MatchingService {
       if (!popped || popped.length === 0) break;
 
       const [targetId] = popped;
+      console.log(`🔍 Kiểm tra đối thủ tiềm năng: ${targetId}`);
 
       // Kiểm tra online
       if (this.socketService.isUserOnline(targetId)) {

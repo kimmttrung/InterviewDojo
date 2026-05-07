@@ -8,14 +8,32 @@ interface QuestionPanelProps {
   isLoading: boolean;
 }
 
+// Bổ sung cả dạng IN HOA dự phòng trường hợp dữ liệu API chưa được ép kiểu chữ thường
 const diffColor: Record<string, string> = {
   Easy: 'text-emerald-600 bg-emerald-50 border-emerald-200',
   Medium: 'text-amber-600 bg-amber-50 border-amber-200',
   Hard: 'text-red-600 bg-red-50 border-red-200',
+  EASY: 'text-emerald-600 bg-emerald-50 border-emerald-200',
+  MEDIUM: 'text-amber-600 bg-amber-50 border-amber-200',
+  HARD: 'text-red-600 bg-red-50 border-red-200',
 };
 
 export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionPanelProps) {
   const [showHints, setShowHints] = useState(false);
+
+  console.log(question);
+
+  // Bóc tách dữ liệu an toàn để dùng chung cho cả Theory và Coding
+  const title = question?.title;
+  const difficulty = question?.difficulty || 'Medium';
+  // Ưu tiên description của coding, nếu không có thì lấy content của theory
+  const description = question?.codingQuestion?.description || question?.content;
+  const tags = question?.tags || [];
+  const constraints = question?.codingQuestion?.constraints;
+  const examples = question?.examples || [];
+  const hints = question?.codingQuestion?.hints || [];
+  const timeLimit = question?.codingQuestion?.timeLimit;
+  const memoryLimit = question?.codingQuestion?.memoryLimit;
 
   return (
     <aside className="w-[22%] min-w-[280px] border-r border-slate-200 bg-white overflow-y-auto flex flex-col">
@@ -49,18 +67,18 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
           <div className="space-y-4">
             {/* Header với title và difficulty */}
             <div className="flex justify-between items-start gap-2">
-              <h3 className="text-sm font-black text-slate-800 leading-tight">{question.title}</h3>
+              <h3 className="text-sm font-black text-slate-800 leading-tight">{title}</h3>
               <span
-                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${diffColor[question.difficulty]}`}
+                className={`text-[9px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${diffColor[difficulty]}`}
               >
-                {question.difficulty}
+                {difficulty}
               </span>
             </div>
 
             {/* Tags */}
-            {question.tags && question.tags.length > 0 && (
+            {tags.length > 0 && (
               <div className="flex flex-wrap gap-1">
-                {question.tags.map((tag, idx) => (
+                {tags.map((tag, idx) => (
                   <span
                     key={idx}
                     className="text-[8px] font-mono bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full"
@@ -71,30 +89,30 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
               </div>
             )}
 
-            {/* Description */}
+            {/* Description / Content */}
             <div className="text-xs text-slate-600 leading-relaxed whitespace-pre-wrap bg-slate-50 p-3 rounded-lg border border-slate-100">
-              {question.content}
+              {description}
             </div>
 
             {/* Constraints */}
-            {question.constraints && mode === 'code' && (
+            {constraints && mode === 'code' && (
               <div className="space-y-1">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   ⚠️ Constraints:
                 </p>
                 <div className="text-[10px] font-mono text-slate-600 bg-amber-50 p-2 rounded-lg border border-amber-200">
-                  {question.constraints}
+                  {constraints}
                 </div>
               </div>
             )}
 
             {/* Examples */}
-            {question.examples.length > 0 && (
+            {examples.length > 0 && (
               <div className="space-y-2">
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                   📝 Examples:
                 </p>
-                {question.examples.map((ex, i) => (
+                {examples.map((ex, i) => (
                   <div
                     key={i}
                     className="bg-slate-900 rounded-lg p-2 text-[10px] font-mono text-white space-y-1"
@@ -102,7 +120,7 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
                     <div className="text-emerald-400">Input: {ex.input}</div>
                     <div className="text-blue-400">Output: {ex.output}</div>
                     {ex.explanation && (
-                      <div className="text-slate-400 text-[9px] border-t border-slate-700 mt-1 pt-1">
+                      <div className="text-slate-400 text-[9px] border-t border-slate-700 mt-1 pt-1 whitespace-pre-wrap">
                         💡 {ex.explanation}
                       </div>
                     )}
@@ -112,7 +130,7 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
             )}
 
             {/* Hints */}
-            {question.hints && question.hints.length > 0 && mode === 'code' && (
+            {hints.length > 0 && mode === 'code' && (
               <div className="space-y-2">
                 <button
                   onClick={() => setShowHints(!showHints)}
@@ -122,7 +140,7 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
                 </button>
                 {showHints && (
                   <div className="space-y-1">
-                    {question.hints.map((hint, idx) => (
+                    {hints.map((hint, idx) => (
                       <div
                         key={idx}
                         className="text-[10px] text-slate-600 bg-blue-50 p-2 rounded-lg border border-blue-200"
@@ -136,10 +154,10 @@ export function QuestionPanel({ question, mode, onRandom, isLoading }: QuestionP
             )}
 
             {/* Time & Memory Limits */}
-            {question.timeLimit && question.memoryLimit && mode === 'code' && (
+            {timeLimit && memoryLimit && mode === 'code' && (
               <div className="flex gap-3 text-[9px] text-slate-500 border-t border-slate-100 pt-3">
-                <span>⏱️ Time: {question.timeLimit}ms</span>
-                <span>💾 Memory: {question.memoryLimit}KB</span>
+                <span>⏱️ Time: {timeLimit}ms</span>
+                <span>💾 Memory: {memoryLimit}KB</span>
               </div>
             )}
           </div>
