@@ -21,6 +21,8 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { MentorsModule } from './modules/mentors/mentors.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -56,6 +58,7 @@ import { TransformInterceptor } from './common/interceptors/transform.intercepto
     CodingModule,
     CategoriesModule,
     CompaniesModule,
+    MentorsModule,
   ],
   controllers: [AppController],
   providers: [

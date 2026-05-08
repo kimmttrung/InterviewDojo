@@ -16,6 +16,11 @@ export const API_ENDPOINT = {
   MENTOR: {
     UPDATE_ME: 'users/mentor-profile',
   },
+  MENTORS: {
+    GET_ALL: '/mentors',
+    GET_ONE: (id: number | string) => `/mentors/${id}`,
+    GET_AVAILABLE_SLOTS: (id: number | string) => `/mentors/${id}/available-slots`,
+  },
   CODE_ENGINE: {
     RUN: '/code-engine/run',
   },

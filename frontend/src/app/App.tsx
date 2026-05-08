@@ -30,6 +30,7 @@ import QuestionBank from '../features/shared-domain/question-bank/pages/Question
 import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
+import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -121,6 +122,10 @@ export function App({ queryClient }: AppProps) {
               <Route
                 path="/ai-analysis/:recordingId"
                 element={<ProtectedRoute element={<AIAnalysisResult />} roles={['CANDIDATE']} />}
+              />
+              <Route
+                path="/mentors/:mentorId"
+                element={<ProtectedRoute element={<MentorDetailPage />} roles={['CANDIDATE']} />}
               />
             </Routes>
           </TooltipProvider>
