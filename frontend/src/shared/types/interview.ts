@@ -1,5 +1,5 @@
 // src/types/interview.ts
-export type WorkMode = 'code' | 'theory' | 'whiteboard';
+export type WorkMode = 'code' | 'whiteboard';
 
 export interface TestCase {
   id: number;
