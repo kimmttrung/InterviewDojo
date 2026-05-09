@@ -30,8 +30,8 @@ import QuestionBankDetail from '../features/shared-domain/question-bank/pages/Qu
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { useAuthStore } from '@/stores/useAuthStore';
-// ✅ Import đúng ProtectedRoute và hook từ feature auth
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
+import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -163,6 +163,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/mentors/:mentorId"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <MentorDetailPage />
                 </ProtectedRoute>
               }
             />
