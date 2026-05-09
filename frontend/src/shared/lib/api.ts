@@ -1,18 +1,25 @@
 import axios from 'axios';
+import { useAuthStore } from '../../stores/useAuthStore';
 
-export const api = axios.create({
+const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('access_token');
-
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
+  const { accessToken } = useAuthStore.getState();
+  if (accessToken) {
+    config.headers.Authorization = `Bearer ${accessToken}`;
   }
-
   return config;
 });
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    // Xử lý refresh token hoặc logout nếu 401 (sẽ bổ sung sau)
+    return Promise.reject(error);
+  },
+);
+
+export { api };

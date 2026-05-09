@@ -1,4 +1,4 @@
-// src/pages/InterviewRoom.tsx
+// features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useCallback, useEffect } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -9,18 +9,18 @@ import { QuestionPanel } from '../components/QuestionPanel';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { VideoCallSection } from '../components/VideoCallSection';
 import { ChatAndNotes } from '../components/ChatAndNotes';
-import { useVideoCall } from '../../../../../../hooks/useVideoCall';
-import { useQuestions } from '../../../../../../hooks/useQuestions';
-import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
-import { useSocketStore } from '../../../../../../stores/useSocketStore';
-import { WorkMode } from '../../../../../../shared/types/interview';
+import { useVideoCall } from '@/hooks/useVideoCall';
+import { useQuestions } from '@/hooks/useQuestions';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSocketStore } from '@/stores/useSocketStore';
+import { useCurrentUser } from '@/features/auth'; // ✅ import hook
+import { WorkMode } from '@/shared/types/interview';
 
 export default function InterviewRoom() {
   const { roomId } = useParams<{ roomId: string }>();
   const [searchParams] = useSearchParams();
 
-  const userStore = localStorage.getItem('user');
-  const currentUser = userStore ? JSON.parse(userStore) : null;
+  const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
   const userId = currentUser?.id?.toString() || searchParams.get('userId') || 'guest';
   const token = searchParams.get('token');
 
@@ -42,20 +42,14 @@ export default function InterviewRoom() {
     'code',
   );
 
-  // Lấy các hàm từ Zustand Socket Store
   const { connect, joinRoom, emit, socket } = useSocketStore();
 
   // ==================== SOCKET CONNECTION ====================
   useEffect(() => {
     if (!userId || !roomId) return;
-
-    // 1. Kết nối socket (chỉ tạo 1 lần duy nhất trong toàn app)
     connect(userId);
-
-    // 2. Join vào room phỏng vấn
     joinRoom(roomId);
 
-    // 3. Lắng nghe sự kiện từ người kia
     const handleReceiveQuestion = (data: { question: any; mode: 'code' | 'theory' }) => {
       setCurrentQuestion(data.question);
       setQuestionMode(data.mode);
@@ -63,41 +57,28 @@ export default function InterviewRoom() {
     };
 
     socket?.on('receive_question', handleReceiveQuestion);
-
-    // Cleanup listener khi component unmount
     return () => {
       socket?.off('receive_question', handleReceiveQuestion);
     };
   }, [userId, roomId, socket, connect, joinRoom, setCurrentQuestion, setQuestionMode, setWorkMode]);
 
-  // Tải danh sách câu hỏi
   useEffect(() => {
     fetchQuestions();
   }, [fetchQuestions]);
 
-  // Random câu hỏi + gửi cho người kia
   const handleRandom = useCallback(
     (type: 'code' | 'theory') => {
       const question = getRandomQuestion(type);
       if (!question) return;
-
       console.log('question:', question);
-
       setCurrentQuestion(question);
       setQuestionMode(type);
       setWorkMode(type === 'code' ? 'code' : 'theory');
-
-      // Gửi qua socket (dùng emit từ store)
-      emit('send_question', {
-        roomId,
-        question,
-        mode: type,
-      });
+      emit('send_question', { roomId, question, mode: type });
     },
     [getRandomQuestion, setCurrentQuestion, setQuestionMode, setWorkMode, emit, roomId],
   );
 
-  // Dọn dẹp localStorage khi rời phòng
   useEffect(() => {
     return () => {
       console.log('🧹 Dọn dẹp dữ liệu phòng phỏng vấn...');
@@ -107,7 +88,8 @@ export default function InterviewRoom() {
     };
   }, []);
 
-  if (!client || !call) {
+  // ✅ Hiển thị loading khi đang fetch user (tránh gọi useVideoCall với userId chưa sẵn sàng)
+  if (isUserLoading || !client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
 
@@ -116,7 +98,6 @@ export default function InterviewRoom() {
       <StreamCall call={call}>
         <div className="h-screen flex flex-col bg-white overflow-hidden">
           <InterviewHeader roomId={roomId!} />
-
           <main className="flex-1 flex overflow-hidden">
             <QuestionPanel
               question={currentQuestion}
@@ -124,7 +105,6 @@ export default function InterviewRoom() {
               onRandom={handleRandom}
               isLoading={isLoading}
             />
-
             <WorkspaceTabs
               workMode={workMode}
               setWorkMode={setWorkMode}
@@ -132,7 +112,6 @@ export default function InterviewRoom() {
               roomId={roomId!}
               userId={userId}
             />
-
             <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
               <VideoCallSection />
               <ChatAndNotes />
@@ -144,7 +123,6 @@ export default function InterviewRoom() {
   );
 }
 
-// Component loading
 function InterviewLoading({ roomId }: { roomId?: string }) {
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">

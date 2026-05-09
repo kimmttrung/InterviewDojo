@@ -7,6 +7,7 @@ export const API_ENDPOINT = {
     UPDATE_ME: '/users/me',
     GET_ME: '/users/me',
     UPDATE_TARGET_ROLE: '/users/target-role',
+    AVATAR: '/users/me/avatar',
   },
   TARGET_ROLE: {
     GET: 'target-roles',

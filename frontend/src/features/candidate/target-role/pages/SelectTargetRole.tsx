@@ -13,7 +13,7 @@ import {
 import { showToast } from '../../../../shared/lib/toast';
 import { useEffect, useState } from 'react';
 import { targetRoleService } from '../services/target-role.service';
-import { userService } from '../../profile/services/user.service';
+import { userService } from '../../../auth/services/user.service';
 import { Card } from '../../../../shared/components/ui/card';
 
 interface RoleFromAPI {

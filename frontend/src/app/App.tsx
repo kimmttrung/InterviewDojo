@@ -1,7 +1,6 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from '../contexts/ThemeContext';
-import { QueryClientProvider } from '@tanstack/react-query';
 import { Toaster as Sonner } from '../shared/components/ui/sonner';
 import { TooltipProvider } from '@radix-ui/react-tooltip';
 import { Toaster } from '../shared/components/ui/toaster';
@@ -21,8 +20,8 @@ import AdminDashboard from '../features/admin/dashboard/pages/AdminDashboard';
 import CategoriesPage from '../features/admin/category-management/pages/CategoriesPage';
 import CompaniesPage from '../features/admin/company-management/pages/CompaniesPage';
 import SelectTargetRole from '../features/candidate/target-role/pages/SelectTargetRole';
-import Login from '../features/shared-domain/auth/pages/Login';
-import Register from '../features/shared-domain/auth/pages/Register';
+import Login from '../features/auth/pages/Login';
+import Register from '../features/auth/pages/Register';
 import InterviewRoom from '../features/candidate/practice/interviews/peer-interview/pages/InterviewRoom';
 import SoloRecording from '../features/candidate/practice/interviews/solo-ai/pages/SoloRecording';
 import PeerMatchingPage from '../features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage';
@@ -30,125 +29,235 @@ import QuestionBank from '../features/shared-domain/question-bank/pages/Question
 import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
 
-interface ProtectedRouteProps {
-  element: React.ReactNode;
-  roles?: string[]; // optional, chỉ định role được phép
-}
-
-const ProtectedRoute = ({ element, roles }: ProtectedRouteProps) => {
-  const userStore = localStorage.getItem('user');
-  if (!userStore) return <Navigate to="/login" replace />;
-
-  const user = JSON.parse(userStore);
-
-  // role check
-  if (roles && !roles.includes(user.role)) {
-    return <Navigate to="/unauthorized" replace />;
-  }
-  return element;
-};
-
-interface AppProps {
-  queryClient: any;
-}
-
-export function App({ queryClient }: AppProps) {
-  return (
-    <I18nextProvider i18n={i18n}>
-      <ThemeProvider>
-        <QueryClientProvider client={queryClient}>
-          <TooltipProvider>
-            <Toaster />
-            <Sonner position="top-right" duration={3000} richColors closeButton />
-            <Routes>
-              <Route path="*" element={<NotFound />} />
-              <Route path="/unauthorized" element={<Unauthorized />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/candidate/setup" element={<SelectRoleGuard />} />
-              <Route
-                path="/mentor/setup"
-                element={<ProtectedRoute element={<MentorSetup />} roles={['MENTOR']} />}
-              />
-              <Route
-                path="/interview/:roomId"
-                element={<ProtectedRoute element={<InterviewRoom />} />}
-              />
-              <Route path="/dashboard" element={<ProtectedRoute element={<Dashboard />} />} />
-              <Route path="/" element={<ProtectedRoute element={<Home />} />} />
-              <Route
-                path="/practice"
-                element={<ProtectedRoute element={<Practice />} roles={['CANDIDATE']} />}
-              />
-              <Route
-                path="/practice/solo-recording"
-                element={<ProtectedRoute element={<SoloRecording />} roles={['CANDIDATE']} />}
-              />
-              <Route
-                path="/practice/matching"
-                element={<ProtectedRoute element={<PeerMatchingPage />} roles={['CANDIDATE']} />}
-              />
-              <Route
-                path="/question-bank"
-                element={<ProtectedRoute element={<QuestionBank />} />}
-              />
-              <Route
-                path="/questions/:id/:slug"
-                element={<ProtectedRoute element={<QuestionBankDetail />} />}
-              />
-              <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
-              <Route
-                path="/mentor/dashboard"
-                element={<ProtectedRoute element={<MentorDashboard />} roles={['MENTOR']} />}
-              />
-              <Route
-                path="/mentor/bookings"
-                element={<ProtectedRoute element={<MentorBookings />} roles={['MENTOR']} />}
-              />
-              <Route
-                path="/mentor/schedule"
-                element={<ProtectedRoute element={<MentorSchedule />} roles={['MENTOR']} />}
-              />
-              <Route
-                path="/mentor/profile"
-                element={<ProtectedRoute element={<MentorProfile />} roles={['MENTOR']} />}
-              />
-              <Route path="/admin/dashboard" element={<AdminDashboard />} />
-              <Route path="/admin/questions" element={<QuestionsPage />} />
-              <Route path="/admin/categories" element={<CategoriesPage />} />
-              <Route path="/admin/companies" element={<CompaniesPage />} />
-              <Route
-                path="/ai-analysis/:recordingId"
-                element={<ProtectedRoute element={<AIAnalysisResult />} roles={['CANDIDATE']} />}
-              />
-              <Route
-                path="/mentors/:mentorId"
-                element={<ProtectedRoute element={<MentorDetailPage />} roles={['CANDIDATE']} />}
-              />
-            </Routes>
-          </TooltipProvider>
-        </QueryClientProvider>
-      </ThemeProvider>
-    </I18nextProvider>
-  );
-}
-
-// Tách logic SelectRole ra để dễ quản lý
+// ──────────────────────────────────────────
+// Guard cho trang chọn target role
+// ──────────────────────────────────────────
 const SelectRoleGuard = () => {
-  const userStore = localStorage.getItem('user');
-  if (!userStore) return <Navigate to="/login" replace />;
+  const { data: user, isLoading } = useCurrentUser();
 
-  const user = JSON.parse(userStore);
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      </div>
+    );
+  }
 
-  // Nếu chưa có targetRole thì mới cho ở lại trang chọn role
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   if (!user.targetRole) {
     return <SelectTargetRole />;
   }
 
-  // Nếu đã có rồi thì về Home luôn
   return <Navigate to="/" replace />;
 };
+
+// ──────────────────────────────────────────
+// App component chính
+// ──────────────────────────────────────────
+export function App() {
+  return (
+    <I18nextProvider i18n={i18n}>
+      <ThemeProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner position="top-right" duration={3000} richColors closeButton />
+          <Routes>
+            <Route path="*" element={<NotFound />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+
+            {/* Target Role Setup */}
+            <Route path="/candidate/setup" element={<SelectRoleGuard />} />
+            <Route
+              path="/mentor/setup"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorSetup />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Interview Room */}
+            <Route
+              path="/interview/:roomId"
+              element={
+                <ProtectedRoute>
+                  <InterviewRoom />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Dashboard & Home */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute>
+                  <Dashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/"
+              element={
+                <ProtectedRoute>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Practice – chỉ candidate */}
+            <Route
+              path="/practice"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <Practice />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/practice/solo-recording"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <SoloRecording />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/practice/matching"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <PeerMatchingPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Question Bank (ai cũng xem được nếu đã login) */}
+            <Route
+              path="/question-bank"
+              element={
+                <ProtectedRoute>
+                  <QuestionBank />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/questions/:id/:slug"
+              element={
+                <ProtectedRoute>
+                  <QuestionBankDetail />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Profile */}
+            <Route
+              path="/profile"
+              element={
+                <ProtectedRoute>
+                  <Profile />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/mentors/:mentorId"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <MentorDetailPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Mentor routes */}
+            <Route
+              path="/mentor/dashboard"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/bookings"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorBookings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/schedule"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorSchedule />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/profile"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorProfile />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* Admin routes – bắt buộc role ADMIN */}
+            <Route
+              path="/admin/dashboard"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <AdminDashboard />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/questions"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <QuestionsPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/categories"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <CategoriesPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/admin/companies"
+              element={
+                <ProtectedRoute roles={['ADMIN']}>
+                  <CompaniesPage />
+                </ProtectedRoute>
+              }
+            />
+
+            {/* AI Analysis */}
+            <Route
+              path="/ai-analysis/:recordingId"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <AIAnalysisResult />
+                </ProtectedRoute>
+              }
+            />
+          </Routes>
+        </TooltipProvider>
+      </ThemeProvider>
+    </I18nextProvider>
+  );
+}
 
 export default App;

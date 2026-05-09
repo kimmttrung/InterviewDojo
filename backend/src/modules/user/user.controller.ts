@@ -1,4 +1,9 @@
 import {
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
   Controller,
   Get,
   Put,
@@ -19,6 +24,11 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
 import { Post } from '@nestjs/common';
 import { Role } from '@/common/enums/role.enum';
+import { ResponseMessage } from '@/common/decorators/response-message.decorator';
+import { Messages } from '@/common/constants/messages.constant';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { ApiConsumes } from '@nestjs/swagger';
+import { UploadedFileType } from '../../common/types/uploaded-file.type';
 
 @ApiTags('Users')
 @Controller('users')
@@ -28,20 +38,22 @@ export class UserController {
 
   @ApiBearerAuth()
   @Get('me')
+  @ResponseMessage(Messages.USER.PROFILE_FETCHED)
   async getMe(@CurrentUser() user: JwtPayload) {
-    console.log('User ID nhận được:', user.sub);
     return this.userService.getMe(Number(user.sub));
   }
 
   //Thieu bang history interview/answered question
   @ApiBearerAuth()
   @Get('stats')
+  @ResponseMessage(Messages.USER.PROFILE_FETCHED)
   async getStats(@CurrentUser() user: JwtPayload) {
     return this.userService.getStats(Number(user.sub));
   }
 
   @ApiBearerAuth()
   @Put('me') // Đổi từ PATCH sang PUT
+  @ResponseMessage(Messages.USER.PROFILE_UPDATED)
   async updateMe(
     @CurrentUser() user: JwtPayload,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
@@ -67,6 +79,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CANDIDATE)
   @Patch('target-role')
+  @ResponseMessage(Messages.USER.TARGET_ROLE_UPDATED)
   async updateTargetRole(
     @CurrentUser() user: JwtPayload,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
@@ -75,10 +88,31 @@ export class UserController {
     return this.userService.updateTargetRole(Number(user.sub), dto);
   }
 
+  @Post('me/avatar')
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  @ResponseMessage(Messages.USER.AVATAR_UPLOADED)
+  async uploadAvatar(
+    @CurrentUser() user: JwtPayload,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5_000_000 }), // 5MB
+          new FileTypeValidator({ fileType: /^(image\/(jpeg|png|webp))$/i }),
+        ],
+      }),
+    )
+    file: UploadedFileType,
+  ) {
+    return this.userService.uploadAvatar(Number(user.sub), file);
+  }
+
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR)
   @Post('mentor-profile')
+  @ResponseMessage(Messages.USER.MENTOR_PROFILE_CREATED)
   async createMentorProfile(
     @CurrentUser() user: JwtPayload,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
