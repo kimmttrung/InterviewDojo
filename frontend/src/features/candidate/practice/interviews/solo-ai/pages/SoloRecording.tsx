@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 import { Layout } from '../../../../../../shared/components/layout/Layout';
 import { Card } from '../../../../../../shared/components/ui/card';
 import { Button } from '../../../../../../shared/components/ui/button';
+import { useCurrentUser } from '@/features/auth';
 
 const MOCK_QUESTIONS = [
   'Giới thiệu về bản thân bạn.',
@@ -33,6 +34,7 @@ const MOCK_QUESTIONS = [
 
 export default function SoloRecording() {
   const navigate = useNavigate();
+  const { data: currentUser } = useCurrentUser();
   const [step, setStep] = useState<'setup' | 'recording' | 'preview' | 'analysis'>('setup');
 
   // Refs & Media
@@ -61,8 +63,6 @@ export default function SoloRecording() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showQuestion, setShowQuestion] = useState(true);
   const [showTranscript, setShowTranscript] = useState(true);
-
-  const user = JSON.parse(localStorage.getItem('user') || 'null');
 
   //AUTO-SCROLL TRANSCRIPT
   useEffect(() => {
@@ -385,7 +385,7 @@ export default function SoloRecording() {
   // HÀM CHÍNH: ĐIỀU PHỐI LUỒNG CHẠY
   // Ver 5: Chạy ngầm upload video, song song với AI analysis
   const handleUploadAndAnalyze = async () => {
-    if (!user) return alert('Please log in to continue');
+    if (!currentUser) return alert('Please log in to continue');
     const finalTranscriptText = (liveTranscript + ' ' + isInterim).trim();
     if (!finalTranscriptText) {
       return alert('Không nhận diện được giọng nói của bạn. Vui lòng thử thu âm lại!');
@@ -403,7 +403,7 @@ export default function SoloRecording() {
 
       // 2. CHUẨN BỊ FORM DATA CHO CẢ HAI
       const analyzePayload = {
-        userId: Number(user.id),
+        userId: Number(currentUser.id),
         duration: seconds,
         question: selectedQuestion,
         transcript: finalTranscriptText,

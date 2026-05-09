@@ -1,7 +1,11 @@
+// features/mentor/dashboard/components/MentorNavbar.tsx
 import { Moon, Sun, LogOut, UserIcon } from 'lucide-react';
-import { Button } from '../../../../shared/components/ui/button';
+import { Button } from '@/shared/components/ui/button';
 import { useNavigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
+import { useQueryClient } from '@tanstack/react-query';
 
 import {
   DropdownMenu,
@@ -9,32 +13,22 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../../../../shared/components/ui/dropdown-menu';
+} from '@/shared/components/ui/dropdown-menu';
 
-import { Avatar, AvatarImage, AvatarFallback } from '../../../../shared/components/ui/avatar';
-import { useTheme } from '../../../../contexts/ThemeContext';
+import { Avatar, AvatarImage, AvatarFallback } from '@/shared/components/ui/avatar';
 
 export function MentorNavbar() {
   const { theme, setTheme } = useTheme();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const userStore = localStorage.getItem('user');
-    if (userStore) {
-      try {
-        setUser(JSON.parse(userStore));
-      } catch (err) {
-        console.warn('Invalid user in localStorage, clearing...');
-        localStorage.removeItem('user');
-        setUser(null);
-      }
-    }
-  }, []);
+  // Auth state
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const { data: user } = useCurrentUser();
 
   const handleLogout = () => {
-    localStorage.clear();
+    clearAuth(); // xóa token + isAuthenticated
+    queryClient.clear(); // xóa cache React Query
     navigate('/login');
   };
 
@@ -46,7 +40,6 @@ export function MentorNavbar() {
           <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold">
             M
           </div>
-
           <span className="font-semibold">Mentor Panel</span>
         </div>
 
@@ -59,7 +52,6 @@ export function MentorNavbar() {
                 {theme === 'dark' ? <Moon /> : <Sun />}
               </Button>
             </DropdownMenuTrigger>
-
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => setTheme('light')}>Light</DropdownMenuItem>
               <DropdownMenuItem onClick={() => setTheme('dark')}>Dark</DropdownMenuItem>
@@ -72,8 +64,12 @@ export function MentorNavbar() {
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" className="h-9 w-9 rounded-full">
                 <Avatar>
-                  <AvatarImage src={user?.avatarUrl} />
-                  <AvatarFallback>{user?.email?.charAt(0).toUpperCase()}</AvatarFallback>
+                  <AvatarImage src={user?.avatarUrl || undefined} />
+                  <AvatarFallback>
+                    {user?.email?.charAt(0).toUpperCase() ||
+                      user?.name?.charAt(0).toUpperCase() ||
+                      '?'}
+                  </AvatarFallback>
                 </Avatar>
               </Button>
             </DropdownMenuTrigger>
@@ -83,9 +79,7 @@ export function MentorNavbar() {
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
               </DropdownMenuItem>
-
               <DropdownMenuSeparator />
-
               <DropdownMenuItem onClick={handleLogout} className="text-red-500">
                 <LogOut className="mr-2 h-4 w-4" />
                 Logout
