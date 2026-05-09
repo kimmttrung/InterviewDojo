@@ -3,6 +3,8 @@ import {
   PrismaClient,
   Difficulty,
   QuestionType,
+  Role,
+  ApprovalStatus,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -1222,6 +1224,97 @@ async function main() {
       data: allTestCases,
     });
   }
+
+// 6. SEED MOCK MENTOR FOR BOOK MENTOR DETAIL
+  const mentorUser = await prisma.user.upsert({
+    where: {
+      email: 'mentor.demo@interviewdojo.com',
+    },
+    update: {
+      name: 'Nguyễn Văn Mentor',
+      role: Role.MENTOR,
+      bio: 'Senior Backend Engineer với hơn 5 năm kinh nghiệm xây dựng hệ thống backend, thiết kế API, database và phỏng vấn ứng viên technical interview.',
+      avatarUrl: 'https://i.pravatar.cc/300?img=12',
+      experienceYears: 5,
+    },
+    create: {
+      email: 'mentor.demo@interviewdojo.com',
+      password: '123456',
+      name: 'Nguyễn Văn Mentor',
+      role: Role.MENTOR,
+      bio: 'Senior Backend Engineer với hơn 5 năm kinh nghiệm xây dựng hệ thống backend, thiết kế API, database và phỏng vấn ứng viên technical interview.',
+      avatarUrl: 'https://i.pravatar.cc/300?img=12',
+      experienceYears: 5,
+    },
+  });
+
+  await prisma.mentorProfile.upsert({
+    where: {
+      userId: mentorUser.id,
+    },
+    update: {
+      approvalStatus: ApprovalStatus.APPROVED,
+    },
+    create: {
+      userId: mentorUser.id,
+      approvalStatus: ApprovalStatus.APPROVED,
+      cvUrl: 'https://example.com/cv.pdf',
+      certificateUrl: 'https://example.com/certificate.pdf',
+    },
+  });
+
+  let company = await prisma.company.findFirst({
+    where: {
+      name: 'Meta',
+    },
+  });
+
+  if (!company) {
+    company = await prisma.company.create({
+      data: {
+        name: 'Meta',
+        logoUrl: 'https://logo.clearbit.com/meta.com',
+        industry: 'Technology',
+      },
+    });
+  }
+
+  let jobRole = await prisma.jobRole.findFirst({
+    where: {
+      name: 'Senior Backend Engineer',
+    },
+  });
+
+  if (!jobRole) {
+    jobRole = await prisma.jobRole.create({
+      data: {
+        name: 'Senior Backend Engineer',
+        description:
+          'Thiết kế hệ thống backend, xây dựng REST API, tối ưu database và review kiến trúc hệ thống.',
+      },
+    });
+  }
+
+  await prisma.experience.deleteMany({
+    where: {
+      mentorId: mentorUser.id,
+    },
+  });
+
+  await prisma.experience.create({
+    data: {
+      mentorId: mentorUser.id,
+      companyId: company.id,
+      jobRoleId: jobRole.id,
+      description:
+        'Phụ trách thiết kế API, tối ưu PostgreSQL, xây dựng service bằng NestJS, review code cho junior developer và tham gia phỏng vấn kỹ thuật ứng viên backend.',
+      startDate: new Date('2021-01-01'),
+      endDate: null,
+      isCurrent: true,
+    },
+  });
+
+  console.log('✅ Mock mentor seeded!');
 
   console.log('✅ Seed completed!');
 }
