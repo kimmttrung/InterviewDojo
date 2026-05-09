@@ -30,6 +30,7 @@ import QuestionBank from '../features/shared-domain/question-bank/pages/Question
 import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
+import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
 
 interface ProtectedRouteProps {
   element: React.ReactNode;
@@ -93,9 +94,13 @@ export function App({ queryClient }: AppProps) {
                 path="/question-bank"
                 element={<ProtectedRoute element={<QuestionBank />} />}
               />
-              <Route
+              {/* <Route
                 path="/questions/:id/:slug"
                 element={<ProtectedRoute element={<QuestionBankDetail />} />}
+              /> */}
+              <Route
+                path="/questions/:id/:slug"
+                element={<ProtectedRoute element={<QuestionDetailContainer />} />}
               />
               <Route path="/profile" element={<ProtectedRoute element={<Profile />} />} />
               <Route

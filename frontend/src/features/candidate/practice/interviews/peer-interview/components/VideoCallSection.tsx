@@ -2,7 +2,6 @@ import {
   SpeakerLayout,
   useCall,
   useCallStateHooks,
-  ParticipantView,
   StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { useNavigate } from 'react-router-dom';
