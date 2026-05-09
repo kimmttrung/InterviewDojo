@@ -6,45 +6,49 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
-import { Role, ApprovalStatus, SkillLevel, SessionMode } from '@prisma/client';
+import {
+  Role,
+  ApprovalStatus,
+  SkillLevel,
+  SessionMode,
+  Prisma,
+} from '@prisma/client'; // Import Prisma
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UploadedFileType } from '../../common/types/uploaded-file.type';
+
+// Định nghĩa type cho User với các relation cần thiết
+type UserWithRelations = Prisma.UserGetPayload<{
+  include: {
+    targetRole: true;
+    skills: {
+      include: {
+        skill: true;
+      };
+    };
+  };
+}>;
 
 @Injectable()
 export class UserService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly cloudinaryService: CloudinaryService,
+  ) {}
+
+  // ========== USER PROFILE ==========
 
   async getMe(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
       include: {
         targetRole: true,
-        skills: {
-          include: { skill: true },
-        },
+        skills: { include: { skill: true } },
       },
     });
 
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
-    return {
-      id: user.id,
-      email: user.email,
-      name: user.name,
-      bio: user.bio,
-      target_role: user.targetRole?.name || null,
-      experience_years: user.experienceYears,
-      current_level: this.calculateLevel(user.experienceYears),
-      avatar_url: user.avatarUrl,
-      credit_balance: user.creditBalance,
-      role: user.role,
-      status: user.status,
-      skills: user.skills?.map((us) => ({
-        id: us.skill.id,
-        name: us.skill.name || 'Unknown',
-        type: us.skill.type,
-        level: us.level,
-        time_use: us.timeUse,
-      })),
-    };
+    return this.mapUserResponse(user);
   }
 
   async updateMe(userId: number, dto: UpdateUserDto) {
@@ -68,7 +72,7 @@ export class UserService {
       data: {
         name: dto.name,
         bio: dto.bio,
-        avatarUrl: dto.avatar_url,
+        // ❌ avatarUrl đã bị loại bỏ – không cho phép cập nhật avatar ở đây
         experienceYears: dto.experience_years,
         ...(dto.target_role_id && {
           targetRole: { connect: { id: dto.target_role_id } },
@@ -81,36 +85,15 @@ export class UserService {
       },
     });
 
-    return {
-      message: 'Cập nhật thông tin thành công',
-      data: {
-        id: updatedUser.id,
-        email: updatedUser.email,
-        name: updatedUser.name,
-        bio: updatedUser.bio,
-        target_role: updatedUser.targetRole?.name || null,
-        experience_years: updatedUser.experienceYears,
-        current_level: this.calculateLevel(updatedUser.experienceYears),
-        avatar_url: updatedUser.avatarUrl,
-        credit_balance: updatedUser.creditBalance,
-        role: updatedUser.role,
-        status: updatedUser.status,
-        skills: updatedUser.skills.map((us) => ({
-          id: us.skill.id,
-          name: us.skill.name,
-          type: us.skill.type,
-          level: us.level,
-          time_use: us.timeUse,
-        })),
-      },
-    };
+    return this.mapUserResponse(updatedUser);
   }
+
+  // ========== STATS ==========
 
   async getStats(userId: number) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new NotFoundException('Người dùng không tồn tại');
 
-    // Query số liệu thực tế từ database
     const soloSessionsCount = await this.prisma.mockSession.count({
       where: { intervieweeId: userId, mode: SessionMode.SOLO },
     });
@@ -135,26 +118,25 @@ export class UserService {
         : 0;
 
     return {
-      total_code_submissions: totalSubmissions, // Thay total_questions_viewed bằng code submissions cho thực tế
-      total_practice_sessions: soloSessionsCount + meetSessionsCount,
-      practice_breakdown: {
-        solo_mode: soloSessionsCount,
-        peer_mode: meetSessionsCount,
+      totalCodeSubmissions: totalSubmissions,
+      totalPracticeSessions: soloSessionsCount + meetSessionsCount,
+      practiceBreakdown: {
+        soloMode: soloSessionsCount,
+        peerMode: meetSessionsCount,
       },
-      average_score: Number(averageScore.toFixed(1)),
-      streak_days: 5, // Tạm thời hardcode nếu bạn chưa có bảng tracking daily login
+      averageScore: Number(averageScore.toFixed(1)),
+      streakDays: 5,
     };
   }
+
+  // ========== TARGET ROLE ==========
 
   async updateTargetRole(userId: number, dto: { target_role_id: number }) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
     });
 
-    if (!user) {
-      throw new NotFoundException('User không tồn tại');
-    }
-
+    if (!user) throw new NotFoundException('User không tồn tại');
     if (user.role !== Role.CANDIDATE) {
       throw new BadRequestException(
         'Chỉ CANDIDATE mới được cập nhật target role',
@@ -165,50 +147,77 @@ export class UserService {
       where: { id: dto.target_role_id },
     });
 
-    if (!role) {
-      throw new BadRequestException('Target role (Job Role) không tồn tại');
-    }
+    if (!role) throw new BadRequestException('Target role không tồn tại');
 
-    const updatedUser = await this.prisma.user.update({
+    await this.prisma.user.update({
       where: { id: userId },
-      data: {
-        targetRole: {
-          connect: { id: dto.target_role_id },
-        },
-      },
-      include: {
-        targetRole: true,
-      },
+      data: { targetRole: { connect: { id: dto.target_role_id } } },
     });
 
-    return {
-      message: 'Cập nhật target role thành công',
-      data: {
-        target_role: updatedUser.targetRole?.name,
-      },
-    };
+    return { targetRole: role.name };
   }
 
-  async createMentorProfile(userId: number, dto: CreateMentorProfileDto) {
-    const user = await this.prisma.user.findUnique({
+  // ========== AVATAR ==========
+
+  async uploadAvatar(userId: number, file: UploadedFileType) {
+    // 1. Validate file size
+    if (file.size > 5 * 1024 * 1024) {
+      throw new BadRequestException('File quá lớn, tối đa 5MB');
+    }
+
+    // 2. Validate loại file
+    const allowedMimeTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedMimeTypes.includes(file.mimetype)) {
+      throw new BadRequestException('Chỉ chấp nhận ảnh JPEG, PNG, WebP');
+    }
+
+    // 3. Lấy avatar cũ (nếu có)
+    const currentUser = await this.prisma.user.findUnique({
       where: { id: userId },
+      select: { avatarUrl: true },
+    });
+    const oldAvatarUrl = currentUser?.avatarUrl;
+
+    // 4. Upload lên Cloudinary
+    const result = await this.cloudinaryService.uploadAvatar(file);
+
+    // 5. Cập nhật DB
+    const updatedUser = await this.prisma.user.update({
+      where: { id: userId },
+      data: { avatarUrl: result.secure_url },
+      include: {
+        targetRole: true,
+        skills: { include: { skill: true } },
+      },
     });
 
-    if (!user) {
-      throw new NotFoundException('User không tồn tại');
+    // 6. Xoá avatar cũ (nếu có)
+    if (oldAvatarUrl) {
+      const publicId = this.extractPublicId(oldAvatarUrl);
+      if (publicId) {
+        try {
+          await this.cloudinaryService.deleteFile(publicId, 'image');
+        } catch (err) {
+          console.error('Xoá ảnh cũ thất bại:', err);
+        }
+      }
     }
 
-    if (user.role !== Role.MENTOR) {
+    return this.mapUserResponse(updatedUser);
+  }
+
+  // ========== MENTOR PROFILE ==========
+
+  async createMentorProfile(userId: number, dto: CreateMentorProfileDto) {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User không tồn tại');
+    if (user.role !== Role.MENTOR)
       throw new BadRequestException('Bạn không phải mentor');
-    }
 
     const existing = await this.prisma.mentorProfile.findUnique({
       where: { userId },
     });
-
-    if (existing) {
-      throw new BadRequestException('Mentor profile đã tồn tại');
-    }
+    if (existing) throw new BadRequestException('Mentor profile đã tồn tại');
 
     return this.prisma.mentorProfile.create({
       data: {
@@ -218,6 +227,44 @@ export class UserService {
         approvalStatus: ApprovalStatus.PENDING,
       },
     });
+  }
+
+  // ========== HELPERS ==========
+
+  private mapUserResponse(user: UserWithRelations) {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      bio: user.bio,
+      targetRole: user.targetRole?.name || null,
+      experienceYears: user.experienceYears,
+      currentLevel: this.calculateLevel(user.experienceYears),
+      avatarUrl: user.avatarUrl,
+      creditBalance: user.creditBalance,
+      role: user.role,
+      status: user.status,
+      skills: user.skills.map((us) => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        type: us.skill.type,
+        level: us.level,
+        timeUse: us.timeUse,
+      })),
+    };
+  }
+
+  private extractPublicId(url: string): string | null {
+    try {
+      const regex = /\/upload\/(?:v\d+\/)?(.+)$/;
+      const match = url.match(regex);
+      if (match && match[1]) {
+        return match[1].replace(/\.\w+$/, '');
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   private calculateLevel(years: number): string {
