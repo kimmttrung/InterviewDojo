@@ -57,21 +57,29 @@ export class BookingService {
       }
 
       // 3. Tạo Booking
-      const booking = await tx.booking.create({
+      const booking = await this.prisma.booking.create({
         data: {
           candidateId,
           mentorId: slot.mentorId,
           slotId: data.slotId,
           coachingPlanId: plan.id,
+
           status: BookingStatus.PENDING,
+
+          snapshotPlanTitle: plan.title,
+
+          snapshotPlanDescription: plan.description,
+
+          snapshotPlanPrice: plan.price,
+
+          snapshotPlanDuration: plan.duration,
         },
-        include: { coachingPlan: true },
       });
 
       // 4. Khóa Slot lại
       await tx.slot.update({
         where: { id: data.slotId },
-        data: { status: SlotStatus.BOOKED },
+        data: { status: SlotStatus.BLOCKED },
       });
 
       return this.mapToBookingResponse(booking);
@@ -147,8 +155,8 @@ export class BookingService {
     }
 
     return this.prisma.$transaction(async (tx) => {
-      // Nếu Mentor HỦY lịch (CANCELLED), nhả Slot đó ra để người khác có thể book lại
-      if (data.status === BookingStatus.CANCELLED) {
+      // Nếu Mentor HỦY lịch (REJECTED), nhả Slot đó ra để người khác có thể book lại
+      if (data.status === BookingStatus.REJECTED) {
         await tx.slot.update({
           where: { id: booking.slotId },
           data: { status: SlotStatus.AVAILABLE },

@@ -54,7 +54,7 @@ export class UserService {
           deleteMany: {},
           create: dto.skill_ids.map((skillId) => ({
             skill: { connect: { id: skillId } },
-            timeUse: 0,
+            experienceMonths: 0,
             level: SkillLevel.LEARNING,
           })),
         }
@@ -199,6 +199,28 @@ export class UserService {
     return this.mapUserResponse(updatedUser);
   }
 
+  // ========== MENTOR PROFILE ==========
+
+  // async createMentorProfile(userId: number, dto: CreateMentorProfileDto) {
+  //   const user = await this.prisma.user.findUnique({ where: { id: userId } });
+  //   if (!user) throw new NotFoundException('User không tồn tại');
+  //   if (user.role !== Role.MENTOR)
+  //     throw new BadRequestException('Bạn không phải mentor');
+
+  //   const existing = await this.prisma.mentorProfile.findUnique({
+  //     where: { userId },
+  //   });
+  //   if (existing) throw new BadRequestException('Mentor profile đã tồn tại');
+
+  //   return this.prisma.mentorProfile.create({
+  //     data: {
+  //       userId,
+  //       approvalStatus: ApprovalStatus.PENDING,
+  //       headline: 'Backend Engineer',
+  //     },
+  //   });
+  // }
+
   // ========== HELPERS ==========
 
   private mapUserResponse(user: UserWithRelations) {
@@ -219,7 +241,7 @@ export class UserService {
         name: us.skill.name,
         type: us.skill.type,
         level: us.level,
-        timeUse: us.timeUse,
+        experienceMonths: us.experienceMonths,
       })),
     };
   }

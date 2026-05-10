@@ -96,7 +96,7 @@ export class SoloRecordingController {
       type: 'object',
       properties: {
         userId: { type: 'number', example: 5 },
-        durationMinutes: { type: 'number', example: 90 },
+        duration: { type: 'number', example: 90 },
         question: { type: 'string', example: 'Tell me about yourself' },
         transcript: {
           type: 'string',

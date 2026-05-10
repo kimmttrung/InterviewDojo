@@ -11,7 +11,7 @@ export class MentorsService {
       where: {
         role: Role.MENTOR,
         mentorProfile: {
-          approvalStatus: ApprovalStatus.APPROVED,
+          approvalStatus: ApprovalStatus.ACTIVE,
         },
       },
       select: {
@@ -59,7 +59,7 @@ export class MentorsService {
               },
             },
             level: true,
-            timeUse: true,
+            experienceMonths: true,
           },
         },
       },
@@ -72,7 +72,7 @@ export class MentorsService {
         id,
         role: Role.MENTOR,
         mentorProfile: {
-          approvalStatus: ApprovalStatus.APPROVED,
+          approvalStatus: ApprovalStatus.ACTIVE,
         },
       },
       select: {
@@ -85,8 +85,6 @@ export class MentorsService {
         createdAt: true,
         mentorProfile: {
           select: {
-            cvUrl: true,
-            certificateUrl: true,
             approvalStatus: true,
             experiences: {
               orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
@@ -125,7 +123,7 @@ export class MentorsService {
               },
             },
             level: true,
-            timeUse: true,
+            experienceMonths: true,
           },
         },
       },
