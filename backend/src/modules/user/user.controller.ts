@@ -16,8 +16,6 @@ import { UpdateTargetRoleDto } from './dto/update-target-role.dto';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
-import { Post } from '@nestjs/common';
 import { Role } from '@/common/enums/role.enum';
 
 @ApiTags('Users')
@@ -73,17 +71,5 @@ export class UserController {
     dto: UpdateTargetRoleDto,
   ) {
     return this.userService.updateTargetRole(Number(user.sub), dto);
-  }
-
-  @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.MENTOR)
-  @Post('mentor-profile')
-  async createMentorProfile(
-    @CurrentUser() user: JwtPayload,
-    @Body(new ValidationPipe({ whitelist: true, transform: true }))
-    dto: CreateMentorProfileDto,
-  ) {
-    return this.userService.createMentorProfile(Number(user.sub), dto);
   }
 }

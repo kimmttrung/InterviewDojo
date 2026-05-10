@@ -1,0 +1,79 @@
+model MentorProfile {
+  userId         Int            @id @map("user_id")
+  cvUrl          String?        @map("cv_url")
+  certificateUrl String?        @map("certificate_url")
+  approvalStatus ApprovalStatus @default(PENDING) @map("approval_status")
+  createdAt      DateTime       @default(now()) @map("created_at")
+  updatedAt      DateTime       @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences         Experience[]     @relation("MentorExperiences")
+
+  @@map("mentor_profiles")
+}
+
+model Experience {
+  id          Int       @id @default(autoincrement())
+  mentorId    Int       @map("mentor_id")
+  companyId   Int       @map("company_id")
+  jobRoleId   Int       @map("job_role_id")
+  description String?
+  startDate   DateTime  @map("start_date")
+  endDate     DateTime? @map("end_date")
+  isCurrent   Boolean   @default(false) @map("is_current")
+
+  mentor  MentorProfile @relation("MentorExperiences", fields: [mentorId], references: [userId], onDelete: Cascade)
+  company Company       @relation(fields: [companyId], references: [id])
+  jobRole JobRole       @relation(fields: [jobRoleId], references: [id])
+
+  @@map("experiences")
+}
+
+model Company {
+  id       Int     @id @default(autoincrement())
+  name     String  @unique
+  logoUrl  String? @map("logo_url")
+  industry String?
+
+  experiences Experience[]
+  questions   QuestionCompany[]
+
+  @@map("companies")
+}
+
+model Slot {
+  id        Int        @id @default(autoincrement())
+  mentorId  Int        @map("mentor_id")
+  startTime DateTime   @map("start_time")
+  endTime   DateTime   @map("end_time")
+  status    SlotStatus @default(AVAILABLE)
+  createdAt DateTime   @default(now()) @map("created_at")
+
+  mentor   User      @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
+  booking  Booking?
+
+  @@map("slots")
+}
+
+model Booking {
+  id          Int           @id @default(autoincrement())
+  slotId      Int           @unique @map("slot_id")
+  candidateId Int           @map("candidate_id")
+  price       Float         @default(0.0)
+  status      BookingStatus @default(PENDING)
+  createdAt   DateTime      @default(now()) @map("created_at")
+
+  slot Slot                 @relation(fields: [slotId], references: [id], onDelete: Cascade)
+  candidate   User          @relation("CandidateBookings", fields: [candidateId], references: [id])
+
+  mockSessions MockSession[]
+
+  @@index([candidateId])
+  @@map("bookings")
+}
+
+Story: user lựa chọn bằng cách bấm nút Schedule with mentor => hiển thị danh sách Mentor,
+tại đây có thể tìm kiếm tên, roles, công ty, lĩnh vực,... hoặc sử dụng cộng cụ lọc để tìm
+ kiếm (roles, companies, skills, industry (lĩnh vực) => các lựa chọn này có thể lựa chọn
+ nhiều chứ không phải là một) => người dùng có thể xem tên, description, rating, title,
+ số mock session đã phỏng vấn => bấm Book thì hiển thị thông tin chi tiết, ví dụ:

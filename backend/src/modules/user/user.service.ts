@@ -5,8 +5,7 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
-import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
-import { Role, ApprovalStatus, SkillLevel, SessionMode } from '@prisma/client';
+import { Role, SkillLevel, SessionMode } from '@prisma/client';
 
 @Injectable()
 export class UserService {
@@ -187,37 +186,6 @@ export class UserService {
         target_role: updatedUser.targetRole?.name,
       },
     };
-  }
-
-  async createMentorProfile(userId: number, dto: CreateMentorProfileDto) {
-    const user = await this.prisma.user.findUnique({
-      where: { id: userId },
-    });
-
-    if (!user) {
-      throw new NotFoundException('User không tồn tại');
-    }
-
-    if (user.role !== Role.MENTOR) {
-      throw new BadRequestException('Bạn không phải mentor');
-    }
-
-    const existing = await this.prisma.mentorProfile.findUnique({
-      where: { userId },
-    });
-
-    if (existing) {
-      throw new BadRequestException('Mentor profile đã tồn tại');
-    }
-
-    return this.prisma.mentorProfile.create({
-      data: {
-        userId,
-        cvUrl: dto.cvUrl,
-        certificateUrl: dto.certificateUrl,
-        approvalStatus: ApprovalStatus.PENDING,
-      },
-    });
   }
 
   private calculateLevel(years: number): string {

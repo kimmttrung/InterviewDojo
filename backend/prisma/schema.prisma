@@ -23,6 +23,7 @@ enum ApprovalStatus {
 
 enum SlotStatus {
   AVAILABLE
+  BOOKED
   BLOCKED
 }
 
@@ -124,6 +125,7 @@ model MentorProfile {
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
   experiences         Experience[]     @relation("MentorExperiences")
+  coachingPlans       CoachingPlan[]   @relation("MentorPlans")
 
   @@map("mentor_profiles")
 }
@@ -189,20 +191,40 @@ model Slot {
 
 model Booking {
   id          Int           @id @default(autoincrement())
-  slotId      Int           @unique @map("slot_id") 
+  slotId      Int           @unique @map("slot_id")
   candidateId Int           @map("candidate_id")
-  price       Float         @default(0.0)
+  mentorId    Int?          @map("mentor_id")
+  coachingPlanId Int?           @map("coaching_plan_id")
   status      BookingStatus @default(PENDING)
   createdAt   DateTime      @default(now()) @map("created_at")
 
   slot Slot                 @relation(fields: [slotId], references: [id], onDelete: Cascade)
   candidate   User          @relation("CandidateBookings", fields: [candidateId], references: [id])
-
+  coachingPlan   CoachingPlan?  @relation(fields: [coachingPlanId], references: [id])
   mockSessions MockSession[]
 
   @@index([candidateId])
   @@map("bookings")
 }
+
+model CoachingPlan {
+  id          Int      @id @default(autoincrement())
+  mentorId    Int      @map("mentor_id")
+  title       String
+  description String?
+  duration    Int      // Lưu số phút
+  price       Float
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  mentorProfile MentorProfile @relation("MentorPlans", fields: [mentorId], references: [userId])
+  bookings    Booking[]
+
+  @@map("coaching_plans")
+}
+
+
 
 // ==================== QUESTION CORE ====================
 
