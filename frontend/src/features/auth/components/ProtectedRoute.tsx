@@ -1,0 +1,31 @@
+import { Navigate } from 'react-router-dom';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '../hooks/useCurrentUser';
+
+interface ProtectedRouteProps {
+  children: React.ReactNode;
+  roles?: string[];
+}
+
+export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const { data: user, isLoading } = useCurrentUser();
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  if (roles && !roles.includes(user.role)) {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
+  return <>{children}</>;
+};

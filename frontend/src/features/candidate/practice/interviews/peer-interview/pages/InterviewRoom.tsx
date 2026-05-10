@@ -1,4 +1,4 @@
-// src/pages/InterviewRoom.tsx
+// features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
@@ -83,6 +83,7 @@ export default function InterviewRoom() {
     };
   }, []);
 
+  // ✅ Hiển thị loading khi đang fetch user (tránh gọi useVideoCall với userId chưa sẵn sàng)
   if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
@@ -92,7 +93,6 @@ export default function InterviewRoom() {
       <StreamCall call={call}>
         <div className="h-screen flex flex-col bg-white overflow-hidden">
           <InterviewHeader roomId={roomId!} />
-
           <main className="flex-1 flex overflow-hidden">
             <QuestionPanel
               question={currentQuestion}
@@ -103,7 +103,6 @@ export default function InterviewRoom() {
               onTypeChange={handleTypeChange}
               onDifficultyChange={handleDifficultyChange}
             />
-
             <WorkspaceTabs
               workMode={workMode}
               setWorkMode={setWorkMode}
@@ -111,7 +110,6 @@ export default function InterviewRoom() {
               roomId={roomId!}
               userId={userId}
             />
-
             <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
               <VideoCallSection />
               <ChatAndNotes />
@@ -123,7 +121,6 @@ export default function InterviewRoom() {
   );
 }
 
-// Component loading
 function InterviewLoading({ roomId }: { roomId?: string }) {
   return (
     <div className="h-screen flex flex-col items-center justify-center bg-slate-900 text-white gap-4">
