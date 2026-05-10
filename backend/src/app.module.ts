@@ -21,6 +21,11 @@ import { CategoriesModule } from './modules/categories/categories.module';
 import { CompaniesModule } from './modules/companies/companies.module';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { TransformInterceptor } from './common/interceptors/transform.interceptor';
+import { MentorModule } from './modules/mentor/mentor.module';
+import { BookingModule } from './modules/booking/booking.module';
+import { PlanModule } from './modules/plan/plan.module';
+import { SlotModule } from './modules/slot/slot.module';
+import { PaymentModule } from './modules/payment/payment.module';
 import { MentorsModule } from './modules/mentors/mentors.module';
 
 @Module({
@@ -58,6 +63,11 @@ import { MentorsModule } from './modules/mentors/mentors.module';
     CodingModule,
     CategoriesModule,
     CompaniesModule,
+    MentorModule,
+    BookingModule,
+    PlanModule,
+    SlotModule,
+    PaymentModule,
     MentorsModule,
   ],
   controllers: [AppController],
