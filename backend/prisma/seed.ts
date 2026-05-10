@@ -1225,7 +1225,7 @@ async function main() {
     });
   }
 
-// 6. SEED MOCK MENTOR FOR BOOK MENTOR DETAIL
+  // 6. SEED MOCK MENTOR FOR BOOK MENTOR DETAIL
   const mentorUser = await prisma.user.upsert({
     where: {
       email: 'mentor.demo@interviewdojo.com',
@@ -1253,13 +1253,15 @@ async function main() {
       userId: mentorUser.id,
     },
     update: {
-      approvalStatus: ApprovalStatus.APPROVED,
+      headline: 'Senior Backend Engineer @ Meta',
+      approvalStatus: ApprovalStatus.ACTIVE,
+      introductionVideoUrl: 'https://example.com/intro-video',
     },
     create: {
       userId: mentorUser.id,
-      approvalStatus: ApprovalStatus.APPROVED,
-      cvUrl: 'https://example.com/cv.pdf',
-      certificateUrl: 'https://example.com/certificate.pdf',
+      headline: 'Senior Backend Engineer @ Meta',
+      approvalStatus: ApprovalStatus.ACTIVE,
+      introductionVideoUrl: 'https://example.com/intro-video',
     },
   });
 
@@ -1295,15 +1297,25 @@ async function main() {
     });
   }
 
+  const mentorProfile = await prisma.mentorProfile.findUnique({
+    where: {
+      userId: mentorUser.id,
+    },
+  });
+
+  if (!mentorProfile) {
+    throw new Error('Mentor profile not found');
+  }
+
   await prisma.experience.deleteMany({
     where: {
-      mentorId: mentorUser.id,
+      mentorId: mentorProfile.id,
     },
   });
 
   await prisma.experience.create({
     data: {
-      mentorId: mentorUser.id,
+      mentorId: mentorProfile.id,
       companyId: company.id,
       jobRoleId: jobRole.id,
       description:

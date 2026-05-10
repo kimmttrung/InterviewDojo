@@ -61,7 +61,7 @@ export class UserService {
           deleteMany: {},
           create: dto.skill_ids.map((skillId) => ({
             skill: { connect: { id: skillId } },
-            timeUse: 0,
+            experienceMonths: 0,
             level: SkillLevel.LEARNING,
           })),
         }
@@ -222,9 +222,8 @@ export class UserService {
     return this.prisma.mentorProfile.create({
       data: {
         userId,
-        cvUrl: dto.cvUrl,
-        certificateUrl: dto.certificateUrl,
         approvalStatus: ApprovalStatus.PENDING,
+        headline: 'Backend Engineer',
       },
     });
   }
@@ -249,7 +248,7 @@ export class UserService {
         name: us.skill.name,
         type: us.skill.type,
         level: us.level,
-        timeUse: us.timeUse,
+        experienceMonths: us.experienceMonths,
       })),
     };
   }
