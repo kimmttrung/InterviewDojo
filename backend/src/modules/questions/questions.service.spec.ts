@@ -45,7 +45,6 @@ describe('QuestionsService', () => {
           type: QuestionType.CODING,
           isPublished: true,
           createdAt: mockDate,
-
           categories: [
             {
               category: {
@@ -53,7 +52,6 @@ describe('QuestionsService', () => {
               },
             },
           ],
-
           companies: [
             {
               company: {
@@ -61,7 +59,6 @@ describe('QuestionsService', () => {
               },
             },
           ],
-
           jobRoles: [
             {
               jobRole: {
@@ -69,11 +66,9 @@ describe('QuestionsService', () => {
               },
             },
           ],
-
           codingQuestion: {
             description: 'Solve two sum',
           },
-
           theoryQuestion: null,
         },
       ] as any);
@@ -82,9 +77,8 @@ describe('QuestionsService', () => {
 
       const result = await service.findAll(query);
 
-      expect(result.data).toHaveLength(1);
-
-      expect(result.data[0]).toEqual({
+      expect(result.items).toHaveLength(1);
+      expect(result.items[0]).toEqual({
         id: 1,
         title: 'Two Sum',
         slug: 'two-sum',
@@ -97,7 +91,6 @@ describe('QuestionsService', () => {
         companies: ['Google'],
         jobRoles: ['Backend Developer'],
       });
-
       expect(result.meta.total).toBe(1);
       expect(result.meta.page).toBe(1);
       expect(result.meta.limit).toBe(10);
@@ -114,22 +107,14 @@ describe('QuestionsService', () => {
 
       await service.findAll(query);
 
+      // Kiểm tra OR array không phụ thuộc thứ tự
       expect(prisma.question.findMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: expect.objectContaining({
-            OR: [
-              {
-                title: {
-                  search: 'nest & js',
-                },
-              },
-              {
-                title: {
-                  contains: 'nest js',
-                  mode: 'insensitive',
-                },
-              },
-            ],
+            OR: expect.arrayContaining([
+              { title: { contains: 'nest js', mode: 'insensitive' } },
+              { title: { search: 'nest & js' } },
+            ]),
           }),
         }),
       );
@@ -141,7 +126,7 @@ describe('QuestionsService', () => {
 
       await service.findAll({
         difficulty: Difficulty.HARD,
-        questionType: QuestionType.CODING,
+        type: QuestionType.CODING,
       });
 
       expect(prisma.question.findMany).toHaveBeenCalledWith(
@@ -160,9 +145,12 @@ describe('QuestionsService', () => {
       prisma.question.findUnique.mockResolvedValue({
         id: 1,
         title: 'Two Sum',
+        slug: 'two-sum',
+        difficulty: Difficulty.EASY,
         type: QuestionType.CODING,
         isPublished: true,
-
+        createdAt: mockDate,
+        updated_at: mockDate,
         categories: [
           {
             category: {
@@ -170,7 +158,6 @@ describe('QuestionsService', () => {
             },
           },
         ],
-
         companies: [
           {
             company: {
@@ -178,7 +165,6 @@ describe('QuestionsService', () => {
             },
           },
         ],
-
         jobRoles: [
           {
             jobRole: {
@@ -186,11 +172,15 @@ describe('QuestionsService', () => {
             },
           },
         ],
-
         theoryQuestion: null,
-
         codingQuestion: {
           description: 'Solve two sum',
+          constraints: null,
+          timeLimit: 2000,
+          memoryLimit: 256000,
+          codeforcesLink: null,
+          hints: [],
+          tags: [],
           testCases: [],
         },
       } as any);
@@ -217,11 +207,10 @@ describe('QuestionsService', () => {
         slug: 'two-sum',
         difficulty: Difficulty.EASY,
         type: QuestionType.CODING,
-
+        isPublished: true,
         categoryIds: [1],
         companyIds: [2],
         jobRoleIds: [3],
-
         codingData: {
           description: 'Solve problem',
           constraints: '1 <= n <= 1000',
@@ -238,19 +227,16 @@ describe('QuestionsService', () => {
       expect(prisma.question.create).toHaveBeenCalledWith({
         data: expect.objectContaining({
           title: 'Two Sum',
-
+          type: QuestionType.CODING,
           categories: {
             create: [{ categoryId: 1 }],
           },
-
           companies: {
             create: [{ companyId: 2 }],
           },
-
           jobRoles: {
             create: [{ jobRoleId: 3 }],
           },
-
           codingQuestion: {
             create: {
               description: 'Solve problem',
@@ -276,7 +262,6 @@ describe('QuestionsService', () => {
 
       const dto: UpdateQuestionDto = {
         categoryIds: [5],
-
         codingData: {
           description: 'Updated',
         },
@@ -286,13 +271,11 @@ describe('QuestionsService', () => {
 
       expect(prisma.question.update).toHaveBeenCalledWith({
         where: { id: 1 },
-
         data: expect.objectContaining({
           categories: {
             deleteMany: {},
             create: [{ categoryId: 5 }],
           },
-
           codingQuestion: {
             update: {
               description: 'Updated',
@@ -313,6 +296,7 @@ describe('QuestionsService', () => {
 
   describe('remove', () => {
     it('should delete question by id', async () => {
+      prisma.question.findUnique.mockResolvedValue({ id: 1 } as any);
       prisma.question.delete.mockResolvedValue({} as any);
 
       await service.remove(1);

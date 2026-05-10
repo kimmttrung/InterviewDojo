@@ -71,6 +71,14 @@ export const Messages = {
 
     USER_RECORDINGS_FETCHED: 'Lấy bản ghi âm của người dùng thành công',
   },
+  QUESTIONS: {
+    FETCHED: 'Lấy danh sách câu hỏi thành công',
+    FETCH_ONE: 'Lấy thông tin câu hỏi thành công',
+    CREATED: 'Tạo câu hỏi thành công',
+    UPDATED: 'Cập nhật câu hỏi thành công',
+    DELETED: 'Xóa câu hỏi thành công',
+    RANDOM_FETCHED: 'Lấy câu hỏi ngẫu nhiên thành công',
+  },
 
   SLOT: {
     FETCHED: 'Lấy danh sách slot thành công',

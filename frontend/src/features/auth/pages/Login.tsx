@@ -38,7 +38,7 @@ export default function Login() {
       const { accessToken, refreshToken, user, redirect } = res.data.data;
 
       // ✅ Cập nhật Zustand store (tự động persist)
-      setAuth({ accessToken, refreshToken });
+      setAuth({ accessToken, refreshToken, userId: user.id });
       // queryClient.setQueryData(['current-user'], user);
       await queryClient.invalidateQueries({ queryKey: ['current-user'] });
 

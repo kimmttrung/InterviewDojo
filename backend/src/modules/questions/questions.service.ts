@@ -4,16 +4,18 @@ import { GetQuestionsDto } from './dto/get-questions.dto';
 import { CreateQuestionDto } from './dto/create-question.dto';
 import { UpdateQuestionDto } from './dto/update-question.dto';
 import { Prisma, QuestionType } from '@prisma/client';
+import { QuestionItem } from './interfaces/question-item.interface';
+import { QuestionDetail } from './interfaces/question-detail.interface';
+import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
+import { RandomQuestionDto } from './dto/random-question.dto';
 
 @Injectable()
 export class QuestionsService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Chuẩn hóa dữ liệu đầu ra chung cho cả Theory và Coding
-  private mapQuestion(q: any) {
+  private toQuestionItem(q: any): QuestionItem {
     const isCoding = q.type === QuestionType.CODING;
     const specificData = isCoding ? q.codingQuestion : q.theoryQuestion;
-
     return {
       id: q.id,
       title: q.title,
@@ -31,49 +33,126 @@ export class QuestionsService {
     };
   }
 
-  async findAll(query: GetQuestionsDto) {
+  private mapToQuestionDetail(rawQ: any, userRole?: string): QuestionDetail {
+    const isCoding = rawQ.type === QuestionType.CODING;
+    let testCasesToReturn: QuestionDetail['testCases'] = undefined;
+
+    if (isCoding && rawQ.codingQuestion?.testCases) {
+      const allTestCases = rawQ.codingQuestion.testCases;
+      if (userRole === 'ADMIN') {
+        testCasesToReturn = allTestCases.map((tc) => ({
+          id: tc.id,
+          input: tc.input,
+          output: tc.expectedOutput,
+          order: tc.order,
+          isHidden: tc.isHidden,
+          isSample: tc.isSample,
+        }));
+      } else {
+        // User thường: chỉ lấy test case mẫu (isSample = true) và không ẩn
+        testCasesToReturn = allTestCases
+          .filter((tc) => tc.isSample === true && tc.isHidden === false)
+          .map((tc) => ({
+            id: tc.id,
+            input: tc.input,
+            output: tc.expectedOutput,
+            order: tc.order,
+            isHidden: false, // hoặc không cần field này
+            isSample: true,
+          }));
+      }
+    }
+
+    return {
+      id: rawQ.id,
+      title: rawQ.title,
+      slug: rawQ.slug,
+      difficulty: rawQ.difficulty,
+      type: rawQ.type,
+      isPublished: rawQ.isPublished,
+      createdAt: rawQ.createdAt,
+      updatedAt: rawQ.updated_at, // lưu ý snake_case nếu trong model là updated_at
+      categories: rawQ.categories.map((c: any) => c.category?.name || ''),
+      companies: rawQ.companies.map((c: any) => c.company?.name || ''),
+      jobRoles: rawQ.jobRoles.map((j: any) => j.jobRole?.name || ''),
+      isCodingQuestion: isCoding,
+      // Theory
+      data: !isCoding ? rawQ.theoryQuestion?.data : undefined,
+      // Coding
+      description: isCoding ? rawQ.codingQuestion?.description : undefined,
+      constraints: isCoding ? rawQ.codingQuestion?.constraints : undefined,
+      timeLimit: isCoding ? rawQ.codingQuestion?.timeLimit : undefined,
+      memoryLimit: isCoding ? rawQ.codingQuestion?.memoryLimit : undefined,
+      codeforcesLink: isCoding
+        ? rawQ.codingQuestion?.codeforcesLink
+        : undefined,
+      testCases: testCasesToReturn,
+      hints: isCoding ? rawQ.codingQuestion?.hints : undefined,
+      tags: isCoding ? rawQ.codingQuestion?.tags : undefined,
+    };
+  }
+
+  async findAll(
+    query: GetQuestionsDto,
+  ): Promise<PaginatedResponse<QuestionItem>> {
     const {
       keyword,
       page = 1,
       limit = 10,
-      sortBy = 'createdAt',
-      sortOrder = 'desc',
       difficulty,
-      questionType,
+      type, // lọc theo loại câu hỏi (CODING, TECHNICAL, ...)
+      category, // tên category
+      jobRole, // tên job role
     } = query;
 
     const skip = (page - 1) * limit;
 
-    // 1. Build query điều kiện
+    // Xây dựng where condition
     const where: Prisma.QuestionWhereInput = { isPublished: true };
 
     if (keyword) {
-      const formattedKeyword = keyword.trim().split(/\s+/).join(' & ');
+      // full-text search (cần index GIN)
       where.OR = [
-        { title: { search: formattedKeyword } },
         { title: { contains: keyword, mode: 'insensitive' } },
+        { title: { search: keyword.split(/\s+/).join(' & ') } },
       ];
     }
+    if (difficulty) where.difficulty = difficulty;
+    if (type) where.type = type;
 
-    if (difficulty) {
-      where.difficulty = difficulty;
+    // Filter theo category (thông qua bảng junction)
+    if (category) {
+      where.categories = {
+        some: {
+          category: {
+            name: { equals: category, mode: 'insensitive' },
+          },
+        },
+      };
     }
 
-    if (questionType) {
-      where.type = questionType;
+    // Filter theo job role
+    if (jobRole) {
+      where.jobRoles = {
+        some: {
+          jobRole: {
+            name: { equals: jobRole, mode: 'insensitive' },
+          },
+        },
+      };
     }
 
-    // 2. Thực thi Database Query (DB tự xử lý Pagination và Sorting)
+    // Lấy dữ liệu và total
     const [questions, total] = await Promise.all([
       this.prisma.question.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { [sortBy]: sortOrder },
+        orderBy: { createdAt: 'desc' }, // có thể custom sort sau nếu cần
         include: {
           categories: { include: { category: true } },
           companies: { include: { company: true } },
-          jobRoles: { include: { jobRole: true } }, // Bổ sung jobRoles từ schema mới
+          jobRoles: { include: { jobRole: true } },
           theoryQuestion: true,
           codingQuestion: true,
         },
@@ -81,11 +160,10 @@ export class QuestionsService {
       this.prisma.question.count({ where }),
     ]);
 
-    // 3. Map format trả về
-    const formattedQuestions = questions.map((q) => this.mapQuestion(q));
+    const items = questions.map((q) => this.toQuestionItem(q));
 
     return {
-      data: formattedQuestions,
+      items,
       meta: {
         total,
         page,
@@ -95,8 +173,7 @@ export class QuestionsService {
     };
   }
 
-  async findOne(id: number) {
-    // 1. Lấy toàn bộ thông tin câu hỏi dựa trên ID duy nhất
+  async findOne(id: number, userRole?: string): Promise<QuestionDetail> {
     const rawQ = await this.prisma.question.findUnique({
       where: { id, isPublished: true },
       include: {
@@ -105,49 +182,29 @@ export class QuestionsService {
         jobRoles: { include: { jobRole: true } },
         theoryQuestion: true,
         codingQuestion: {
-          include: { testCases: { orderBy: { order: 'asc' } } }, // Load test cases nếu là coding
+          include: { testCases: { orderBy: { order: 'asc' } } },
         },
       },
     });
-
-    if (!rawQ) {
-      throw new NotFoundException('Question not found');
-    }
-
-    const isCoding = rawQ.type === QuestionType.CODING;
-
-    // 2. Trả về format chi tiết dùng cho trang Question Detail
-    return {
-      ...rawQ,
-      isCodingQuestion: isCoding,
-      categories: rawQ.categories.map((c) => c.category?.name || ''),
-      companies: rawQ.companies.map((c) => c.company?.name || ''),
-      jobRoles: rawQ.jobRoles.map((j) => j.jobRole?.name || ''),
-      // Loại bỏ các property quan hệ nguyên bản để data trả về sạch sẽ hơn
-      theoryQuestion: undefined,
-      codingQuestion: undefined,
-      // Gắn dữ liệu đặc thù vào root object
-      ...(isCoding ? rawQ.codingQuestion : rawQ.theoryQuestion),
-    };
+    if (!rawQ) throw new NotFoundException('Question not found');
+    return this.mapToQuestionDetail(rawQ, userRole);
   }
 
   async create(createDto: CreateQuestionDto) {
-    // Lấy riêng các ID quan hệ và dữ liệu đặc thù
     const {
       categoryIds,
       companyIds,
       jobRoleIds,
       type,
-      theoryData, // Payload cho Theory
-      codingData, // Payload cho Coding
+      theoryData,
+      codingData,
       ...baseQuestionData
     } = createDto;
 
     return this.prisma.question.create({
       data: {
         ...baseQuestionData,
-        type: type,
-        // Insert vào các bảng trung gian
+        type,
         ...(categoryIds && {
           categories: { create: categoryIds.map((id) => ({ categoryId: id })) },
         }),
@@ -157,7 +214,6 @@ export class QuestionsService {
         ...(jobRoleIds && {
           jobRoles: { create: jobRoleIds.map((id) => ({ jobRoleId: id })) },
         }),
-        // Tạo Polymorphic Relation tương ứng
         ...(type !== QuestionType.CODING &&
           theoryData && {
             theoryQuestion: { create: { data: theoryData } },
@@ -197,8 +253,8 @@ export class QuestionsService {
         ...baseQuestionData,
         ...(categoryIds && {
           categories: {
-            deleteMany: {}, // Xóa mapping cũ
-            create: categoryIds.map((catId) => ({ categoryId: catId })), // Tạo mới
+            deleteMany: {},
+            create: categoryIds.map((catId) => ({ categoryId: catId })),
           },
         }),
         ...(companyIds && {
@@ -213,7 +269,6 @@ export class QuestionsService {
             create: jobRoleIds.map((roleId) => ({ jobRoleId: roleId })),
           },
         }),
-        // Update dữ liệu đặc thù
         ...(question.type !== QuestionType.CODING &&
           theoryData && {
             theoryQuestion: { update: { data: theoryData } },
@@ -227,10 +282,59 @@ export class QuestionsService {
   }
 
   async remove(id: number) {
-    // Chỉ cần xóa ở bảng Question.
-    // Các bảng TheoryQuestion, CodingQuestion và các bảng Junction sẽ tự bay màu nhờ onDelete: Cascade
-    return this.prisma.question.delete({
-      where: { id },
+    const question = await this.prisma.question.findUnique({ where: { id } });
+    if (!question) throw new NotFoundException('Question not found');
+    return this.prisma.question.delete({ where: { id } });
+  }
+
+  async findRandom(
+    filter: RandomQuestionDto,
+    userRole?: string,
+  ): Promise<QuestionDetail> {
+    const where: Prisma.QuestionWhereInput = { isPublished: true };
+
+    if (filter.difficulty) where.difficulty = filter.difficulty;
+    if (filter.type) where.type = filter.type;
+    if (filter.category) {
+      where.categories = {
+        some: {
+          category: { name: { equals: filter.category, mode: 'insensitive' } },
+        },
+      };
+    }
+    if (filter.jobRole) {
+      where.jobRoles = {
+        some: {
+          jobRole: { name: { equals: filter.jobRole, mode: 'insensitive' } },
+        },
+      };
+    }
+
+    const total = await this.prisma.question.count({ where });
+    if (total === 0) {
+      throw new NotFoundException('Không có câu hỏi nào phù hợp với bộ lọc');
+    }
+
+    const randomOffset = Math.floor(Math.random() * total);
+    const [randomQuestion] = await this.prisma.question.findMany({
+      where,
+      skip: randomOffset,
+      take: 1,
+      include: {
+        categories: { include: { category: true } },
+        companies: { include: { company: true } },
+        jobRoles: { include: { jobRole: true } },
+        theoryQuestion: true,
+        codingQuestion: {
+          include: { testCases: { orderBy: { order: 'asc' } } },
+        },
+      },
     });
+
+    if (!randomQuestion) {
+      throw new NotFoundException('Không tìm thấy câu hỏi ngẫu nhiên');
+    }
+
+    return this.mapToQuestionDetail(randomQuestion, userRole);
   }
 }

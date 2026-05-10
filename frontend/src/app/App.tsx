@@ -29,6 +29,8 @@ import QuestionBank from '../features/shared-domain/question-bank/pages/Question
 import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
+import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
+
 import { useAuthStore } from '@/stores/useAuthStore';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
@@ -152,7 +154,7 @@ export function App() {
               path="/questions/:id/:slug"
               element={
                 <ProtectedRoute>
-                  <QuestionBankDetail />
+                  <QuestionDetailContainer />
                 </ProtectedRoute>
               }
             />

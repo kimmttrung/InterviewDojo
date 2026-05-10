@@ -1,11 +1,5 @@
-import {
-  IsOptional,
-  IsString,
-  IsInt,
-  Min,
-  IsEnum,
-  IsIn,
-} from 'class-validator';
+// get-questions.dto.ts
+import { IsOptional, IsString, IsInt, Min, IsEnum } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Difficulty, QuestionType } from '@prisma/client';
 
@@ -27,23 +21,18 @@ export class GetQuestionsDto {
   limit?: number = 10;
 
   @IsOptional()
-  @IsIn(['createdAt', 'title', 'difficulty', 'updatedAt'])
-  sortBy?: string = 'createdAt';
-
-  @IsOptional()
-  @IsIn(['asc', 'desc'])
-  sortOrder?: 'asc' | 'desc' = 'desc';
-
-  // Thêm các filter cơ bản dựa trên Schema
-  @IsOptional()
   @IsEnum(Difficulty)
   difficulty?: Difficulty;
 
   @IsOptional()
   @IsEnum(QuestionType)
-  questionType?: QuestionType;
+  type?: QuestionType; // đã có questionType, nhưng để đồng bộ tôi dùng 'type'
 
   @IsOptional()
-  @IsEnum(['CODING', 'NORMAL'])
-  source?: 'CODING' | 'NORMAL';
+  @IsString()
+  category?: string; // lọc theo tên category
+
+  @IsOptional()
+  @IsString()
+  jobRole?: string; // lọc theo tên job role
 }

@@ -1,11 +1,23 @@
 import {
-  CallControls,
   SpeakerLayout,
   useCall,
   useCallStateHooks,
+  StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp } from 'lucide-react';
+
+// 1. Tạo Component hiển thị khi tắt Cam (Avatar placeholder)
+const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParticipant }) => (
+  <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center z-10">
+    <div className="w-16 h-16 bg-slate-800 rounded-full flex items-center justify-center border border-slate-700 shadow-xl">
+      <span className="text-xl text-white font-bold">
+        {participant.name?.charAt(0).toUpperCase() || 'U'}
+      </span>
+    </div>
+    <p className="text-slate-500 text-[10px] mt-3 font-medium">Camera Off</p>
+  </div>
+);
 
 export function VideoCallSection() {
   const navigate = useNavigate();
@@ -13,110 +25,56 @@ export function VideoCallSection() {
   const { useCameraState, useMicrophoneState, useLocalParticipant } = useCallStateHooks();
 
   const localParticipant = useLocalParticipant();
-  const { camera, error: cameraError, hasBrowserPermission: camPermission } = useCameraState();
-  const { microphone, error: micError } = useMicrophoneState();
+  const { camera } = useCameraState();
+  const { microphone } = useMicrophoneState();
 
-  const [isProcessing, setIsProcessing] = useState(false);
-
-  // Hàm xử lý bật/tắt thiết bị mượt mà
-  const toggleCamera = async () => {
-    if (!call) return;
-    setIsProcessing(true);
-    try {
-      await call.camera.toggle();
-    } catch (err) {
-      console.error('Camera toggle failed', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  const toggleMic = async () => {
-    if (!call) return;
-    setIsProcessing(true);
-    try {
-      await call.microphone.toggle();
-    } catch (err) {
-      console.error('Mic toggle failed', err);
-    } finally {
-      setIsProcessing(false);
-    }
-  };
-
-  // Nếu chưa có call instance, chỉ hiện loading nhẹ, không sập cả trang
-  if (!call) return <div className="p-10 text-center text-white">Initializing Call...</div>;
+  if (!call) return <div className="p-10 text-center text-white">Initializing...</div>;
 
   return (
-    <div className="bg-slate-950 border-b border-slate-800 relative group overflow-hidden">
-      {/* Container chính cho Video */}
-      <div className="aspect-video w-full bg-slate-900 relative">
-        {/* Layout hiển thị video (SpeakerLayout tự động xử lý người nói chính) */}
-        <SpeakerLayout />
+    <div className="bg-black relative group overflow-hidden w-full">
+      {/* 2. Cấu hình SpeakerLayout để dùng Placeholder tùy chỉnh */}
+      <SpeakerLayout VideoPlaceholder={CustomVideoPlaceholder} />
 
-        {/* Overlay: Nếu Camera đang tắt hoặc không có quyền */}
-        {!camera.enabled && (
-          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 z-10">
-            <div className="w-24 h-24 bg-slate-800 rounded-full flex items-center justify-center mb-4 border border-slate-700">
-              <span className="text-3xl">👤</span>
-            </div>
-            <p className="text-slate-400 text-sm font-medium">
-              {camPermission ? 'Camera is off' : 'Camera access denied'}
-            </p>
-            {!camPermission && (
-              <p className="text-slate-500 text-xs mt-2 text-center px-4">
-                Please check your browser settings to allow camera access
-              </p>
-            )}
-          </div>
-        )}
-
-        {/* Hiển thị lỗi thiết bị dạng nhỏ (Toast style), không chặn UI */}
-        {(cameraError || micError) && (
-          <div className="absolute top-4 left-4 z-50 bg-red-500/90 text-white text-[10px] px-3 py-1.5 rounded-full backdrop-blur-sm shadow-lg">
-            ⚠️ {cameraError ? `Camera: ${cameraError}` : `Mic: ${micError}`}
-          </div>
-        )}
-
-        {/* Loading khi đang bật/tắt thiết bị */}
-        {isProcessing && (
-          <div className="absolute inset-0 flex items-center justify-center bg-black/20 z-20">
-            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-white"></div>
-          </div>
-        )}
-      </div>
-
-      {/* Controls: Tùy biến lại thanh điều khiển */}
-      <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-4 z-30 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-        {/* Nút Mic */}
+      {/* Control Bar (Giữ nguyên logic cũ của bạn nhưng làm đẹp hơn) */}
+      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-2 px-3 py-2 bg-slate-900/90 backdrop-blur-xl rounded-xl border border-white/10 opacity-0 group-hover:opacity-100 transition-all duration-300 z-50">
         <button
-          onClick={toggleMic}
-          className={`p-4 rounded-full transition-all ${microphone.enabled ? 'bg-slate-800 text-white' : 'bg-red-500 text-white'}`}
+          onClick={() => call.microphone.toggle()}
+          className={`p-2.5 rounded-lg ${microphone.enabled ? 'text-white hover:bg-slate-700' : 'bg-red-500/20 text-red-500'}`}
         >
-          {microphone.enabled ? '🎤' : '🔇'}
+          {microphone.enabled ? <Mic size={18} /> : <MicOff size={18} />}
         </button>
 
-        {/* Nút Cam */}
         <button
-          onClick={toggleCamera}
-          className={`p-4 rounded-full transition-all ${camera.enabled ? 'bg-slate-800 text-white' : 'bg-red-500 text-white'}`}
+          onClick={() => call.camera.toggle()}
+          className={`p-2.5 rounded-lg ${camera.enabled ? 'text-white hover:bg-slate-700' : 'bg-red-500/20 text-red-500'}`}
         >
-          {camera.enabled ? '📹' : '🚫'}
+          {camera.enabled ? <Video size={18} /> : <VideoOff size={18} />}
         </button>
 
-        {/* Nút thoát */}
+        <button
+          onClick={() => call.screenShare.toggle()}
+          className="p-3 rounded-xl hover:bg-slate-700 text-white transition-colors"
+          title="Share Screen"
+        >
+          <MonitorUp size={20} />
+        </button>
+
         <button
           onClick={async () => {
-            await call.leave();
-            navigate('/practice/matching');
+            const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
+            if (confirmed) {
+              await call.leave();
+              navigate('/practice/matching');
+            }
           }}
-          className="p-4 rounded-full bg-red-600 text-white hover:bg-red-700 transition-all"
+          className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white"
         >
-          📞
+          <PhoneOff size={18} />
         </button>
       </div>
 
-      {/* Tên người dùng hiển thị ở góc video (Local) */}
-      <div className="absolute bottom-4 left-4 z-20 bg-black/50 px-2 py-1 rounded text-[10px] text-white backdrop-blur-md">
+      {/* Label tên người dùng ở góc */}
+      <div className="absolute bottom-2 left-2 z-20 bg-black/40 px-2 py-0.5 rounded text-[10px] text-slate-300 backdrop-blur-sm border border-white/5">
         {localParticipant?.name} (You)
       </div>
     </div>
