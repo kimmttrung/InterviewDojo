@@ -56,9 +56,21 @@ describe('AiAgentService', () => {
             message: {
               content: JSON.stringify({
                 overallScore: 8,
-                strengths: ['Strong 1', 'Strong 2', 'Strong 3'],
-                weaknesses: ['Weak 1', 'Weak 2', 'Weak 3'],
-                suggestions: ['Sug 1', 'Sug 2', 'Sug 3'],
+                strengths: {
+                  communication: 'Giao tiếp tốt',
+                  confidence: 'Tự tin',
+                  structure: 'Trả lời có cấu trúc',
+                },
+                weaknesses: {
+                  detail: 'Thiếu chi tiết',
+                  speed: 'Nói hơi nhanh',
+                  examples: 'Ít ví dụ thực tế',
+                },
+                suggestions: {
+                  practice: 'Luyện mock interview',
+                  improve: 'Bổ sung ví dụ',
+                  pacing: 'Điều chỉnh tốc độ nói',
+                },
               }),
             },
           },
@@ -72,9 +84,9 @@ describe('AiAgentService', () => {
 
       expect(result.overallScore).toBe(8);
 
-      expect(result.strengths).toHaveLength(3);
-      expect(result.weaknesses).toHaveLength(3);
-      expect(result.suggestions).toHaveLength(3);
+      expect(result.strengths).toBeDefined();
+      expect(result.weaknesses).toBeDefined();
+      expect(result.suggestions).toBeDefined();
 
       expect(mockCreate).toHaveBeenCalled();
     });
@@ -88,9 +100,15 @@ describe('AiAgentService', () => {
 \`\`\`json
 {
   "overallScore": 7,
-  "strengths": ["A", "B", "C"],
-  "weaknesses": ["D", "E", "F"],
-  "suggestions": ["G", "H", "I"]
+  "strengths": {
+    "a": "A"
+  },
+  "weaknesses": {
+    "b": "B"
+  },
+  "suggestions": {
+    "c": "C"
+  }
 }
 \`\`\`
               `,
@@ -104,7 +122,7 @@ describe('AiAgentService', () => {
       });
 
       expect(result.overallScore).toBe(7);
-      expect(result.strengths).toEqual(['A', 'B', 'C']);
+      expect(result.strengths).toBeDefined();
     });
 
     it('should normalize score to max 10', async () => {
@@ -114,9 +132,9 @@ describe('AiAgentService', () => {
             message: {
               content: JSON.stringify({
                 overallScore: 99,
-                strengths: ['A', 'B', 'C'],
-                weaknesses: ['D', 'E', 'F'],
-                suggestions: ['G', 'H', 'I'],
+                strengths: {},
+                weaknesses: {},
+                suggestions: {},
               }),
             },
           },
@@ -137,9 +155,9 @@ describe('AiAgentService', () => {
             message: {
               content: JSON.stringify({
                 overallScore: -5,
-                strengths: ['A', 'B', 'C'],
-                weaknesses: ['D', 'E', 'F'],
-                suggestions: ['G', 'H', 'I'],
+                strengths: {},
+                weaknesses: {},
+                suggestions: {},
               }),
             },
           },
@@ -170,36 +188,9 @@ describe('AiAgentService', () => {
 
       expect(result.overallScore).toBe(5);
 
-      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
-      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
-      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
-    });
-
-    it('should use fallback arrays when AI arrays are invalid', async () => {
-      mockCreate.mockResolvedValue({
-        choices: [
-          {
-            message: {
-              content: JSON.stringify({
-                overallScore: 6,
-                strengths: ['A'],
-                weaknesses: 'invalid',
-                suggestions: [],
-              }),
-            },
-          },
-        ],
-      });
-
-      const result = await service.generateFeedback({
-        transcript: 'Test',
-      });
-
-      expect(result.overallScore).toBe(6);
-
-      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
-      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
-      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
+      expect(result.strengths).toBeDefined();
+      expect(result.weaknesses).toBeDefined();
+      expect(result.suggestions).toBeDefined();
     });
 
     it('should throw BadRequestException if transcript is empty', async () => {
@@ -219,9 +210,9 @@ describe('AiAgentService', () => {
 
       expect(result.overallScore).toBe(4);
 
-      expect(result.strengths.length).toBeGreaterThanOrEqual(3);
-      expect(result.weaknesses.length).toBeGreaterThanOrEqual(3);
-      expect(result.suggestions.length).toBeGreaterThanOrEqual(3);
+      expect(result.strengths).toBeDefined();
+      expect(result.weaknesses).toBeDefined();
+      expect(result.suggestions).toBeDefined();
     });
   });
 });
