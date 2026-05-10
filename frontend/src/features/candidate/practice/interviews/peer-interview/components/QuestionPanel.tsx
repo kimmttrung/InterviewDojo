@@ -1,7 +1,7 @@
 // src/pages/InterviewRoom/components/QuestionPanel.tsx
 import { useState } from 'react';
 import { Loader2, Shuffle, ChevronDown, Layers, SearchX } from 'lucide-react';
-import { QuestionType } from '../../../../../shared-domain/question-bank/types';
+import { QuestionType } from '../../../../../shared-domain/question-bank/types/question.types';
 import { TheoryView } from '../../../../../shared-domain/question-bank/components/QuestionDetail/TheoryView';
 import { CodingDescription } from '../../../../../shared-domain/question-bank/components/QuestionDetail/CodingDescription';
 import { Button } from '../../../../../../shared/components/ui/button';

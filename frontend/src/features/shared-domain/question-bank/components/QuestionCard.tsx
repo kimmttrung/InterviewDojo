@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { Bookmark, MessageCircle, PlusCircle, ChevronDown } from 'lucide-react';
-import { Question } from '../types';
+import { Question } from '../types/question.types';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
 

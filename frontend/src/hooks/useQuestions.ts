@@ -1,7 +1,7 @@
 // src/hooks/useQuestions.ts
 import { useState, useCallback } from 'react';
 import { questionService } from '../features/shared-domain/question-bank/services/question.service';
-import { QuestionType } from '../features/shared-domain/question-bank/types';
+import { QuestionType } from '../features/shared-domain/question-bank/types/question.types';
 
 export function useQuestions() {
   const [currentQuestion, setCurrentQuestion] = useState<any>(null);

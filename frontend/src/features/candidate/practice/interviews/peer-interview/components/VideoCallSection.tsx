@@ -5,17 +5,7 @@ import {
   StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
 import { useNavigate } from 'react-router-dom';
-import { useState } from 'react';
-import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  PhoneOff,
-  Maximize2,
-  Minimize2,
-  MonitorUp,
-} from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp } from 'lucide-react';
 
 // 1. Tạo Component hiển thị khi tắt Cam (Avatar placeholder)
 const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParticipant }) => (
@@ -37,16 +27,11 @@ export function VideoCallSection() {
   const localParticipant = useLocalParticipant();
   const { camera } = useCameraState();
   const { microphone } = useMicrophoneState();
-  const [isFullscreen, setIsFullscreen] = useState(false);
 
   if (!call) return <div className="p-10 text-center text-white">Initializing...</div>;
 
   return (
-    <div
-      className={`bg-black relative group overflow-hidden transition-all duration-500 ${
-        isFullscreen ? 'fixed inset-0 z-[100]' : 'aspect-video w-full border-b border-slate-800'
-      }`}
-    >
+    <div className="bg-black relative group overflow-hidden w-full">
       {/* 2. Cấu hình SpeakerLayout để dùng Placeholder tùy chỉnh */}
       <SpeakerLayout VideoPlaceholder={CustomVideoPlaceholder} />
 
@@ -75,16 +60,12 @@ export function VideoCallSection() {
         </button>
 
         <button
-          onClick={() => setIsFullscreen(!isFullscreen)}
-          className="p-2.5 rounded-lg text-white hover:bg-slate-700 transition-colors"
-        >
-          {isFullscreen ? <Minimize2 size={18} /> : <Maximize2 size={18} />}
-        </button>
-
-        <button
           onClick={async () => {
-            await call.leave();
-            navigate('/practice/matching');
+            const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
+            if (confirmed) {
+              await call.leave();
+              navigate('/practice/matching');
+            }
           }}
           className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white"
         >

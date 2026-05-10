@@ -7,7 +7,7 @@ import { Prisma, QuestionType } from '@prisma/client';
 import { QuestionItem } from './interfaces/question-item.interface';
 import { QuestionDetail } from './interfaces/question-detail.interface';
 import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
-import { RandomQuestionDto } from './dto/andom-question.dto';
+import { RandomQuestionDto } from './dto/random-question.dto';
 
 @Injectable()
 export class QuestionsService {
@@ -46,6 +46,7 @@ export class QuestionsService {
           output: tc.expectedOutput,
           order: tc.order,
           isHidden: tc.isHidden,
+          isSample: tc.isSample,
         }));
       } else {
         // User thường: chỉ lấy test case mẫu (isSample = true) và không ẩn
@@ -57,6 +58,7 @@ export class QuestionsService {
             output: tc.expectedOutput,
             order: tc.order,
             isHidden: false, // hoặc không cần field này
+            isSample: true,
           }));
       }
     }

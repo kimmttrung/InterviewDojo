@@ -1,11 +1,13 @@
+// features/questions/components/QuestionDetail/AnswerSection.tsx
 import { useState } from 'react';
 import { MessageCircle, ChevronDown, MoreHorizontal, Star, PlusCircle, Share } from 'lucide-react';
-import { Button } from '../../../../../shared/components/ui/button';
-import { Card } from '../../../../../shared/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../../../shared/components/ui/avatar';
-import { Input } from '../../../../../shared/components/ui/input';
-import { Badge } from '../../../../../shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Card } from '@/shared/components/ui/card';
+import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Input } from '@/shared/components/ui/input';
+import { Badge } from '@/shared/components/ui/badge';
 
+// Vẫn giữ MOCK_ANSWERS, sau này thay bằng API
 const MOCK_ANSWERS = [
   {
     id: 1,
@@ -44,7 +46,7 @@ export function AnswerSection({ answersCount }: { answersCount: number }) {
         </Button>
       </div>
 
-      {/* AI Suggestion Banner (Optional) */}
+      {/* AI Suggestion Banner */}
       <Card className="p-6 border-indigo-100 bg-indigo-50/30 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4">
         <p className="text-indigo-800 text-sm font-medium">
           💡 <b>Tip:</b> Bạn có thể sử dụng AI để chấm điểm câu trả lời của mình ngay lập tức.

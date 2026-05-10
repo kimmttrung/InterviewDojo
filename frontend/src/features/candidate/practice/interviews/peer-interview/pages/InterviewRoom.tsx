@@ -14,46 +14,73 @@ import { useQuestions } from '../../../../../../hooks/useQuestions';
 import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
 import { useSocketStore } from '../../../../../../stores/useSocketStore';
 import { WorkMode } from '../../../../../../shared/types/interview';
-import { QuestionType } from '../../../../../shared-domain/question-bank/types';
+import { QuestionType } from '../../../../../shared-domain/question-bank/types/question.types';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
+import { useRandomQuestion } from '@/features/shared-domain/question-bank/hooks/useQuestions';
 
 export default function InterviewRoom() {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { roomId } = useParams();
   const [searchParams] = useSearchParams();
 
-  // State quản lý filter
+  // Lấy userId từ auth store (ưu tiên) hoặc từ query param
+  const { userId: authUserId, isAuthenticated } = useAuthStore();
+  const { data: currentUser } = useCurrentUser();
+  const userId =
+    isAuthenticated && authUserId ? String(authUserId) : searchParams.get('userId') || 'guest';
+  const token = searchParams.get('token');
+
+  // Filter state (client state) – có thể sync qua socket
   const [selectedType, setSelectedType] = useState<QuestionType | undefined>();
   const [selectedDifficulty, setSelectedDifficulty] = useState<string | undefined>();
+  const [displayedQuestion, setDisplayedQuestion] = useState<any>(null);
 
-  const userStore = localStorage.getItem('user');
-  const currentUser = userStore ? JSON.parse(userStore) : null;
-  const userId = currentUser?.id?.toString() || searchParams.get('userId') || 'guest';
-  const token = searchParams.get('token');
-  const { client, call } = useVideoCall(roomId, token, userId, currentUser);
-  const { currentQuestion, setCurrentQuestion, getRandomQuestion, isLoading } = useQuestions();
-  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
+  // Random question hook
+  const {
+    data: randomQuestion,
+    refetch,
+    isFetching,
+  } = useRandomQuestion({
+    type: selectedType,
+    difficulty: selectedDifficulty as any,
+  });
+
+  // Cập nhật displayedQuestion khi random thành công
+  useEffect(() => {
+    if (randomQuestion) {
+      setDisplayedQuestion(randomQuestion);
+    }
+  }, [randomQuestion]);
+
+  // currentQuestion sẽ lấy từ randomQuestion hoặc null
+  const currentQuestion = randomQuestion || null;
+  const isLoading = isFetching;
 
   // Lấy các hàm từ Zustand Socket Store
+  const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
   const { emit, socket } = useSocketStore();
 
+  // Socket listeners
   useEffect(() => {
     const handleReceiveQuestion = (data: any) => {
       console.log('📥 Nhận câu hỏi từ đối phương:', data);
-
-      // 1. Cập nhật câu hỏi (có thể là object hoặc null)
-      setCurrentQuestion(data.question);
+      setDisplayedQuestion(data.question); // hiển thị câu hỏi nhận được
     };
-    socket?.on('receive_question', handleReceiveQuestion);
 
-    socket?.on('sync_filters', (data: { type?: QuestionType; difficulty?: string }) => {
+    const handleSyncFilters = (data: { type?: QuestionType; difficulty?: string }) => {
       setSelectedType(data.type);
       setSelectedDifficulty(data.difficulty);
-    });
+    };
+
+    socket?.on('receive_question', handleReceiveQuestion);
+    socket?.on('sync_filters', handleSyncFilters);
 
     return () => {
       socket?.off('receive_question', handleReceiveQuestion);
-      socket?.off('sync_filters');
+      socket?.off('sync_filters', handleSyncFilters);
     };
-  }, [socket, setCurrentQuestion]);
+  }, [socket]);
 
   const handleTypeChange = (type?: QuestionType) => {
     setSelectedType(type);
@@ -65,13 +92,12 @@ export default function InterviewRoom() {
     emit('update_filters', { roomId, type: selectedType, difficulty });
   };
 
-  const handleRandom = async (type?: QuestionType, difficulty?: string) => {
-    const question = await getRandomQuestion(type, difficulty);
-
-    emit('send_question', {
-      roomId,
-      question: question || null,
-    });
+  // Xử lý random: gọi API, sau đó gửi câu hỏi qua socket
+  const handleRandom = async () => {
+    const result = await refetch();
+    const question = result.data ?? null;
+    setDisplayedQuestion(question);
+    emit('send_question', { roomId, question });
   };
 
   useEffect(() => {
@@ -95,9 +121,9 @@ export default function InterviewRoom() {
           <InterviewHeader roomId={roomId!} />
           <main className="flex-1 flex overflow-hidden">
             <QuestionPanel
-              question={currentQuestion}
+              question={displayedQuestion}
               onRandom={handleRandom}
-              isLoading={isLoading}
+              isLoading={isFetching}
               selectedType={selectedType}
               selectedDifficulty={selectedDifficulty}
               onTypeChange={handleTypeChange}
@@ -106,7 +132,7 @@ export default function InterviewRoom() {
             <WorkspaceTabs
               workMode={workMode}
               setWorkMode={setWorkMode}
-              currentQuestion={currentQuestion}
+              currentQuestion={displayedQuestion}
               roomId={roomId!}
               userId={userId}
             />

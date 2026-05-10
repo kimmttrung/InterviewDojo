@@ -28,7 +28,7 @@ import { QuestionDetail } from './interfaces/question-detail.interface';
 import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
-import { RandomQuestionDto } from './dto/andom-question.dto';
+import { RandomQuestionDto } from './dto/random-question.dto';
 
 @ApiTags('Questions')
 @ApiBearerAuth()
@@ -46,6 +46,18 @@ export class QuestionsController {
     @Query() query: GetQuestionsDto,
   ): Promise<PaginatedResponse<QuestionItem>> {
     return this.questionsService.findAll(query);
+  }
+
+  @Get('random')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Lấy câu hỏi ngẫu nhiên theo bộ lọc' })
+  @ResponseMessage(Messages.QUESTIONS.RANDOM_FETCHED)
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  async getRandomQuestion(
+    @Query() filter: RandomQuestionDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<QuestionDetail | null> {
+    return this.questionsService.findRandom(filter, user?.role);
   }
 
   @Get(':id')
@@ -88,17 +100,5 @@ export class QuestionsController {
   @Roles(Role.ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number) {
     return this.questionsService.remove(id);
-  }
-
-  @Get('random')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Lấy câu hỏi ngẫu nhiên theo bộ lọc' })
-  @ResponseMessage(Messages.QUESTIONS.RANDOM_FETCHED)
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
-  async getRandomQuestion(
-    @Query() filter: RandomQuestionDto,
-    @CurrentUser() user: JwtPayload,
-  ): Promise<QuestionDetail> {
-    return this.questionsService.findRandom(filter, user?.role);
   }
 }

@@ -1,49 +1,42 @@
-import { useState, useEffect } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Loader2 } from 'lucide-react';
-import { Layout } from '../../../../shared/components/layout/Layout';
+import { Layout } from '@/shared/components/layout/Layout';
 import { TheoryView } from '../components/QuestionDetail/TheoryView';
 import { CodingView } from '../components/QuestionDetail/CodingView';
 import { DetailSidebar } from '../components/QuestionDetail/DetailSidebar';
-import { QuestionType } from '../types';
-import { questionService } from '../services/question.service';
 import { AnswerSection } from '../components/QuestionDetail/AnswerSection';
-
-// Feature Components
+import { useQuestionDetail } from '../hooks/useQuestions';
+import { QuestionType } from '../types/question.types';
 
 export default function QuestionDetailContainer() {
-  const { id } = useParams();
-  const [question, setQuestion] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const { id } = useParams<{ id: string }>();
+  const { data: question, isLoading, error } = useQuestionDetail(id!);
 
-  useEffect(() => {
-    const fetch = async () => {
-      try {
-        setLoading(true);
-        const res = await questionService.getById(id as string);
-        setQuestion(res?.data?.data || res?.data);
-      } finally {
-        setLoading(false);
-      }
-    };
-    if (id) fetch();
-  }, [id]);
+  console.log('checck question', question);
 
-  if (loading) return <LoadingScreen />;
-  if (!question) return <NotFound />;
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="animate-spin text-indigo-600 w-8 h-8" />
+      </div>
+    );
+  }
 
-  // Phân loại render theo QuestionType Enum
+  if (error || !question) {
+    return (
+      <div className="text-center py-20 text-red-500">Question not found or failed to load.</div>
+    );
+  }
+
   if (question.type === QuestionType.CODING) {
     return <CodingView question={question} />;
   }
 
-  // Giao diện cho 3 loại Theory (TECHNICAL, BEHAVIORAL, SYSTEM_DESIGN)
   const parsedData = typeof question.data === 'string' ? JSON.parse(question.data) : question.data;
 
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        {/* Back Button / Breadcrumb */}
         <div className="mb-6">
           <Link
             to="/question-bank"
@@ -57,11 +50,8 @@ export default function QuestionDetailContainer() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8">
             <TheoryView question={question} parsedData={parsedData} />
-
-            {/* Tích hợp Answer Section */}
-            <AnswerSection answersCount={question.answersCount} />
+            <AnswerSection answersCount={0} />
           </div>
-
           <div className="lg:col-span-4">
             <DetailSidebar question={question} />
           </div>
@@ -69,16 +59,4 @@ export default function QuestionDetailContainer() {
       </div>
     </Layout>
   );
-}
-
-function LoadingScreen() {
-  return (
-    <div className="flex items-center justify-center min-h-screen">
-      <Loader2 className="animate-spin text-indigo-600" />
-    </div>
-  );
-}
-
-function NotFound() {
-  return <div className="text-center py-20">Question not found</div>;
 }
