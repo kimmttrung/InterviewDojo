@@ -14,7 +14,8 @@ export const API_ENDPOINT = {
     CREATE_LIST: 'target-roles/bulk',
   },
   MENTOR: {
-    UPDATE_ME: 'users/mentor-profile',
+    UPDATE_ME: '/mentors/me',
+    GET_LIST: '/mentors',
   },
   CODE_ENGINE: {
     RUN: '/code-engine/run',
