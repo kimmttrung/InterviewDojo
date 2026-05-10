@@ -41,6 +41,12 @@ export const Messages = {
     CREATED: 'Đặt lịch thành công',
     CANCELLED: 'Huỷ lịch thành công',
     FETCHED: 'Lấy danh sách lịch thành công',
+    DETAIL_FETCHED: 'Lấy chi tiết lịch đặt thành công',
+    STATUS_UPDATED: 'Cập nhật trạng thái lịch đặt thành công',
+    NOT_FOUND: 'Không tìm thấy lịch đặt hoặc không có quyền truy cập',
+    SLOT_UNAVAILABLE: 'Khung giờ này đã được đặt hoặc không khả dụng',
+    PLAN_NOT_FOUND: 'Gói dịch vụ không tồn tại hoặc đã bị khóa',
+    INVALID_TRANSITION: 'Không thể chuyển đổi sang trạng thái này',
   },
 
   // Feedback
@@ -64,5 +70,35 @@ export const Messages = {
     ERROR_VIDEO_FILE: 'File tải lên không phải là video hợp lệ',
 
     USER_RECORDINGS_FETCHED: 'Lấy bản ghi âm của người dùng thành công',
+  },
+
+  SLOT: {
+    FETCHED: 'Lấy danh sách slot thành công',
+    CREATED: 'Tạo mới slot thành công',
+    BATCH_CREATED: 'Tạo hàng loạt slot thành công',
+    UPDATED: 'Cập nhật thông tin slot thành công',
+    DELETED: 'Xóa slot thành công',
+    BATCH_DELETED: 'Xóa hàng loạt slot thành công',
+    NOT_FOUND: 'Không tìm thấy slot hoặc không có quyền truy cập',
+    INVALID_STATUS:
+      'Chỉ có thể thao tác với slot đang ở trạng thái trống (AVAILABLE)',
+  },
+
+  MENTOR: {
+    FETCHED: 'Lấy danh sách mentor thành công',
+    DETAIL_FETCHED: 'Lấy thông tin mentor thành công',
+    UPDATED: 'Cập nhật hồ sơ mentor thành công',
+    NOT_FOUND: 'Không tìm thấy mentor',
+    FORBIDDEN: 'Bạn không có quyền truy cập',
+  },
+  PLAN: {
+    FETCHED: 'Lấy danh sách gói dịch vụ thành công',
+    DETAIL_FETCHED: 'Lấy thông tin gói dịch vụ thành công',
+    CREATED: 'Tạo mới gói dịch vụ thành công',
+    UPDATED: 'Cập nhật gói dịch vụ thành công',
+    DELETED: 'Xóa gói dịch vụ thành công',
+    APPROVED: 'Duyệt gói dịch vụ thành công',
+    NOT_FOUND: 'Không tìm thấy gói dịch vụ hoặc không có quyền truy cập',
+    FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
   },
 } as const;

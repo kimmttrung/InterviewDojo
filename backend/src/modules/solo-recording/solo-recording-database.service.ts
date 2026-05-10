@@ -61,7 +61,7 @@ export class SoloRecordingDatabaseService {
         intervieweeId: userId,
 
         scheduledAt: now,
-        durationMinutes: durationMinutes,
+        durationMinutes: durationMinutes / 60,
 
         status: SessionStatus.COMPLETED,
 
