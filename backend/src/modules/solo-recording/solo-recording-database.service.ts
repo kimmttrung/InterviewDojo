@@ -1,63 +1,104 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { SessionMode, SessionStatus } from '@prisma/client';
+import {
+  Prisma,
+  SessionMode,
+  SessionSource,
+  SessionStatus,
+} from '@prisma/client';
 
 @Injectable()
 export class SoloRecordingDatabaseService {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Tạo mới một MockSession (mode SOLO) kèm SoloSession con.
+   * Tạo SOLO MockSession.
+   *
+   * SOLO mode:
+   * - Không dùng booking
+   * - Không dùng match
+   * - Lưu transcript/question vào solo_sessions.script
    */
   async createSoloSession(params: {
     userId: number;
     durationMinutes: number;
+
+    question: string;
+    answer: string;
+
     scheduledAt?: Date;
     recordingUrl?: string;
+    publicId?: string;
   }) {
-    const { userId, durationMinutes, scheduledAt, recordingUrl } = params;
+    const {
+      userId,
+      durationMinutes,
+      question,
+      answer,
+      scheduledAt,
+      recordingUrl,
+      publicId,
+    } = params;
 
-    // Tách 2 bước để tránh conflict giữa BookingCreateInput và BookingUncheckedCreateInput.
-    // Prisma không cho phép vừa dùng nested relation (slot: { create }) vừa dùng raw FK (candidateId)
-    // trong cùng một lệnh create.
     const now = scheduledAt ?? new Date();
 
-    const slot = await this.prisma.slot.create({
-      data: {
-        mentorId: userId, // self-slot cho solo session
-        startTime: now,
-        endTime: new Date(now.getTime() + durationMinutes * 60000),
-      },
-    });
-
-    const booking = await this.prisma.booking.create({
-      data: {
-        slotId: slot.id,
-        candidateId: userId,
-      },
-    });
+    /**
+     * Script structure:
+     * Có thể mở rộng sau này cho multi-turn conversation.
+     */
+    const script: Prisma.InputJsonValue = {
+      conversations: [
+        {
+          question,
+          answer,
+          createdAt: now.toISOString(),
+        },
+      ],
+    };
 
     const mockSession = await this.prisma.mockSession.create({
       data: {
-        bookingId: booking.id,
         intervieweeId: userId,
+
         scheduledAt: now,
-        durationMinutes,
+        durationMinutes: durationMinutes / 60,
+
         status: SessionStatus.COMPLETED,
+
+        source: SessionSource.SOLO,
         mode: SessionMode.SOLO,
+
+        /**
+         * URL video cloudinary
+         */
         recordingUrl: recordingUrl ?? null,
+
+        /**
+         * publicId cloudinary
+         * dùng tạm meetingLink để tránh sửa schema
+         */
+        meetingLink: publicId ?? null,
+
+        /**
+         * SOLO detail
+         */
         soloSession: {
-          create: {},
+          create: {
+            script,
+          },
         },
       },
-      include: { soloSession: true },
+
+      include: {
+        soloSession: true,
+      },
     });
 
-    return { booking, mockSession };
+    return mockSession;
   }
 
   /**
-   * Lưu kết quả phân tích AI dưới dạng Feedback gắn vào MockSession.
+   * Lưu feedback AI cho session.
    */
   async saveFeedback(params: {
     sessionId: number;
@@ -82,41 +123,106 @@ export class SoloRecordingDatabaseService {
       data: {
         sessionId,
         revieweeId,
+
         overallScore,
+
         strengths,
         weaknesses,
         suggestions,
+
         comment: comment ?? null,
-        // reviewerId null → AI-generated feedback
+
+        /**
+         * reviewerId null = AI feedback
+         */
       },
     });
   }
 
   /**
-   * Cập nhật recordingUrl & publicId cho MockSession sau khi upload Cloudinary xong.
+   * Update recording URL sau khi upload cloudinary xong.
+   *
+   * recordingUrl:
+   * - URL xem video
+   *
+   * meetingLink:
+   * - dùng lưu publicId cloudinary
    */
   async updateRecordingUrl(
     sessionId: number,
     recordingUrl: string,
     publicId: string,
   ) {
-    // publicId lưu vào script của SoloSession để không làm bẩn schema chính.
     return this.prisma.mockSession.update({
-      where: { id: sessionId },
+      where: {
+        id: sessionId,
+      },
+
       data: {
         recordingUrl,
-        soloSession: {
-          update: {
-            script: { publicId },
-          },
-        },
+
+        /**
+         * Dùng meetingLink để lưu publicId
+         */
+        meetingLink: publicId,
       },
-      include: { soloSession: true },
+
+      include: {
+        soloSession: true,
+      },
     });
   }
 
   /**
-   * Lấy toàn bộ lịch sử solo session của một user, kèm feedback AI.
+   * Append thêm hội thoại mới vào script JSON.
+   *
+   * Chuẩn bị cho future continuous conversation.
+   */
+  async appendConversation(params: {
+    sessionId: number;
+    question: string;
+    answer: string;
+  }) {
+    const { sessionId, question, answer } = params;
+
+    const current = await this.prisma.soloSession.findFirst({
+      where: {
+        sessionId,
+      },
+    });
+
+    const currentScript =
+      (current?.script as {
+        conversations?: Array<{
+          question: string;
+          answer: string;
+          createdAt: string;
+        }>;
+      }) ?? {};
+
+    const conversations = currentScript.conversations ?? [];
+
+    conversations.push({
+      question,
+      answer,
+      createdAt: new Date().toISOString(),
+    });
+
+    return this.prisma.soloSession.update({
+      where: {
+        sessionId,
+      },
+
+      data: {
+        script: {
+          conversations,
+        },
+      },
+    });
+  }
+
+  /**
+   * Lấy lịch sử SOLO session của user.
    */
   async findByUser(userId: number) {
     return this.prisma.mockSession.findMany({
@@ -124,7 +230,27 @@ export class SoloRecordingDatabaseService {
         intervieweeId: userId,
         mode: SessionMode.SOLO,
       },
-      orderBy: { scheduledAt: 'desc' },
+
+      orderBy: {
+        scheduledAt: 'desc',
+      },
+
+      include: {
+        soloSession: true,
+        feedbacks: true,
+      },
+    });
+  }
+
+  /**
+   * Lấy chi tiết một SOLO session.
+   */
+  async findOne(sessionId: number) {
+    return this.prisma.mockSession.findUnique({
+      where: {
+        id: sessionId,
+      },
+
       include: {
         soloSession: true,
         feedbacks: true,
