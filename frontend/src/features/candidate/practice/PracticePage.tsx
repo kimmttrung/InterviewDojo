@@ -19,15 +19,14 @@ import { Button } from '../../../shared/components/ui/button';
 import { Layout } from '../../../shared/components/layout/Layout';
 import { Card } from '../../../shared/components/ui/card';
 import { Footer } from '../../../shared/components/layout/Footer';
+import { useCurrentUser } from '@/features/auth';
 
 export default function PracticePage() {
   const navigate = useNavigate();
   const [isSearching, setIsSearching] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const userStore = localStorage.getItem('user');
-  const user = userStore ? JSON.parse(userStore) : null;
-
+  // sau nay can user thi lay tu const { data: user } = useCurrentUser().
   return (
     <Layout>
       <div className="min-h-screen bg-background">

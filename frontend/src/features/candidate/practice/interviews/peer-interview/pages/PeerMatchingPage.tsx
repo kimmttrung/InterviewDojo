@@ -1,48 +1,38 @@
-// src/pages/PeerMatchingPage.tsx
+// src/features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-
 import { Loader2, Users, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
 import { matchingService } from '../services/matching.service';
-import { useSocketStore } from '../../../../../../stores/useSocketStore';
-import { Layout } from '../../../../../../shared/components/layout/Layout';
-import { Button } from '../../../../../../shared/components/ui/button';
+import { useSocketStore } from '@/stores/useSocketStore';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Button } from '@/shared/components/ui/button';
+import { useCurrentUser } from '@/features/auth'; // ✅ lấy user từ server state
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();
-  const { connect, socket, isConnected } = useSocketStore();
+  const { connect, socket } = useSocketStore();
+  const { data: user, isLoading: isUserLoading } = useCurrentUser();
 
   const [isSearching, setIsSearching] = useState(false);
   const [timer, setTimer] = useState(0);
 
-  const userStore = localStorage.getItem('user');
-  const user = userStore ? JSON.parse(userStore) : null;
-
   // ==================== TIMER ====================
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
-
     if (isSearching) {
-      interval = setInterval(() => {
-        setTimer((prev) => prev + 1);
-      }, 1000);
+      interval = setInterval(() => setTimer((prev) => prev + 1), 1000);
     } else {
       setTimer(0);
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
   }, [isSearching]);
 
-  // ==================== SOCKET CONNECTION ====================
   // ==================== SOCKET CONNECT ====================
   useEffect(() => {
     if (!user?.id) return;
-
-    // 🔥 FIX: luôn gọi connect (KHÔNG check socket ở đây)
     connect(user.id);
-
     console.log('🔌 Connecting socket with user ID:', user.id);
   }, [user?.id, connect]);
 
@@ -52,13 +42,11 @@ export default function PeerMatchingPage() {
 
     const handleMatchFound = (data: { roomId: string; token: string }) => {
       console.log('🎯 MATCH FOUND:', data);
-
       setIsSearching(false);
       navigate(`/interview/${data.roomId}?token=${data.token}`);
     };
 
     socket.on('match_found', handleMatchFound);
-
     return () => {
       socket.off('match_found', handleMatchFound);
     };
@@ -67,16 +55,14 @@ export default function PeerMatchingPage() {
   // ==================== START MATCHING ====================
   const handleStartMatching = async () => {
     if (!user) {
-      alert('Please log in to continue!');
+      alert('Vui lòng đăng nhập để tiếp tục!');
       return;
     }
 
     const { socket } = useSocketStore.getState();
 
-    // 🔥 FIX: đảm bảo socket CONNECTED trước khi gọi API
     if (!socket?.connected) {
       console.log('⏳ waiting for socket...');
-
       await new Promise<void>((resolve) => {
         socket?.once('connect', () => {
           console.log('✅ socket connected (await)');
@@ -86,9 +72,6 @@ export default function PeerMatchingPage() {
     }
 
     console.log('🚀 socket ready → start matching');
-
-    setIsSearching(true);
-
     setIsSearching(true);
 
     try {
@@ -98,7 +81,6 @@ export default function PeerMatchingPage() {
         level: 'Junior',
       });
 
-      // Nếu backend trả về ngay matched (trường hợp hiếm)
       if (data.status === 'matched') {
         setIsSearching(false);
         navigate(`/interview/${data.roomId}?token=${data.token}`);
@@ -110,10 +92,32 @@ export default function PeerMatchingPage() {
     }
   };
 
+  // ==================== LOADING STATE ====================
+  if (isUserLoading) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="min-h-[80vh] flex flex-col items-center justify-center gap-4">
+          <p>Bạn cần đăng nhập để sử dụng tính năng này.</p>
+          <Button onClick={() => navigate('/login')}>Đăng nhập</Button>
+        </div>
+      </Layout>
+    );
+  }
+
+  // ==================== MAIN UI ====================
   return (
     <Layout>
       <div className="min-h-[80vh] flex flex-col items-center justify-center bg-slate-50 px-4">
-        {/* Back Button */}
         <button
           onClick={() => navigate(-1)}
           className="absolute top-24 left-8 flex items-center text-muted-foreground hover:text-primary transition-colors"
@@ -159,7 +163,6 @@ export default function PeerMatchingPage() {
               <Button
                 size="lg"
                 className="h-16 px-12 text-xl bg-indigo-600 hover:bg-indigo-700 shadow-lg hover:shadow-indigo-200 transition-all"
-                // disabled={!isConnected}
                 onClick={handleStartMatching}
               >
                 Find a Partner Now

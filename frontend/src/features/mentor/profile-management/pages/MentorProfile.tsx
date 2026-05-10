@@ -6,7 +6,7 @@ import { Input } from '../../../../shared/components/ui/input';
 import { Textarea } from '../../../../shared/components/ui/textarea';
 import { Button } from '../../../../shared/components/ui/button';
 import { showToast } from '../../../../shared/lib/toast';
-import { mentorService } from '../../../shared-domain/auth/services/mentor.service';
+import { mentorService } from '../../../auth/services/mentor.service';
 export default function MentorProfile() {
   const [isLoading, setIsLoading] = useState(false);
   const [form, setForm] = useState({

@@ -14,6 +14,8 @@ export const Messages = {
     LOGOUT_SUCCESS: 'Đăng xuất thành công',
     REGISTER_SUCCESS: 'Đăng ký thành công',
     TOKEN_REFRESHED: 'Làm mới token thành công',
+    ADMIN_CREATED: 'Tạo admin thành công',
+    USER_FETCHED: 'Lấy thông tin người dùng thành công',
   },
 
   // Coding
@@ -29,6 +31,9 @@ export const Messages = {
   USER: {
     PROFILE_FETCHED: 'Lấy thông tin người dùng thành công',
     PROFILE_UPDATED: 'Cập nhật thông tin thành công',
+    TARGET_ROLE_UPDATED: 'Cập nhật target role thành công',
+    MENTOR_PROFILE_CREATED: 'Tạo hồ sơ mentor thành công',
+    AVATAR_UPLOADED: 'Cập nhật ảnh đại diện thành công',
   },
 
   // Booking

@@ -3,22 +3,27 @@ import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Lock, Mail, ArrowLeft } from 'lucide-react';
 import { authService } from '../services/auth.service';
-import { showToast } from '../../../../shared/lib/toast';
-import { Card } from '../../../../shared/components/ui/card';
-import { Label } from '../../../../shared/components/ui/label';
-import { Input } from '../../../../shared/components/ui/input';
-import { Button } from '../../../../shared/components/ui/button';
+import { showToast } from '../../../shared/lib/toast';
+import { Card } from '../../../shared/components/ui/card';
+import { Label } from '../../../shared/components/ui/label';
+import { Input } from '../../../shared/components/ui/input';
+import { Button } from '../../../shared/components/ui/button';
+import { useAuthStore } from '../../../stores/useAuthStore';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function Login() {
   const { t } = useTranslation();
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const queryClient = useQueryClient();
 
   const [formData, setFormData] = useState({
     email: '',
     password: '',
   });
+
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -30,36 +35,28 @@ export default function Login() {
       });
 
       console.log('check res', res);
-      const response = res.data.data;
-      const redirect = response.redirect;
+      const { accessToken, refreshToken, user, redirect } = res.data.data;
 
-      // lưu token
-      localStorage.setItem('access_token', response.data.accessToken);
-      localStorage.setItem('refresh_token', response.data.refreshToken);
+      // ✅ Cập nhật Zustand store (tự động persist)
+      setAuth({ accessToken, refreshToken });
+      // queryClient.setQueryData(['current-user'], user);
+      await queryClient.invalidateQueries({ queryKey: ['current-user'] });
 
-      // lưu user
-      localStorage.setItem('user', JSON.stringify(response.data.user));
       showToast.success(t('Login successful'));
 
-      const userRole = response.data.user;
-
-      // 🎯 redirect theo role
+      // Điều hướng theo role
       if (redirect) {
         navigate(redirect);
-      } else if (userRole.role === 'ADMIN' || userRole.role === 'STAFF') {
+      } else if (user.role === 'ADMIN' || user.role === 'STAFF') {
         navigate('/admin/dashboard');
-      } else if (userRole.role === 'MENTOR' && redirect === null) {
+      } else if (user.role === 'MENTOR') {
         navigate('/mentor/dashboard');
-      } else if (userRole.role === 'CANDIDATE' && redirect === null) {
-        navigate('/');
       } else {
         navigate('/');
       }
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Something went wrong';
-
       showToast.error(message);
-      console.error('Login error:', error);
     } finally {
       setIsLoading(false);
     }

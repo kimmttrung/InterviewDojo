@@ -7,6 +7,7 @@ export const API_ENDPOINT = {
     UPDATE_ME: '/users/me',
     GET_ME: '/users/me',
     UPDATE_TARGET_ROLE: '/users/target-role',
+    AVATAR: '/users/me/avatar',
   },
   TARGET_ROLE: {
     GET: 'target-roles',
@@ -16,6 +17,11 @@ export const API_ENDPOINT = {
   MENTOR: {
     UPDATE_ME: '/mentors/me',
     GET_LIST: '/mentors',
+  },
+  MENTORS: {
+    GET_ALL: '/mentors',
+    GET_ONE: (id: number | string) => `/mentors/${id}`,
+    GET_AVAILABLE_SLOTS: (id: number | string) => `/mentors/${id}/available-slots`,
   },
   CODE_ENGINE: {
     RUN: '/code-engine/run',

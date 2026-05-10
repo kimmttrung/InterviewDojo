@@ -26,6 +26,8 @@ import { BookingModule } from './modules/booking/booking.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { MentorsModule } from './modules/mentors/mentors.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -66,6 +68,7 @@ import { PaymentModule } from './modules/payment/payment.module';
     PlanModule,
     SlotModule,
     PaymentModule,
+    MentorsModule,
   ],
   controllers: [AppController],
   providers: [

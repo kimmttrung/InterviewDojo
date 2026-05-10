@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { FileText, Award, ArrowRight, Loader2 } from 'lucide-react';
 import { showToast } from '../../../../shared/lib/toast';
-import { userService } from '../../../candidate/profile/services/user.service';
+import { userService } from '../../../auth/services/user.service';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../../../shared/components/ui/card';
 import { Label } from '../../../../shared/components/ui/label';

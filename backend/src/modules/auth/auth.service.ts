@@ -24,18 +24,15 @@ export class AuthService {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-
     if (existingUser) {
       throw new BadRequestException('Email đã tồn tại');
     }
-
     if (dto.role === UserRole.ADMIN) {
       throw new BadRequestException('Không được phép đăng ký ADMIN');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    const user = await this.prisma.user.create({
+    const newUser = await this.prisma.user.create({
       data: {
         email: dto.email,
         password: hashedPassword,
@@ -44,20 +41,13 @@ export class AuthService {
       },
     });
 
-    const data = await this.generateTokens(user.id, user.email, user.role);
-
-    return {
-      message: 'Register successful',
-      data,
-    };
+    return this.generateTokens(newUser.id, newUser.email, newUser.role);
   }
 
   async login(dto: LoginDto) {
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
-      include: {
-        mentorProfile: true, // check để xem mentor đã setup chưa
-      },
+      include: { mentorProfile: true },
     });
 
     if (!user) {
@@ -65,28 +55,21 @@ export class AuthService {
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
-
     if (!isPasswordValid) {
       throw new UnauthorizedException('Sai mật khẩu');
     }
 
-    const data = await this.generateTokens(user.id, user.email, user.role);
+    const tokens = await this.generateTokens(user.id, user.email, user.role);
 
-    type RedirectPath = '/mentor/setup' | '/candidate/setup' | null;
-
-    let redirect: RedirectPath = null;
-
+    let redirect: string | null = null;
     if (user.role === Role.MENTOR && !user.mentorProfile) {
       redirect = '/mentor/setup';
-    }
-
-    if (user.role === Role.CANDIDATE && !user.targetRoleId) {
+    } else if (user.role === Role.CANDIDATE && !user.targetRoleId) {
       redirect = '/candidate/setup';
     }
 
     return {
-      message: 'Login successful',
-      data,
+      ...tokens, // accessToken, refreshToken, user
       redirect,
     };
   }
@@ -105,12 +88,7 @@ export class AuthService {
         throw new UnauthorizedException('Refresh token không hợp lệ');
       }
 
-      const data = await this.generateTokens(user.id, user.email, user.role);
-
-      return {
-        message: 'Refresh token successful',
-        data,
-      };
+      return this.generateTokens(user.id, user.email, user.role);
     } catch {
       throw new UnauthorizedException(
         'Refresh token không hợp lệ hoặc đã hết hạn',
@@ -119,29 +97,26 @@ export class AuthService {
   }
 
   async validateUser(userId: number) {
-    return this.prisma.user.findUnique({
+    const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: {
-        id: true,
-        email: true,
-        name: true,
-        role: true,
-      },
+      select: { id: true, email: true, name: true, role: true },
     });
+    if (!user) {
+      throw new UnauthorizedException('Người dùng không tồn tại');
+    }
+    return { sub: user.id, ...user };
   }
 
   async createAdmin(dto: CreateAdminDto) {
     const existingUser = await this.prisma.user.findUnique({
       where: { email: dto.email },
     });
-
     if (existingUser) {
       throw new BadRequestException('Email đã tồn tại');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
-
-    const admin = await this.prisma.user.create({
+    return this.prisma.user.create({
       data: {
         email: dto.email,
         password: hashedPassword,
@@ -149,38 +124,25 @@ export class AuthService {
         role: Role.ADMIN,
       },
     });
-
-    return {
-      message: 'Admin created successfully',
-      data: admin,
-    };
   }
 
   private async generateTokens(userId: number, email: string, role: string) {
-    const payload: JwtPayload = {
-      sub: userId,
-      email,
-      role,
-    };
-
-    const accessToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_ACCESS_SECRET as string,
-      expiresIn: '1h',
-    });
-
-    const refreshToken = await this.jwtService.signAsync(payload, {
-      secret: process.env.JWT_REFRESH_SECRET as string,
-      expiresIn: '7d',
-    });
+    const payload: JwtPayload = { sub: userId, email, role };
+    const [accessToken, refreshToken] = await Promise.all([
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_ACCESS_SECRET,
+        expiresIn: '1h',
+      }),
+      this.jwtService.signAsync(payload, {
+        secret: process.env.JWT_REFRESH_SECRET,
+        expiresIn: '7d',
+      }),
+    ]);
 
     return {
       accessToken,
       refreshToken,
-      user: {
-        id: userId,
-        email,
-        role,
-      },
+      user: { id: userId, email, role },
     };
   }
 }
