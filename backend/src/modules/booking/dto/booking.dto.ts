@@ -11,6 +11,8 @@ import { Type } from 'class-transformer';
 
 import { BookingStatus } from '@prisma/client';
 
+import { Min } from 'class-validator';
+
 /**
  * Query booking
  */
@@ -35,6 +37,7 @@ export class QueryBookingDto {
  */
 export class CreateBookingAnswerDto {
   @IsInt()
+  @Min(1)
   questionId!: number;
 
   @IsOptional()
@@ -51,9 +54,11 @@ export class CreateBookingAnswerDto {
  */
 export class CreateBookingDto {
   @IsInt()
+  @Min(1)
   slotId!: number;
 
   @IsInt()
+  @Min(1)
   coachingPlanId!: number;
 
   @IsOptional()

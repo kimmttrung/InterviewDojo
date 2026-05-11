@@ -119,7 +119,15 @@ export class MentorService {
           description: plan.description,
           duration: plan.duration,
           price: plan.price,
-          questions: [],
+          questions:
+            plan.questions?.map((question: any) => ({
+              id: question.id,
+              question: question.question,
+              type: question.type,
+              placeholder: question.placeholder,
+              isRequired: question.isRequired,
+              orderIndex: question.orderIndex,
+            })) ?? [],
         })) ?? [],
     };
   }
@@ -138,9 +146,9 @@ export class MentorService {
     const isAdmin = currentUser?.role === Role.ADMIN;
 
     /**
-     * Candidate chỉ được xem mentor APPROVED
+     * Candidate chỉ được xem mentor ACTIVE
      */
-    const filterStatus = isAdmin ? status : ApprovalStatus.APPROVED;
+    const filterStatus = isAdmin ? status : ApprovalStatus.ACTIVE;
 
     const whereCondition: any = {
       role: Role.MENTOR,
@@ -182,7 +190,7 @@ export class MentorService {
         role: Role.MENTOR,
         mentorProfile: {
           is: {
-            approvalStatus: ApprovalStatus.APPROVED,
+            approvalStatus: ApprovalStatus.ACTIVE,
           },
         },
       },
@@ -204,6 +212,13 @@ export class MentorService {
               },
               orderBy: {
                 createdAt: 'desc',
+              },
+              include: {
+                questions: {
+                  orderBy: {
+                    orderIndex: 'asc',
+                  },
+                },
               },
             },
           },
@@ -231,7 +246,7 @@ export class MentorService {
         role: Role.MENTOR,
         mentorProfile: {
           is: {
-            approvalStatus: ApprovalStatus.APPROVED,
+            approvalStatus: ApprovalStatus.ACTIVE,
           },
         },
       },
