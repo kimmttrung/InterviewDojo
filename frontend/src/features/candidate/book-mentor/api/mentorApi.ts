@@ -1,19 +1,35 @@
 import { api } from '../../../../shared/lib/api';
-import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
+import type { AvailableSlot, MentorDetail } from '../types/mentor.types';
 
-export const mentorApi = {
-  getMentors: async () => {
-    const res = await api.get(API_ENDPOINT.MENTORS.GET_ALL);
-    return res.data.data ?? res.data;
-  },
+type ApiResponse<T> = {
+  success: boolean;
+  data: T;
+  message: string;
+};
 
-  getMentorDetail: async (mentorId: number | string) => {
-    const res = await api.get(API_ENDPOINT.MENTORS.GET_ONE(mentorId));
-    return res.data.data ?? res.data;
-  },
+export const getMentorDetail = async (mentorId: number) => {
+  const response = await api.get<ApiResponse<MentorDetail>>(`/mentors/${mentorId}`);
 
-  getAvailableSlots: async (mentorId: number | string) => {
-    const res = await api.get(API_ENDPOINT.MENTORS.GET_AVAILABLE_SLOTS(mentorId));
-    return res.data.data ?? res.data;
-  },
+  return response.data.data;
+};
+
+export const getMentorAvailableSlots = async (mentorId: number) => {
+  const response = await api.get<ApiResponse<AvailableSlot[]>>(
+    `/mentors/${mentorId}/available-slots`,
+  );
+
+  return response.data.data;
+};
+
+export const createBooking = async (data: {
+  slotId: number;
+  coachingPlanId: number;
+  answers?: {
+    questionId: number;
+    answerText?: string;
+    fileUrl?: string;
+  }[];
+}) => {
+  const response = await api.post<ApiResponse<unknown>>('/bookings', data);
+  return response.data.data;
 };
