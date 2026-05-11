@@ -38,7 +38,7 @@ export class QuestionsService {
     let testCasesToReturn: QuestionDetail['testCases'] = undefined;
 
     if (isCoding && rawQ.codingQuestion?.testCases) {
-      const allTestCases = rawQ.codingQuestion.testCases;
+      const allTestCases: any[] = rawQ.codingQuestion.testCases;
       if (userRole === 'ADMIN') {
         testCasesToReturn = allTestCases.map((tc) => ({
           id: tc.id,
@@ -174,7 +174,7 @@ export class QuestionsService {
   }
 
   async findOne(id: number, userRole?: string): Promise<QuestionDetail> {
-    const rawQ = await this.prisma.question.findUnique({
+    const rawQ = await this.prisma.question.findFirst({
       where: { id, isPublished: true },
       include: {
         categories: { include: { category: true } },
