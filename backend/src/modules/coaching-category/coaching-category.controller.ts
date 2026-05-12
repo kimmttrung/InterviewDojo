@@ -10,8 +10,8 @@ import {
   UseGuards,
 } from '@nestjs/common';
 import { CoachingCategoryService } from './coaching-category.service';
-import { CreateCategoryDto } from './dto/create-coaching-category.dto';
-import { UpdateCategoryDto } from './dto/update-coaching-category.dto';
+import { CreateCategoryCoachingDto } from './dto/create-coaching-category.dto';
+import { UpdateCategoryCoachingDto } from './dto/update-coaching-category.dto';
 import { Messages } from '../../common/constants/messages.constant';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { Roles } from '../auth/decorators/roles.decorator';
@@ -33,7 +33,7 @@ export class CoachingCategoryController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ResponseMessage(Messages.COACHING_CATEGORY.CREATED)
-  async create(@Body() dto: CreateCategoryDto) {
+  async create(@Body() dto: CreateCategoryCoachingDto) {
     return this.service.create(dto);
   }
 
@@ -43,7 +43,7 @@ export class CoachingCategoryController {
   @ResponseMessage(Messages.COACHING_CATEGORY.UPDATED)
   async update(
     @Param('id', ParseIntPipe) id: number,
-    @Body() dto: UpdateCategoryDto,
+    @Body() dto: UpdateCategoryCoachingDto,
   ) {
     return this.service.update(id, dto);
   }

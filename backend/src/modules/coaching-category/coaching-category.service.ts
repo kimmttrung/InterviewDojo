@@ -4,8 +4,8 @@ import {
   ConflictException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { CreateCategoryDto } from './dto/create-coaching-category.dto';
-import { UpdateCategoryDto } from './dto/update-coaching-category.dto';
+import { CreateCategoryCoachingDto } from './dto/create-coaching-category.dto';
+import { UpdateCategoryCoachingDto } from './dto/update-coaching-category.dto';
 
 @Injectable()
 export class CoachingCategoryService {
@@ -17,7 +17,7 @@ export class CoachingCategoryService {
     });
   }
 
-  async create(dto: CreateCategoryDto) {
+  async create(dto: CreateCategoryCoachingDto) {
     const existing = await this.prisma.coachingCategory.findUnique({
       where: { slug: dto.slug },
     });
@@ -26,7 +26,7 @@ export class CoachingCategoryService {
     return this.prisma.coachingCategory.create({ data: dto });
   }
 
-  async update(id: number, dto: UpdateCategoryDto) {
+  async update(id: number, dto: UpdateCategoryCoachingDto) {
     const category = await this.prisma.coachingCategory.findUnique({
       where: { id },
     });

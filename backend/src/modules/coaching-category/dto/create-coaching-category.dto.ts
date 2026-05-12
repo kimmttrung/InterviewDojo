@@ -1,6 +1,6 @@
 import { IsString, IsNotEmpty, IsOptional } from 'class-validator';
 
-export class CreateCategoryDto {
+export class CreateCategoryCoachingDto {
   @IsString()
   @IsNotEmpty()
   slug!: string; // ← thêm !

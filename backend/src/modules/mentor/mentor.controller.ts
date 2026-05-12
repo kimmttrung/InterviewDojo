@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { MentorService } from './mentor.service';
 import { QueryMentorDto, UpdateMentorDto } from './dto/mentor.dto';
-import { MentorResponse } from './interfaces/mentor.interface';
+import {
+  MentorResponse,
+  PaginatedMentorResponse,
+} from './interfaces/mentor.interface';
 import { Messages } from '../../common/constants/messages.constant';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -25,14 +28,11 @@ export class MentorController {
   constructor(private readonly mentorService: MentorService) {}
 
   @Get()
-  // Không đặt JwtAuthGuard cứng ở class level, để Guest/Candidate có thể lấy list mentor
-  // Nếu có token, currentUser sẽ lấy ra được (để check Admin), nếu không sẽ là undefined
   @ResponseMessage(Messages.MENTOR.FETCHED)
   async findAll(
     @Query() query: QueryMentorDto,
     @CurrentUser() user?: JwtPayload,
-  ): Promise<MentorResponse[]> {
-    // Bỏ PaginatedResponse đi
+  ): Promise<PaginatedMentorResponse> {
     return this.mentorService.findAll(query, user);
   }
 
