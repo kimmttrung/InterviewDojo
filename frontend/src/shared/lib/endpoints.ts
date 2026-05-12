@@ -2,6 +2,8 @@ export const API_ENDPOINT = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
+    REFRESH: '/auth/refresh', // <<-- phải có dòng này
+    ME: '/auth/me',
   },
   USER: {
     UPDATE_ME: '/users/me',
