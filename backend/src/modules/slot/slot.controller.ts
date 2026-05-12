@@ -53,6 +53,7 @@ export class SlotController {
   }
 
   @Post()
+  @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR) // Chỉ Mentor (hoặc Admin do logic RolesGuard) mới được truy cập
   @ResponseMessage(Messages.SLOT.CREATED)
   async create(

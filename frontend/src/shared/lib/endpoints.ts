@@ -65,4 +65,13 @@ export const API_ENDPOINT = {
   AI_ANALYSIS: {
     GET_SOLO_RECORDING: (sessionId: number | string) => `/ai-analysis/session/${sessionId}`,
   },
+
+  SLOTS: {
+    GET_ALL: '/slots',
+    CREATE: '/slots',
+    CREATE_BATCH: '/slots/batch',
+    UPDATE: (id: number | string) => `/slots/${id}`,
+    DELETE: (id: number | string) => `/slots/${id}`,
+    DELETE_BATCH: '/slots/batch',
+  },
 };

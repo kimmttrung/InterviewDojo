@@ -7,15 +7,19 @@ import { Toaster } from '../shared/components/ui/toaster';
 import i18n from '../shared/i18n';
 import NotFound from '../shared/components/layout/NotFound';
 import Unauthorized from '../shared/components/layout/Unauthorized';
-import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
+
 import Dashboard from '../features/candidate/dashboard/pages/Dashboard';
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
+
+import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
-import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedule';
+import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedulePage';
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfile';
+import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
+
 import AdminDashboard from '../features/admin/dashboard/pages/AdminDashboard';
 import CategoriesPage from '../features/admin/category-management/pages/CategoriesPage';
 import CompaniesPage from '../features/admin/company-management/pages/CompaniesPage';
@@ -29,9 +33,8 @@ import QuestionBank from '../features/shared-domain/question-bank/pages/Question
 import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
-import { useAuthStore } from '@/stores/useAuthStore';
+// import { useAuthStore } from '@/stores/useAuthStore';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
-import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
