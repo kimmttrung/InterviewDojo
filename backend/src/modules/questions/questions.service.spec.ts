@@ -142,7 +142,7 @@ describe('QuestionsService', () => {
 
   describe('findOne', () => {
     it('should return coding question detail', async () => {
-      prisma.question.findUnique.mockResolvedValue({
+      prisma.question.findFirst.mockResolvedValue({
         id: 1,
         title: 'Two Sum',
         slug: 'two-sum',
@@ -194,7 +194,7 @@ describe('QuestionsService', () => {
     });
 
     it('should throw NotFoundException if question not found', async () => {
-      prisma.question.findUnique.mockResolvedValue(null);
+      prisma.question.findFirst.mockResolvedValue(null);
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });

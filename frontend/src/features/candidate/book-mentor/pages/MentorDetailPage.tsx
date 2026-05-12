@@ -1,151 +1,113 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { mentorApi } from '../api/mentorApi';
+import { useMentorAvailableSlots, useMentorDetail } from '../hooks/useMentorDetail';
+import type { CoachingPlan } from '../types/mentor.types';
+import MentorSkillSection from '../components/MentorSkillSection';
+import MentorExperienceSection from '../components/MentorExperienceSection';
+import BookingModal from '../components/BookingModal';
 
 export default function MentorDetailPage() {
-  const { mentorId } = useParams();
-  const [mentor, setMentor] = useState<any>(null);
-  const [slots, setSlots] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
+  const params = useParams();
 
-  useEffect(() => {
-    if (!mentorId) return;
+  const mentorId = Number(params.id ?? params.mentorId);
 
-    const id = mentorId;
+  const [selectedPlan, setSelectedPlan] = useState<CoachingPlan | null>(null);
 
-    async function fetchMentorDetail() {
-      try {
-        const [mentorData, slotData] = await Promise.all([
-          mentorApi.getMentorDetail(id),
-          mentorApi.getAvailableSlots(id),
-        ]);
+  const { data: mentor, isLoading, isError, error } = useMentorDetail(mentorId);
 
-        setMentor(mentorData);
-        setSlots(slotData);
-      } catch (error) {
-        console.error('Failed to fetch mentor detail:', error);
-      } finally {
-        setLoading(false);
-      }
-    }
+  const { data: slots = [] } = useMentorAvailableSlots(mentorId);
 
-    fetchMentorDetail();
-  }, [mentorId]);
+  console.log('PARAMS:', params);
 
-  if (loading) {
-    return <div className="p-8">Loading mentor detail...</div>;
+  console.log('MENTOR_ID:', mentorId);
+  console.log('MENTOR_DATA:', mentor);
+  console.log('MENTOR_ERROR:', error);
+
+  if (isLoading) {
+    return <div className="p-8">Đang tải thông tin mentor...</div>;
   }
 
-  if (!mentor) {
-    return <div className="p-8">Mentor not found</div>;
+  if (isError || !mentor) {
+    return (
+      <div className="p-8 text-red-500">
+        Không tải được mentor.
+        <pre className="mt-4 text-sm text-black">{JSON.stringify(error, null, 2)}</pre>
+      </div>
+    );
   }
-
-  const experiences = mentor.mentorProfile?.experiences ?? [];
 
   return (
-    <div className="min-h-screen bg-gray-50 px-6 py-10">
-      <div className="mx-auto max-w-5xl">
-        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_320px]">
-          <main className="space-y-6">
-            <section className="rounded-2xl bg-white p-8 shadow-sm">
-              <div className="flex gap-6">
-                <img
-                  src={mentor.avatarUrl || 'https://i.pravatar.cc/300'}
-                  alt={mentor.name}
-                  className="h-28 w-28 rounded-full object-cover"
-                />
+    <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+        <div className="flex items-start gap-5">
+          <img
+            src={mentor.avatarUrl || '/default-avatar.png'}
+            alt={mentor.name}
+            className="h-24 w-24 rounded-full object-cover"
+          />
 
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-900">{mentor.name}</h1>
-
-                  <p className="mt-2 text-lg text-gray-600">
-                    {experiences[0]?.jobRole?.name || 'Mentor'}
-                    {experiences[0]?.company?.name ? ` | ${experiences[0].company.name}` : ''}
-                  </p>
-
-                  <p className="mt-4 leading-7 text-gray-700">
-                    {mentor.bio || 'This mentor has not added bio yet.'}
-                  </p>
-
-                  <p className="mt-3 text-sm text-gray-500">
-                    {mentor.experienceYears || 0} years of experience
-                  </p>
-                </div>
-              </div>
-            </section>
-
-            <section className="rounded-2xl bg-white p-8 shadow-sm">
-              <h2 className="text-2xl font-bold text-gray-900">Experience</h2>
-
-              <div className="mt-5 space-y-4">
-                {experiences.length > 0 ? (
-                  experiences.map((exp: any) => (
-                    <div key={exp.id} className="rounded-xl border p-5">
-                      <h3 className="text-lg font-semibold">{exp.jobRole?.name}</h3>
-
-                      <p className="mt-1 text-gray-600">
-                        {exp.company?.name}
-                        {exp.company?.industry ? ` · ${exp.company.industry}` : ''}
-                      </p>
-
-                      <p className="mt-1 text-sm text-gray-500">
-                        {formatDate(exp.startDate)} -{' '}
-                        {exp.isCurrent ? 'Present' : formatDate(exp.endDate)}
-                      </p>
-
-                      {exp.description && (
-                        <p className="mt-3 leading-7 text-gray-700">{exp.description}</p>
-                      )}
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500">No experience added yet.</p>
-                )}
-              </div>
-            </section>
-          </main>
-
-          <aside className="h-fit rounded-2xl bg-white p-6 shadow-sm">
-            <h2 className="text-xl font-bold text-gray-900">Available slots</h2>
-
-            <div className="mt-4 space-y-3">
-              {slots.length > 0 ? (
-                slots.map((slot) => (
-                  <button
-                    key={slot.id}
-                    className="w-full rounded-xl border px-4 py-3 text-left hover:border-purple-500 hover:bg-purple-50"
-                  >
-                    <p className="font-medium">{formatDateTime(slot.startTime)}</p>
-                    <p className="text-sm text-gray-500">to {formatDateTime(slot.endTime)}</p>
-                  </button>
-                ))
-              ) : (
-                <p className="text-sm text-gray-500">This mentor has no available slots.</p>
-              )}
-            </div>
-
-            <button className="mt-6 w-full rounded-xl bg-purple-600 px-4 py-3 font-semibold text-white hover:bg-purple-700">
-              Request booking
-            </button>
-          </aside>
+          <div>
+            <h1 className="text-3xl font-bold">{mentor.name}</h1>
+            <p className="mt-1 text-gray-600">{mentor.mentorProfile?.headline}</p>
+            <p className="mt-3 text-gray-700">{mentor.bio || 'Mentor chưa cập nhật bio.'}</p>
+          </div>
         </div>
-      </div>
+      </section>
+
+      {mentor.mentorProfile?.introductionVideoUrl && (
+        <section className="rounded-2xl border bg-white p-6 shadow-sm">
+          <h2 className="mb-4 text-xl font-semibold">Video giới thiệu</h2>
+          <video
+            src={mentor.mentorProfile.introductionVideoUrl}
+            controls
+            className="w-full rounded-xl"
+          />
+        </section>
+      )}
+
+      <MentorSkillSection skills={mentor.skills ?? []} />
+
+      <MentorExperienceSection experiences={mentor.experiences ?? []} />
+
+      <section className="rounded-2xl border bg-white p-6 shadow-sm">
+        <h2 className="mb-4 text-xl font-semibold">Dịch vụ cung cấp</h2>
+
+        {mentor.coachingPlans?.length === 0 ? (
+          <p className="text-sm text-gray-500">Mentor chưa có dịch vụ.</p>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {mentor.coachingPlans?.map((plan) => (
+              <div key={plan.id} className="rounded-xl border p-5">
+                <h3 className="text-lg font-semibold">{plan.title}</h3>
+
+                <p className="mt-2 text-sm text-gray-600">{plan.description}</p>
+
+                <div className="mt-4 flex justify-between">
+                  <span className="font-semibold">{plan.price.toLocaleString('vi-VN')} credit</span>
+
+                  <span className="text-sm text-gray-500">{plan.duration} phút</span>
+                </div>
+
+                <button
+                  onClick={() => setSelectedPlan(plan)}
+                  className="mt-4 w-full rounded-xl bg-black px-4 py-2 text-white"
+                >
+                  Đặt dịch vụ
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {selectedPlan && (
+        <BookingModal
+          mentorId={mentorId}
+          plan={selectedPlan}
+          slots={slots}
+          onClose={() => setSelectedPlan(null)}
+        />
+      )}
     </div>
   );
-}
-
-function formatDate(date?: string | null) {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('vi-VN');
-}
-
-function formatDateTime(date?: string | null) {
-  if (!date) return '';
-  return new Date(date).toLocaleString('vi-VN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-  });
 }

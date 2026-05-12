@@ -36,22 +36,26 @@ export class MentorController {
     return this.mentorService.findAll(query, user);
   }
 
-  @Get(':id')
-  @ResponseMessage(Messages.MENTOR.DETAIL_FETCHED)
-  async findById(
-    @Param('id', ParseIntPipe) id: number,
-  ): Promise<MentorResponse> {
-    return this.mentorService.findById(id);
-  }
-
   @Put('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.MENTOR) // Chỉ Mentor mới được update profile của chính mình
+  @Roles(Role.MENTOR)
   @ResponseMessage(Messages.MENTOR.UPDATED)
   async updateMe(
     @Body() updateMentorDto: UpdateMentorDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<MentorResponse> {
-    return this.mentorService.updateMe(user.sub, updateMentorDto);
+    return this.mentorService.updateMe(Number(user.sub), updateMentorDto);
+  }
+
+  @Get(':id/available-slots')
+  @ResponseMessage(Messages.MENTOR.AVAILABLE_SLOTS_FETCHED)
+  findAvailableSlots(@Param('id', ParseIntPipe) id: number) {
+    return this.mentorService.findAvailableSlots(id);
+  }
+
+  @Get(':id')
+  @ResponseMessage(Messages.MENTOR.DETAIL_FETCHED)
+  findById(@Param('id', ParseIntPipe) id: number) {
+    return this.mentorService.findById(id);
   }
 }

@@ -34,6 +34,7 @@ export const Messages = {
     TARGET_ROLE_UPDATED: 'Cập nhật target role thành công',
     MENTOR_PROFILE_CREATED: 'Tạo hồ sơ mentor thành công',
     AVATAR_UPLOADED: 'Cập nhật ảnh đại diện thành công',
+    NOT_FOUND: 'Không tìm thấy người dùng',
   },
 
   // Booking
@@ -47,6 +48,8 @@ export const Messages = {
     SLOT_UNAVAILABLE: 'Khung giờ này đã được đặt hoặc không khả dụng',
     PLAN_NOT_FOUND: 'Gói dịch vụ không tồn tại hoặc đã bị khóa',
     INVALID_TRANSITION: 'Không thể chuyển đổi sang trạng thái này',
+    NOT_ENOUGH_CREDIT:
+      'Số dư tài khoản không đủ, vui lòng nạp tiền để hoàn thành giao dịch',
   },
 
   // Feedback
@@ -96,8 +99,9 @@ export const Messages = {
     FETCHED: 'Lấy danh sách mentor thành công',
     DETAIL_FETCHED: 'Lấy thông tin mentor thành công',
     UPDATED: 'Cập nhật hồ sơ mentor thành công',
+    AVAILABLE_SLOTS_FETCHED: 'Lấy lịch rảnh của mentor thành công',
     NOT_FOUND: 'Không tìm thấy mentor',
-    FORBIDDEN: 'Bạn không có quyền truy cập',
+    NOT_MENTOR: 'Bạn không phải mentor',
   },
   PLAN: {
     FETCHED: 'Lấy danh sách gói dịch vụ thành công',
