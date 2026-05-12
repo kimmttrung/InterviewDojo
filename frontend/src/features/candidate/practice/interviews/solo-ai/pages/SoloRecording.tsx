@@ -24,13 +24,12 @@ import { Card } from '../../../../../../shared/components/ui/card';
 import { Button } from '../../../../../../shared/components/ui/button';
 import { useCurrentUser } from '@/features/auth';
 
-const MOCK_QUESTIONS = [
-  'Giới thiệu về bản thân bạn.',
-  'Điểm yếu và mạnh của bạn là gì?',
-  'Tại sao bạn muốn làm việc tại công ty này?',
-  'Mô tả một thách thức kỹ thuật khó khăn mà bạn đã đối mặt.',
-  'Trong 5 năm tới, bạn sẽ phát triển như thế nào?',
-];
+type QuestionItem = {
+  id: number;
+  title: string;
+  difficulty: string;
+  type: string;
+};
 
 export default function SoloRecording() {
   const navigate = useNavigate();
@@ -47,7 +46,16 @@ export default function SoloRecording() {
   const transcriptScrollRef = useRef<HTMLDivElement | null>(null);
 
   // State
-  const [selectedQuestion, setSelectedQuestion] = useState(MOCK_QUESTIONS[0]);
+  const [questions, setQuestions] = useState<QuestionItem[]>([]);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
+
+  const [typeFilter, setTypeFilter] = useState('');
+  const [difficultyFilter, setDifficultyFilter] = useState('');
+  const [companyFilter, setCompanyFilter] = useState('');
+
+  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
+  const selectedQuestionTitle = selectedQuestion?.title ?? '';
+
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -63,6 +71,35 @@ export default function SoloRecording() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showQuestion, setShowQuestion] = useState(true);
   const [showTranscript, setShowTranscript] = useState(true);
+
+  useEffect(() => {
+    const fetchQuestions = async () => {
+      try {
+        const res = await soloRecordingService.getQuestions({
+          page: 1,
+          limit: 50,
+          type: typeFilter || undefined,
+          difficulty: difficultyFilter || undefined,
+        });
+
+        const payload = res.data?.data ?? res.data;
+        const items = payload?.items ?? [];
+
+        setQuestions(items);
+
+        if (items.length > 0) {
+          setSelectedQuestionId(items[0].id);
+        } else {
+          setSelectedQuestionId(null);
+        }
+      } catch (error) {
+        console.error('Fetch questions failed:', error);
+        toast.error('Không tải được danh sách câu hỏi');
+      }
+    };
+
+    fetchQuestions();
+  }, [typeFilter, difficultyFilter]);
 
   //AUTO-SCROLL TRANSCRIPT
   useEffect(() => {
@@ -405,7 +442,7 @@ export default function SoloRecording() {
       const analyzePayload = {
         userId: Number(currentUser.id),
         duration: seconds,
-        question: selectedQuestion,
+        question: selectedQuestionTitle,
         transcript: finalTranscriptText,
       };
 
@@ -506,16 +543,57 @@ export default function SoloRecording() {
               <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
                 <div className="text-left space-y-4">
                   <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                    Filter Questions
+                  </label>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <select
+                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={typeFilter}
+                      onChange={(e) => setTypeFilter(e.target.value)}
+                    >
+                      <option value="">All categories</option>
+                      <option value="SYSTEM_DESIGN">System Design</option>
+                      <option value="BEHAVIORAL">Behavioral</option>
+                      <option value="TECHNICAL">Technical</option>
+                      <option value="CODING">Coding</option>
+                    </select>
+
+                    <select
+                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={difficultyFilter}
+                      onChange={(e) => setDifficultyFilter(e.target.value)}
+                    >
+                      <option value="">All difficulty</option>
+                      <option value="EASY">Easy</option>
+                      <option value="MEDIUM">Medium</option>
+                      <option value="HARD">Hard</option>
+                    </select>
+
+                    <select
+                      className="w-full p-4 rounded-lg border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                      value={companyFilter}
+                      onChange={(e) => setCompanyFilter(e.target.value)}
+                      disabled
+                    >
+                      <option value="">All companies</option>
+                    </select>
+                  </div>
+
+                  <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
                     Choose a Question
                   </label>
+
                   <select
                     className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={selectedQuestion}
-                    onChange={(e) => setSelectedQuestion(e.target.value)}
+                    value={selectedQuestionId ?? ''}
+                    onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
                   >
-                    {MOCK_QUESTIONS.map((q) => (
-                      <option key={q} value={q}>
-                        {q}
+                    {questions.length === 0 && <option value="">Không có câu hỏi phù hợp</option>}
+
+                    {questions.map((q) => (
+                      <option key={q.id} value={q.id}>
+                        {q.title} - {q.type} - {q.difficulty}
                       </option>
                     ))}
                   </select>
@@ -536,6 +614,7 @@ export default function SoloRecording() {
                   size="lg"
                   className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
                   onClick={handleStartInterview}
+                  disabled={!selectedQuestionId}
                 >
                   Start Practice Session
                 </Button>
@@ -643,7 +722,7 @@ export default function SoloRecording() {
                       <span className="text-sm font-bold uppercase tracking-wider opacity-80 mr-2">
                         Q:
                       </span>
-                      <span className="font-medium text-lg">"{selectedQuestion}"</span>
+                      <span className="font-medium text-lg">"{selectedQuestionTitle}"</span>
                     </div>
                   </div>
                 )}
