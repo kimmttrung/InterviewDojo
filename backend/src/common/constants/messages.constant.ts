@@ -113,4 +113,23 @@ export const Messages = {
     NOT_FOUND: 'Không tìm thấy gói dịch vụ hoặc không có quyền truy cập',
     FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
   },
+
+  COACHING_CATEGORY: {
+    FETCHED: 'Lấy danh sách danh mục coaching thành công',
+    CREATED: 'Tạo danh mục coaching thành công',
+    UPDATED: 'Cập nhật danh mục coaching thành công',
+    DELETED: 'Xóa danh mục coaching thành công',
+  },
+
+  SKILL: {
+    FETCHED: 'Lấy danh sách kỹ năng thành công',
+  },
+
+  COMPANY: {
+    FETCHED: 'Lấy danh sách công ty thành công',
+    CREATED: 'Tạo công ty thành công',
+    UPDATED: 'Cập nhật công ty thành công',
+    DELETED: 'Xóa công ty thành công',
+    INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
+  },
 } as const;

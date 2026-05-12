@@ -3,61 +3,74 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-
 import { PrismaService } from '../../prisma/prisma.service';
-
 import { QueryMentorDto, UpdateMentorDto } from './dto/mentor.dto';
-
-import { MentorResponse } from './interfaces/mentor.interface';
-
+import {
+  MentorResponse,
+  PaginatedMentorResponse,
+  MentorDetailResponse,
+} from './interfaces/mentor.interface';
 import { Messages } from '../../common/constants/messages.constant';
+import { Role, ApprovalStatus, SlotStatus, Prisma } from '@prisma/client';
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
-import { Role, ApprovalStatus, SlotStatus } from '@prisma/client';
+// ==================== REUSABLE INCLUDES ====================
+const mentorListInclude = {
+  mentorProfile: {
+    include: {
+      experiences: {
+        orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
+        take: 2, // chỉ lấy 2 experiences cho listing
+        include: { company: true, jobRole: true },
+      },
+    },
+  },
+  skills: {
+    include: { skill: true },
+    orderBy: { experienceMonths: 'desc' },
+    take: 5, // chỉ lấy 5 skills cho listing
+  },
+} satisfies Prisma.UserInclude;
 
+const mentorDetailInclude = {
+  mentorProfile: {
+    include: {
+      experiences: {
+        orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
+        include: { company: true, jobRole: true },
+      },
+      coachingPlans: {
+        where: { isActive: true },
+        orderBy: { createdAt: 'desc' },
+        include: {
+          questions: {
+            orderBy: { orderIndex: 'asc' },
+          },
+        },
+      },
+    },
+  },
+  skills: {
+    include: { skill: true },
+  },
+} satisfies Prisma.UserInclude;
+
+type MentorListUser = Prisma.UserGetPayload<{
+  include: typeof mentorListInclude;
+}>;
+type MentorDetailUser = Prisma.UserGetPayload<{
+  include: typeof mentorDetailInclude;
+}>;
+
+// ==================== SERVICE ====================
 @Injectable()
 export class MentorService {
   constructor(private prisma: PrismaService) {}
 
   /**
-   * Map User + MentorProfile
+   * Map cho danh sách mentor (gọn, dùng type từ mentorListInclude)
    */
-  private mapToMentorResponse(user: any): MentorResponse {
-    return {
-      id: user.id,
-
-      email: user.email,
-
-      name: user.name,
-
-      bio: user.bio,
-
-      avatarUrl: user.avatarUrl,
-
-      experienceYears: user.experienceYears,
-
-      linkedInLink: user.linkedInLink,
-
-      githubLink: user.githubLink,
-
-      createdAt: user.createdAt,
-
-      mentorProfile: user.mentorProfile
-        ? {
-            id: user.mentorProfile.id,
-
-            headline: user.mentorProfile.headline,
-
-            introductionVideoUrl: user.mentorProfile.introductionVideoUrl,
-
-            approvalStatus: user.mentorProfile.approvalStatus,
-
-            createdAt: user.mentorProfile.createdAt,
-          }
-        : null,
-    };
-  }
-
-  private mapToMentorDetailResponse(user: any) {
+  private mapToMentorResponse(user: MentorListUser): MentorResponse {
     return {
       id: user.id,
       email: user.email,
@@ -68,7 +81,6 @@ export class MentorService {
       linkedInLink: user.linkedInLink,
       githubLink: user.githubLink,
       createdAt: user.createdAt,
-
       mentorProfile: user.mentorProfile
         ? {
             id: user.mentorProfile.id,
@@ -76,160 +88,222 @@ export class MentorService {
             introductionVideoUrl: user.mentorProfile.introductionVideoUrl,
             approvalStatus: user.mentorProfile.approvalStatus,
             createdAt: user.mentorProfile.createdAt,
+            experiences: user.mentorProfile.experiences.map((exp) => ({
+              id: exp.id,
+              description: exp.description,
+              isCurrent: exp.isCurrent,
+              startDate: exp.startDate,
+              endDate: exp.endDate,
+              company: {
+                id: exp.company.id,
+                name: exp.company.name,
+                logoUrl: exp.company.logoUrl,
+                industry: exp.company.industry,
+              },
+              jobRole: {
+                id: exp.jobRole.id,
+                name: exp.jobRole.name,
+              },
+            })),
           }
         : null,
-
-      skills: user.skills.map((item: any) => ({
-        id: item.skill.id,
-        name: item.skill.name,
-        type: item.skill.type,
-        level: item.level,
-        experienceMonths: item.experienceMonths,
-        proofUrl: item.proofUrl,
+      skills: user.skills.map((us) => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        type: us.skill.type,
+        level: us.level,
+        experienceMonths: us.experienceMonths,
       })),
-
-      experiences:
-        user.mentorProfile?.experiences.map((item: any) => ({
-          id: item.id,
-          description: item.description,
-          startDate: item.startDate,
-          endDate: item.endDate,
-          isCurrent: item.isCurrent,
-          company: item.company
-            ? {
-                id: item.company.id,
-                name: item.company.name,
-                logoUrl: item.company.logoUrl,
-                industry: item.company.industry,
-              }
-            : null,
-          jobRole: item.jobRole
-            ? {
-                id: item.jobRole.id,
-                name: item.jobRole.name,
-                description: item.jobRole.description,
-              }
-            : null,
-        })) ?? [],
-
-      coachingPlans:
-        user.mentorProfile?.coachingPlans.map((plan: any) => ({
-          id: plan.id,
-          title: plan.title,
-          description: plan.description,
-          duration: plan.duration,
-          price: plan.price,
-          questions:
-            plan.questions?.map((question: any) => ({
-              id: question.id,
-              question: question.question,
-              type: question.type,
-              placeholder: question.placeholder,
-              isRequired: question.isRequired,
-              orderIndex: question.orderIndex,
-            })) ?? [],
-        })) ?? [],
     };
   }
 
   /**
-   * List mentors
+   * Map cho chi tiết mentor (đầy đủ, bao gồm coachingPlans, câu hỏi, proofUrl)
+   */
+  private mapToMentorDetailResponse(
+    user: MentorDetailUser,
+  ): MentorDetailResponse {
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      bio: user.bio,
+      avatarUrl: user.avatarUrl,
+      experienceYears: user.experienceYears,
+      linkedInLink: user.linkedInLink,
+      githubLink: user.githubLink,
+      createdAt: user.createdAt,
+      mentorProfile: user.mentorProfile
+        ? {
+            id: user.mentorProfile.id,
+            headline: user.mentorProfile.headline,
+            introductionVideoUrl: user.mentorProfile.introductionVideoUrl,
+            approvalStatus: user.mentorProfile.approvalStatus,
+            createdAt: user.mentorProfile.createdAt,
+            experiences: user.mentorProfile.experiences.map((exp) => ({
+              id: exp.id,
+              description: exp.description,
+              isCurrent: exp.isCurrent,
+              startDate: exp.startDate,
+              endDate: exp.endDate,
+              company: exp.company
+                ? {
+                    id: exp.company.id,
+                    name: exp.company.name,
+                    logoUrl: exp.company.logoUrl,
+                    industry: exp.company.industry,
+                  }
+                : null,
+              jobRole: exp.jobRole
+                ? {
+                    id: exp.jobRole.id,
+                    name: exp.jobRole.name,
+                    description: exp.jobRole.description,
+                  }
+                : null,
+            })),
+            coachingPlans: user.mentorProfile.coachingPlans.map((plan) => ({
+              id: plan.id,
+              title: plan.title,
+              description: plan.description,
+              duration: plan.duration,
+              price: plan.price,
+              questions: plan.questions.map((q) => ({
+                id: q.id,
+                question: q.question,
+                type: q.type,
+                placeholder: q.placeholder,
+                isRequired: q.isRequired,
+                orderIndex: q.orderIndex,
+              })),
+            })),
+          }
+        : null,
+      skills: user.skills.map((us) => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        type: us.skill.type,
+        level: us.level,
+        experienceMonths: us.experienceMonths,
+        proofUrl: us.proofUrl,
+      })),
+    };
+  }
+
+  /**
+   * Danh sách mentor (có filter + phân trang)
    */
   async findAll(
     query: QueryMentorDto,
-    currentUser: any,
-  ): Promise<MentorResponse[]> {
-    const { page = 1, limit = 10, status } = query;
+    currentUser?: JwtPayload,
+  ): Promise<PaginatedMentorResponse> {
+    const {
+      page = 1,
+      limit = 10,
+      status,
+      roleIds,
+      companyIds,
+      industry,
+      skillIds,
+      categoryIds,
+      search,
+    } = query;
 
-    const skip = (page - 1) * limit;
+    const safeLimit = Math.min(limit, 50);
+    const skip = (page - 1) * safeLimit;
 
     const isAdmin = currentUser?.role === Role.ADMIN;
+    const filterStatus = isAdmin
+      ? status || ApprovalStatus.ACTIVE
+      : ApprovalStatus.ACTIVE;
 
-    /**
-     * Candidate chỉ được xem mentor ACTIVE
-     */
-    const filterStatus = isAdmin ? status : ApprovalStatus.ACTIVE;
+    const conditions: any[] = [
+      { role: Role.MENTOR },
+      { mentorProfile: { is: { approvalStatus: filterStatus } } },
+    ];
 
-    const whereCondition: any = {
-      role: Role.MENTOR,
+    const experienceAND: any[] = [];
+    if (roleIds?.length) experienceAND.push({ jobRoleId: { in: roleIds } });
+    if (companyIds?.length)
+      experienceAND.push({ companyId: { in: companyIds } });
+    if (industry)
+      experienceAND.push({
+        company: { industry: { contains: industry, mode: 'insensitive' } },
+      });
+    if (experienceAND.length) {
+      conditions.push({
+        mentorProfile: {
+          is: { experiences: { some: { AND: experienceAND } } },
+        },
+      });
+    }
 
-      mentorProfile: filterStatus
-        ? {
-            is: {
-              approvalStatus: filterStatus,
+    if (skillIds?.length) {
+      conditions.push({ skills: { some: { skillId: { in: skillIds } } } });
+    }
+
+    if (categoryIds?.length) {
+      conditions.push({
+        mentorProfile: {
+          is: {
+            coachingPlans: {
+              some: { categoryId: { in: categoryIds }, isActive: true },
             },
-          }
-        : undefined,
+          },
+        },
+      });
+    }
+
+    const where: any = { AND: conditions };
+
+    if (search) {
+      where.AND.push({
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          {
+            mentorProfile: {
+              is: { headline: { contains: search, mode: 'insensitive' } },
+            },
+          },
+        ],
+      });
+    }
+
+    const [total, users] = await Promise.all([
+      this.prisma.user.count({ where }),
+      this.prisma.user.findMany({
+        where,
+        include: mentorListInclude,
+        skip,
+        take: safeLimit,
+        orderBy: { createdAt: 'desc' },
+      }),
+    ]);
+
+    return {
+      items: users.map((u) => this.mapToMentorResponse(u)),
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
     };
-
-    const users = await this.prisma.user.findMany({
-      where: whereCondition,
-
-      include: {
-        mentorProfile: true,
-      },
-
-      skip,
-      take: limit,
-
-      orderBy: {
-        createdAt: 'desc',
-      },
-    });
-
-    return users.map((user) => this.mapToMentorResponse(user));
   }
 
   /**
-   * Find mentor detail
+   * Chi tiết một mentor (dùng include riêng, trả về nhiều thông tin hơn)
    */
-  async findById(id: number) {
+  async findById(id: number): Promise<MentorDetailResponse> {
     const user = await this.prisma.user.findFirst({
       where: {
         id,
         role: Role.MENTOR,
         mentorProfile: {
-          is: {
-            approvalStatus: ApprovalStatus.ACTIVE,
-          },
+          is: { approvalStatus: ApprovalStatus.ACTIVE },
         },
       },
-
-      include: {
-        mentorProfile: {
-          include: {
-            experiences: {
-              orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
-              include: {
-                company: true,
-                jobRole: true,
-              },
-            },
-
-            coachingPlans: {
-              where: {
-                isActive: true,
-              },
-              orderBy: {
-                createdAt: 'desc',
-              },
-              include: {
-                questions: {
-                  orderBy: {
-                    orderIndex: 'asc',
-                  },
-                },
-              },
-            },
-          },
-        },
-
-        skills: {
-          include: {
-            skill: true,
-          },
-        },
-      },
+      include: mentorDetailInclude,
     });
 
     if (!user) {
@@ -239,20 +313,19 @@ export class MentorService {
     return this.mapToMentorDetailResponse(user);
   }
 
+  /**
+   * Lấy slot trống của mentor
+   */
   async findAvailableSlots(mentorId: number) {
     const mentor = await this.prisma.user.findFirst({
       where: {
         id: mentorId,
         role: Role.MENTOR,
         mentorProfile: {
-          is: {
-            approvalStatus: ApprovalStatus.ACTIVE,
-          },
+          is: { approvalStatus: ApprovalStatus.ACTIVE },
         },
       },
-      select: {
-        id: true,
-      },
+      select: { id: true },
     });
 
     if (!mentor) {
@@ -263,13 +336,9 @@ export class MentorService {
       where: {
         mentorId,
         status: SlotStatus.AVAILABLE,
-        startTime: {
-          gte: new Date(),
-        },
+        startTime: { gte: new Date() },
       },
-      orderBy: {
-        startTime: 'asc',
-      },
+      orderBy: { startTime: 'asc' },
       select: {
         id: true,
         mentorId: true,
@@ -281,24 +350,19 @@ export class MentorService {
   }
 
   /**
-   * Update mentor profile
+   * Mentor tự cập nhật profile
    */
   async updateMe(
     userId: number,
     data: UpdateMentorDto,
   ): Promise<MentorResponse> {
     const existingUser = await this.prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
-
-      include: {
-        mentorProfile: true,
-      },
+      where: { id: userId },
+      include: { mentorProfile: true },
     });
 
     if (!existingUser) {
-      throw new NotFoundException(Messages.USER.NOT_FOUND);
+      throw new NotFoundException(Messages.MENTOR.NOT_FOUND);
     }
 
     if (existingUser.role !== Role.MENTOR) {
@@ -306,41 +370,29 @@ export class MentorService {
     }
 
     const updatedUser = await this.prisma.user.update({
-      where: {
-        id: userId,
-      },
-
+      where: { id: userId },
       data: {
         name: data.name,
-
         bio: data.bio,
-
         avatarUrl: data.avatarUrl,
-
         experienceYears: data.experienceYears,
-
         linkedInLink: data.linkedInLink,
-
         githubLink: data.githubLink,
-
         mentorProfile: existingUser.mentorProfile
           ? {
               update: {
                 headline: data.headline,
+                introductionVideoUrl: data.introductionVideoUrl,
               },
             }
           : {
               create: {
                 headline: data.headline ?? 'Mentor',
-
                 approvalStatus: ApprovalStatus.PENDING,
               },
             },
       },
-
-      include: {
-        mentorProfile: true,
-      },
+      include: mentorListInclude,
     });
 
     return this.mapToMentorResponse(updatedUser);

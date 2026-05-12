@@ -55,4 +55,14 @@ export class CompaniesService {
       `SELECT setval(pg_get_serial_sequence('companies', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM companies;`,
     );
   }
+
+  async findAllIndustries() {
+    const companies = await this.prisma.company.findMany({
+      select: { industry: true },
+      distinct: ['industry'],
+      where: { industry: { not: null } },
+      orderBy: { industry: 'asc' },
+    });
+    return companies.map((c) => c.industry);
+  }
 }

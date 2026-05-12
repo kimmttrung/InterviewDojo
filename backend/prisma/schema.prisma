@@ -332,12 +332,28 @@ model CoachingPlan {
 
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
+  categoryId   Int               @map("category_id")
 
+  category     CoachingCategory  @relation(fields: [categoryId], references: [id])
   mentor    MentorProfile          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   bookings  Booking[]
   questions CoachingPlanQuestion[]
 
   @@map("coaching_plans")
+}
+
+model CoachingCategory {
+  id          Int      @id @default(autoincrement())
+  slug        String   @unique
+  name        String
+  description String?
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  plans       CoachingPlan[]
+
+  @@map("coaching_categories")
 }
 
 model CoachingPlanQuestion {

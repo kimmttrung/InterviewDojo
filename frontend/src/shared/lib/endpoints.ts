@@ -2,6 +2,8 @@ export const API_ENDPOINT = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
+    REFRESH: '/auth/refresh', // <<-- phải có dòng này
+    ME: '/auth/me',
   },
   USER: {
     UPDATE_ME: '/users/me',
@@ -43,6 +45,7 @@ export const API_ENDPOINT = {
   },
   COMPANIES: {
     GET_ALL: '/companies',
+    GET_INDUSTRIES: '/companies/industries',
     GET_ONE: (id: number) => `/companies/${id}`,
     CREATE: '/companies',
     UPDATE: (id: number) => `/companies/${id}`,
@@ -65,5 +68,11 @@ export const API_ENDPOINT = {
   },
   AI_ANALYSIS: {
     GET_SOLO_RECORDING: (sessionId: number | string) => `/ai-analysis/session/${sessionId}`,
+  },
+  SKILLS: {
+    GET_ALL: '/skills',
+  },
+  COACHING_CATEGORIES: {
+    GET_ALL: '/coaching-categories',
   },
 };

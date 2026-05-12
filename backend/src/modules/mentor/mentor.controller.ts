@@ -10,7 +10,10 @@ import {
 } from '@nestjs/common';
 import { MentorService } from './mentor.service';
 import { QueryMentorDto, UpdateMentorDto } from './dto/mentor.dto';
-import { MentorResponse } from './interfaces/mentor.interface';
+import {
+  MentorResponse,
+  PaginatedMentorResponse,
+} from './interfaces/mentor.interface';
 import { Messages } from '../../common/constants/messages.constant';
 import { ResponseMessage } from '../../common/decorators/response-message.decorator';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
@@ -29,7 +32,7 @@ export class MentorController {
   async findAll(
     @Query() query: QueryMentorDto,
     @CurrentUser() user?: JwtPayload,
-  ): Promise<MentorResponse[]> {
+  ): Promise<PaginatedMentorResponse> {
     return this.mentorService.findAll(query, user);
   }
 
