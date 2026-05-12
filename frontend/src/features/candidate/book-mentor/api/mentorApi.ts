@@ -31,5 +31,6 @@ export const createBooking = async (data: {
   }[];
 }) => {
   const response = await api.post<ApiResponse<unknown>>('/bookings', data);
+
   return response.data.data;
 };

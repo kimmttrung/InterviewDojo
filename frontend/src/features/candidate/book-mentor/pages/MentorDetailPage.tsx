@@ -7,20 +7,33 @@ import MentorExperienceSection from '../components/MentorExperienceSection';
 import BookingModal from '../components/BookingModal';
 
 export default function MentorDetailPage() {
-  const { id } = useParams();
-  const mentorId = Number(id);
+  const params = useParams();
+
+  const mentorId = Number(params.id ?? params.mentorId);
 
   const [selectedPlan, setSelectedPlan] = useState<CoachingPlan | null>(null);
 
-  const { data: mentor, isLoading, isError } = useMentorDetail(mentorId);
+  const { data: mentor, isLoading, isError, error } = useMentorDetail(mentorId);
+
   const { data: slots = [] } = useMentorAvailableSlots(mentorId);
+
+  console.log('PARAMS:', params);
+
+  console.log('MENTOR_ID:', mentorId);
+  console.log('MENTOR_DATA:', mentor);
+  console.log('MENTOR_ERROR:', error);
 
   if (isLoading) {
     return <div className="p-8">Đang tải thông tin mentor...</div>;
   }
 
   if (isError || !mentor) {
-    return <div className="p-8 text-red-500">Không tải được mentor.</div>;
+    return (
+      <div className="p-8 text-red-500">
+        Không tải được mentor.
+        <pre className="mt-4 text-sm text-black">{JSON.stringify(error, null, 2)}</pre>
+      </div>
+    );
   }
 
   return (
