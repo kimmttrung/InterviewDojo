@@ -116,4 +116,15 @@ export const Messages = {
     UPDATED: 'Cập nhật danh mục coaching thành công',
     DELETED: 'Xóa danh mục coaching thành công',
   },
+
+  SKILL: {
+    FETCHED: 'Lấy danh sách kỹ năng thành công',
+  },
+
+  COMPANY: {
+    FETCHED: 'Lấy danh sách công ty thành công',
+    CREATED: 'Tạo công ty thành công',
+    UPDATED: 'Cập nhật công ty thành công',
+    DELETED: 'Xóa công ty thành công',
+  },
 } as const;

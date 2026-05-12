@@ -7,7 +7,6 @@ import {
   Delete,
   Body,
   Param,
-  HttpStatus,
   ParseIntPipe,
   UseGuards,
 } from '@nestjs/common';
@@ -19,6 +18,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { ResponseMessage } from '@/common/decorators/response-message.decorator';
+import { Messages } from '@/common/constants/messages.constant';
 
 @ApiTags('Companies')
 @ApiBearerAuth()
@@ -30,58 +31,43 @@ export class CompaniesController {
   @Get()
   @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
   @ApiOperation({ summary: 'Lấy danh sách công ty' })
+  @ResponseMessage(Messages.COMPANY.FETCHED)
   async findAll() {
-    const data = await this.companiesService.findAll();
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Companies retrieved successfully',
-      data,
-    };
+    return this.companiesService.findAll();
   }
 
   @Post()
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Tạo công ty mới' })
+  @ResponseMessage(Messages.COMPANY.CREATED)
   async create(@Body() createCompanyDto: CreateCompanyDto) {
-    const data = await this.companiesService.create(createCompanyDto);
-    return {
-      statusCode: HttpStatus.CREATED,
-      message: 'Company created successfully',
-      data,
-    };
+    return this.companiesService.create(createCompanyDto);
   }
 
   @Put(':id')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Cập nhật công ty' })
+  @ResponseMessage(Messages.COMPANY.UPDATED)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCompanyDto: UpdateCompanyDto,
   ) {
-    const data = await this.companiesService.update(id, updateCompanyDto);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Company updated successfully',
-      data,
-    };
+    return this.companiesService.update(id, updateCompanyDto);
   }
 
   @Delete(':id')
   @Roles(Role.ADMIN)
   @ApiOperation({ summary: 'Xóa công ty' })
+  @ResponseMessage(Messages.COMPANY.DELETED)
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.companiesService.remove(id);
-    return {
-      statusCode: HttpStatus.OK,
-      message: 'Company deleted successfully',
-      data: null,
-    };
+    return null; // Interceptor sẽ bọc thành { data: null }
   }
 
   @Get('debug/fix-id')
   @Roles(Role.ADMIN)
   async fixId() {
     await this.companiesService.fixSequence();
-    return { message: 'Sequence synced!' };
+    return null;
   }
 }

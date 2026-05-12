@@ -66,4 +66,10 @@ export const API_ENDPOINT = {
   AI_ANALYSIS: {
     GET_SOLO_RECORDING: (sessionId: number | string) => `/ai-analysis/session/${sessionId}`,
   },
+  SKILLS: {
+    GET_ALL: '/skills',
+  },
+  COACHING_CATEGORIES: {
+    GET_ALL: '/coaching-categories',
+  },
 };

@@ -61,7 +61,7 @@ export default function PracticePage() {
                 size="lg"
                 variant="outline"
                 className="px-8 h-12"
-                onClick={() => navigate('/solo-ai')}
+                onClick={() => navigate('/mentors')}
               >
                 Schedule with Mentor
               </Button>

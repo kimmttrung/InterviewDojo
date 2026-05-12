@@ -40,7 +40,7 @@ export default function Login() {
       // ✅ Cập nhật Zustand store (tự động persist)
       setAuth({ accessToken, refreshToken, userId: user.id });
       // queryClient.setQueryData(['current-user'], user);
-      await queryClient.invalidateQueries({ queryKey: ['current-user'] });
+      queryClient.invalidateQueries({ queryKey: ['current-user'] });
 
       showToast.success(t('Login successful'));
 

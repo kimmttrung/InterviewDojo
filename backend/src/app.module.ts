@@ -27,6 +27,8 @@ import { PlanModule } from './modules/plan/plan.module';
 import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
+import { SkillModule } from './modules/skill/skill.module';
+
 @Module({
   imports: [
     ConfigModule.forRoot({
@@ -68,6 +70,7 @@ import { CoachingCategoryModule } from './modules/coaching-category/coaching-cat
     SlotModule,
     PaymentModule,
     CoachingCategoryModule,
+    SkillModule,
   ],
   controllers: [AppController],
   providers: [
