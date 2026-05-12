@@ -109,4 +109,11 @@ export const Messages = {
     NOT_FOUND: 'Không tìm thấy gói dịch vụ hoặc không có quyền truy cập',
     FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
   },
+
+  COACHING_CATEGORY: {
+    FETCHED: 'Lấy danh sách danh mục coaching thành công',
+    CREATED: 'Tạo danh mục coaching thành công',
+    UPDATED: 'Cập nhật danh mục coaching thành công',
+    DELETED: 'Xóa danh mục coaching thành công',
+  },
 } as const;

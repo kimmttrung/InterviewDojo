@@ -2,6 +2,7 @@ import {
   Injectable,
   NotFoundException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CreatePlanDto, UpdatePlanDto } from './dto/plan.dto';
@@ -17,6 +18,8 @@ export class PlanService {
     return {
       id: plan.id,
       mentorId: plan.mentorId,
+      categoryId: plan.categoryId,
+      categoryName: plan.category?.name ?? null,
       title: plan.title,
       description: plan.description,
       durationMinutes: plan.durationMinutes,
@@ -52,6 +55,11 @@ export class PlanService {
   }
 
   async create(mentorId: number, data: CreatePlanDto): Promise<PlanResponse> {
+    const category = await this.prisma.coachingCategory.findUnique({
+      where: { id: data.categoryId },
+    });
+    if (!category) throw new BadRequestException('Danh mục không tồn tại');
+
     // Đảm bảo user này thực sự là Mentor (đã có profile)
     const mentorProfile = await this.prisma.mentorProfile.findUnique({
       where: { userId: mentorId },
@@ -66,6 +74,7 @@ export class PlanService {
     const plan = await this.prisma.coachingPlan.create({
       data: {
         mentorId,
+        categoryId: data.categoryId,
         title: data.title,
         description: data.description,
         duration: data.duration,

@@ -5,10 +5,15 @@ import {
   Min,
   IsBoolean,
   IsNumber,
+  IsNotEmpty,
 } from 'class-validator';
 //import { Type } from 'class-transformer';
 
 export class CreatePlanDto {
+  @IsInt()
+  @IsNotEmpty()
+  categoryId!: number;
+
   @IsString()
   title!: string;
 
@@ -41,7 +46,7 @@ export class UpdatePlanDto {
   @IsOptional()
   @IsInt()
   @Min(1)
-  durationMinutes?: number;
+  duration?: number;
 
   @IsOptional()
   @IsNumber()
