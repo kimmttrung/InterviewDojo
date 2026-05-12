@@ -23,5 +23,11 @@ export const useFilterOptions = () => {
     queryFn: filterOptionsService.getCategories,
   });
 
-  return { roles, companies, skills, categories };
+  const industries = useQuery({
+    queryKey: ['filter-options', 'industries'],
+    queryFn: filterOptionsService.getIndustries,
+    select: (data) => (Array.isArray(data) ? data : []),
+  });
+
+  return { roles, companies, skills, categories, industries };
 };

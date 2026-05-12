@@ -15,10 +15,11 @@ interface Props {
 }
 
 export function MentorFilters({ filters, setFilters }: Props) {
-  const { roles, companies, skills, categories } = useFilterOptions();
+  const { roles, companies, skills, categories, industries } = useFilterOptions();
 
   return (
     <div className="flex flex-wrap gap-4 p-4 bg-background border rounded-lg">
+      {/* Search */}
       <Input
         placeholder="Search name or headline..."
         value={filters.search || ''}
@@ -26,21 +27,31 @@ export function MentorFilters({ filters, setFilters }: Props) {
         className="w-64"
       />
 
-      {/* Industry filter – dạng text */}
-      <Input
-        placeholder="Industry (e.g. Fintech, E-commerce)"
+      {/* Industry */}
+      <Select
         value={filters.industry || ''}
-        onChange={(e) => setFilters({ ...filters, industry: e.target.value, page: 1 })}
-        className="w-48"
-      />
+        onValueChange={(val) => setFilters({ ...filters, industry: val || undefined, page: 1 })}
+      >
+        <SelectTrigger className="w-44 bg-white">
+          <SelectValue placeholder="Industry" />
+        </SelectTrigger>
+        <SelectContent className="bg-white">
+          {(industries.data || []).map((ind: string) => (
+            <SelectItem key={ind} value={ind}>
+              {ind}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
 
+      {/* Role */}
       <Select
         value={filters.roleIds?.[0]?.toString() || ''}
         onValueChange={(val) =>
           setFilters({ ...filters, roleIds: val ? [Number(val)] : undefined, page: 1 })
         }
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-44 bg-white">
           <SelectValue placeholder="Role" />
         </SelectTrigger>
         <SelectContent className="bg-white">
@@ -52,13 +63,14 @@ export function MentorFilters({ filters, setFilters }: Props) {
         </SelectContent>
       </Select>
 
+      {/* Company */}
       <Select
         value={filters.companyIds?.[0]?.toString() || ''}
         onValueChange={(val) =>
           setFilters({ ...filters, companyIds: val ? [Number(val)] : undefined, page: 1 })
         }
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-44 bg-white">
           <SelectValue placeholder="Company" />
         </SelectTrigger>
         <SelectContent className="bg-white">
@@ -70,13 +82,14 @@ export function MentorFilters({ filters, setFilters }: Props) {
         </SelectContent>
       </Select>
 
+      {/* Skill */}
       <Select
         value={filters.skillIds?.[0]?.toString() || ''}
         onValueChange={(val) =>
           setFilters({ ...filters, skillIds: val ? [Number(val)] : undefined, page: 1 })
         }
       >
-        <SelectTrigger className="w-44">
+        <SelectTrigger className="w-44 bg-white">
           <SelectValue placeholder="Skill" />
         </SelectTrigger>
         <SelectContent className="bg-white">
@@ -88,13 +101,14 @@ export function MentorFilters({ filters, setFilters }: Props) {
         </SelectContent>
       </Select>
 
+      {/* Category */}
       <Select
         value={filters.categoryIds?.[0]?.toString() || ''}
         onValueChange={(val) =>
           setFilters({ ...filters, categoryIds: val ? [Number(val)] : undefined, page: 1 })
         }
       >
-        <SelectTrigger className="w-52">
+        <SelectTrigger className="w-52 bg-white">
           <SelectValue placeholder="Category" />
         </SelectTrigger>
         <SelectContent className="bg-white">
@@ -106,6 +120,7 @@ export function MentorFilters({ filters, setFilters }: Props) {
         </SelectContent>
       </Select>
 
+      {/* Clear */}
       <Button variant="ghost" onClick={() => setFilters({ page: 1, limit: 10 })}>
         Clear
       </Button>

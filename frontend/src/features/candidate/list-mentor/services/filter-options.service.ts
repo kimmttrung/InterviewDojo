@@ -23,4 +23,9 @@ export const filterOptionsService = {
     console.log('category: ', res.data);
     return res.data.data;
   },
+  getIndustries: async () => {
+    const res = await api.get(API_ENDPOINT.COMPANIES.GET_INDUSTRIES);
+    const data = res.data.data;
+    return Array.isArray(data) ? data : [];
+  },
 };

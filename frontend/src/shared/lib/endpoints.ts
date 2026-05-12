@@ -43,6 +43,7 @@ export const API_ENDPOINT = {
   },
   COMPANIES: {
     GET_ALL: '/companies',
+    GET_INDUSTRIES: '/companies/industries',
     GET_ONE: (id: number) => `/companies/${id}`,
     CREATE: '/companies',
     UPDATE: (id: number) => `/companies/${id}`,
