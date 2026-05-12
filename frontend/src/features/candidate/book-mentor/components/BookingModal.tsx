@@ -2,6 +2,29 @@ import { useState } from 'react';
 import type { AvailableSlot, CoachingPlan } from '../types/mentor.types';
 import { useCreateBooking } from '../hooks/useMentorDetail';
 
+function formatSlotTime(startTime: string, endTime: string) {
+  const start = new Date(startTime);
+  const end = new Date(endTime);
+
+  const date = start.toLocaleDateString('vi-VN', {
+    timeZone: 'UTC',
+  });
+
+  const startHour = start.toLocaleTimeString('vi-VN', {
+    timeZone: 'UTC',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  const endHour = end.toLocaleTimeString('vi-VN', {
+    timeZone: 'UTC',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+
+  return `${startHour} ${date} - ${endHour}`;
+}
+
 export default function BookingModal({
   mentorId,
   plan,
@@ -18,6 +41,8 @@ export default function BookingModal({
 
   const createBookingMutation = useCreateBooking(mentorId);
 
+  const availableSlots = slots.filter((slot) => slot.status === 'AVAILABLE');
+
   const handleSubmit = async () => {
     if (!selectedSlotId) {
       alert('Vui lòng chọn lịch rảnh');
@@ -28,10 +53,11 @@ export default function BookingModal({
       await createBookingMutation.mutateAsync({
         slotId: selectedSlotId,
         coachingPlanId: plan.id,
-        answers: plan.questions.map((question) => ({
-          questionId: question.id,
-          answerText: answers[question.id] ?? '',
-        })),
+        answers:
+          plan.questions?.map((question) => ({
+            questionId: question.id,
+            answerText: answers[question.id] ?? '',
+          })) ?? [],
       });
 
       alert('Đặt lịch thành công, đang chờ mentor duyệt');
@@ -49,16 +75,19 @@ export default function BookingModal({
         <div className="mt-5">
           <h3 className="mb-3 font-medium">Chọn lịch rảnh</h3>
 
-          {slots.length === 0 ? (
+          {availableSlots.length === 0 ? (
             <p className="text-sm text-gray-500">Mentor hiện chưa có lịch rảnh.</p>
           ) : (
             <div className="grid gap-3 md:grid-cols-2">
-              {slots.map((slot) => (
+              {availableSlots.map((slot) => (
                 <button
                   key={slot.id}
+                  type="button"
                   onClick={() => setSelectedSlotId(slot.id)}
                   className={`rounded-xl border p-3 text-left text-sm ${
-                    selectedSlotId === slot.id ? 'border-black bg-gray-100' : ''
+                    selectedSlotId === slot.id
+                      ? 'border-black bg-gray-100'
+                      : 'border-gray-200 bg-white hover:bg-gray-50'
                   }`}
                 >
                   {new Date(slot.startTime).toLocaleString('vi-VN')} -{' '}
@@ -95,11 +124,12 @@ export default function BookingModal({
         </div>
 
         <div className="mt-6 flex justify-end gap-3">
-          <button onClick={onClose} className="rounded-xl border px-4 py-2">
+          <button type="button" onClick={onClose} className="rounded-xl border px-4 py-2">
             Hủy
           </button>
 
           <button
+            type="button"
             onClick={handleSubmit}
             disabled={createBookingMutation.isPending}
             className="rounded-xl bg-black px-4 py-2 text-white disabled:opacity-60"
