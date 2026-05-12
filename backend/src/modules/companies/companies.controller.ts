@@ -70,4 +70,12 @@ export class CompaniesController {
     await this.companiesService.fixSequence();
     return null;
   }
+
+  @Get('industries')
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  @ApiOperation({ summary: 'Lấy danh sách ngành nghề' })
+  @ResponseMessage(Messages.COMPANY.INDUSTRIES_FETCHED)
+  async findAllIndustries() {
+    return this.companiesService.findAllIndustries();
+  }
 }

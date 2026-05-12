@@ -1,4 +1,3 @@
-// features/candidate/list-mentor/components/MentorFilters.tsx
 import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import {
@@ -8,7 +7,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/components/ui/select';
-import { useFilterOptions } from '../hooks/useFilterOption';
+import { useFilterOptions } from '../hooks/useFilterOptions';
 
 interface Props {
   filters: any;
@@ -27,6 +26,14 @@ export function MentorFilters({ filters, setFilters }: Props) {
         className="w-64"
       />
 
+      {/* Industry filter – dạng text */}
+      <Input
+        placeholder="Industry (e.g. Fintech, E-commerce)"
+        value={filters.industry || ''}
+        onChange={(e) => setFilters({ ...filters, industry: e.target.value, page: 1 })}
+        className="w-48"
+      />
+
       <Select
         value={filters.roleIds?.[0]?.toString() || ''}
         onValueChange={(val) =>
@@ -36,7 +43,7 @@ export function MentorFilters({ filters, setFilters }: Props) {
         <SelectTrigger className="w-44">
           <SelectValue placeholder="Role" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {(roles.data || []).map((role: any) => (
             <SelectItem key={role.id} value={role.id.toString()}>
               {role.name}
@@ -54,7 +61,7 @@ export function MentorFilters({ filters, setFilters }: Props) {
         <SelectTrigger className="w-44">
           <SelectValue placeholder="Company" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {(companies.data || []).map((c: any) => (
             <SelectItem key={c.id} value={c.id.toString()}>
               {c.name}
@@ -72,7 +79,7 @@ export function MentorFilters({ filters, setFilters }: Props) {
         <SelectTrigger className="w-44">
           <SelectValue placeholder="Skill" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {(skills.data || []).map((s: any) => (
             <SelectItem key={s.id} value={s.id.toString()}>
               {s.name}
@@ -90,7 +97,7 @@ export function MentorFilters({ filters, setFilters }: Props) {
         <SelectTrigger className="w-52">
           <SelectValue placeholder="Category" />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="bg-white">
           {(categories.data || []).map((c: any) => (
             <SelectItem key={c.id} value={c.id.toString()}>
               {c.name}

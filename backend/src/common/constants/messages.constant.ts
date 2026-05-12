@@ -126,5 +126,6 @@ export const Messages = {
     CREATED: 'Tạo công ty thành công',
     UPDATED: 'Cập nhật công ty thành công',
     DELETED: 'Xóa công ty thành công',
+    INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
   },
 } as const;
