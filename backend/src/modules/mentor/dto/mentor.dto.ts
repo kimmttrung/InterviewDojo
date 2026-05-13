@@ -1,21 +1,10 @@
-import {
-  IsOptional,
-  IsString,
-  IsInt,
-  IsEnum,
-  Min,
-  IsUrl,
-} from 'class-validator';
+import { IsOptional, IsString, IsInt, Min, IsUrl } from 'class-validator';
 
-import { Type } from 'class-transformer';
+import { Type, Transform } from 'class-transformer';
 
 import { ApprovalStatus } from '@prisma/client';
 
 export class QueryMentorDto {
-  @IsOptional()
-  @IsEnum(ApprovalStatus)
-  status?: ApprovalStatus;
-
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -27,6 +16,46 @@ export class QueryMentorDto {
   @IsInt()
   @Min(1)
   limit?: number = 10;
+
+  @IsOptional()
+  @IsString()
+  status?: ApprovalStatus;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  roleIds?: number[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  companyIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  industry?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  skillIds?: number[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  categoryIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
 
 export class UpdateMentorDto {

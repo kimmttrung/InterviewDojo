@@ -124,4 +124,23 @@ export const Messages = {
     SLOT_UNAVAILABLE: 'Slot đã bị block hoặc không khả dụng',
     MENTOR_NOT_ACTIVE: 'Tài khoản mentor chưa được kích hoạt',
   },
+
+  COACHING_CATEGORY: {
+    FETCHED: 'Lấy danh sách danh mục coaching thành công',
+    CREATED: 'Tạo danh mục coaching thành công',
+    UPDATED: 'Cập nhật danh mục coaching thành công',
+    DELETED: 'Xóa danh mục coaching thành công',
+  },
+
+  SKILL: {
+    FETCHED: 'Lấy danh sách kỹ năng thành công',
+  },
+
+  COMPANY: {
+    FETCHED: 'Lấy danh sách công ty thành công',
+    CREATED: 'Tạo công ty thành công',
+    UPDATED: 'Cập nhật công ty thành công',
+    DELETED: 'Xóa công ty thành công',
+    INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
+  },
 } as const;

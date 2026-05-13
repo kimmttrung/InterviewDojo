@@ -8,7 +8,6 @@ interface ProtectedRouteProps {
 }
 
 export const ProtectedRoute = ({ children, roles }: ProtectedRouteProps) => {
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const { data: user, isLoading } = useCurrentUser();
 
   if (isLoading) {

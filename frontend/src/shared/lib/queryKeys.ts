@@ -21,4 +21,7 @@ export const queryKeys = {
   companies: {
     all: ['companies'] as const,
   },
+  mentor: {
+    list: (filters: Record<string, any>) => ['mentors', filters] as const,
+  },
 } as const;

@@ -1,13 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+// import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
+// import { ApprovalStatus } from '@/shared/types/enum';
 
 import { CheckCircle, XCircle, Clock, ArrowRight } from 'lucide-react';
-import { cn } from '../../../../shared/lib/utils';
+import { cn } from '@/shared/lib/utils';
 import { MentorLayout } from '../components/MentorLayout';
-import { Card } from '../../../../shared/components/ui/card';
-import { Input } from '../../../../shared/components/ui/input';
-import { Button } from '../../../../shared/components/ui/button';
-import { Badge } from '../../../../shared/components/ui/badge';
+import { Card } from '@/shared/components/ui/card';
+import { Input } from '@/shared/components/ui/input';
+import { Button } from '@/shared/components/ui/button';
+import { Badge } from '@/shared/components/ui/badge';
 
 const getStatusUI = (status: string) => {
   switch (status) {
