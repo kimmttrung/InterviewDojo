@@ -6,6 +6,7 @@ import {
   IsInt,
   IsOptional,
   IsEnum,
+  IsString, // 1. Bổ sung IsString vào đây
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { SlotStatus } from '@prisma/client';
@@ -54,6 +55,15 @@ export class UpdateSlotDto {
   @IsOptional()
   @IsDateString()
   endTime?: string;
+
+  // 2. Bổ sung 2 trường phục vụ lặp lịch
+  @IsOptional()
+  @IsString()
+  recurrence?: string;
+
+  @IsOptional()
+  @IsDateString()
+  recurrenceEndDate?: string;
 }
 
 export class DeleteBatchSlotDto {
