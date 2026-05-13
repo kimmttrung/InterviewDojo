@@ -3,66 +3,50 @@ import {
   BadRequestException,
   NotFoundException,
 } from '@nestjs/common';
-
 import { PrismaService } from '../../prisma/prisma.service';
-
 import { CreateSlotDto, UpdateSlotDto, QuerySlotDto } from './dto/slot.dto';
-
 import { SlotResponse } from './interfaces/slot.interfaces';
-
 import { Messages } from '../../common/constants/messages.constant';
-
-import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { BookingStatus } from '@prisma/client';
 
 @Injectable()
 export class SlotService {
+  private readonly STEP_MINUTES = 30; // bước nhảy mặc định khi sinh session
+
   constructor(private prisma: PrismaService) {}
+
+  // ========== CRUD ==========
 
   private mapToSlotResponse(slot: any): SlotResponse {
     return {
       id: slot.id,
       mentorId: slot.mentorId,
-
       startTime: slot.startTime,
       endTime: slot.endTime,
-
       isActive: slot.isActive,
-
       recurrentType: slot.recurrentType,
       recurrentUntil: slot.recurrentUntil,
-
       createdAt: slot.createdAt,
     };
   }
 
   async findAll(
     query: QuerySlotDto,
-    currentUser: JwtPayload,
+    currentUser: any,
   ): Promise<SlotResponse[]> {
     const { mentorId, startDate, endDate } = query;
-
-    if (currentUser.role !== 'MENTOR' && !mentorId) {
-      throw new BadRequestException('mentorId là bắt buộc.');
-    }
-
     const targetMentorId =
-      currentUser.role === 'MENTOR' ? currentUser.sub : mentorId;
+      currentUser.role === 'MENTOR' ? currentUser.id : mentorId;
 
     const slots = await this.prisma.slot.findMany({
       where: {
         mentorId: targetMentorId,
-
-        startTime: startDate ? { gte: new Date(startDate) } : undefined,
-
-        endTime: endDate ? { lte: new Date(endDate) } : undefined,
+        ...(startDate && { startTime: { gte: new Date(startDate) } }),
+        ...(endDate && { endTime: { lte: new Date(endDate) } }),
       },
-
-      orderBy: {
-        startTime: 'asc',
-      },
+      orderBy: { startTime: 'asc' },
     });
-
-    return slots.map((slot) => this.mapToSlotResponse(slot));
+    return slots.map(this.mapToSlotResponse);
   }
 
   async create(mentorId: number, dto: CreateSlotDto): Promise<SlotResponse> {
@@ -70,56 +54,37 @@ export class SlotService {
 
     const start = new Date(dto.startTime);
     const end = new Date(dto.endTime);
-
-    if (start >= end) {
+    if (start >= end)
       throw new BadRequestException(
         'Thời gian kết thúc phải sau thời gian bắt đầu.',
       );
-    }
-
-    if (start < new Date()) {
+    if (start < new Date())
       throw new BadRequestException(
         'Không thể tạo availability trong quá khứ.',
       );
-    }
 
     const overlapping = await this.prisma.slot.findFirst({
       where: {
         mentorId,
-
         isActive: true,
-
-        startTime: {
-          lt: end,
-        },
-
-        endTime: {
-          gt: start,
-        },
+        startTime: { lt: end },
+        endTime: { gt: start },
       },
     });
-
-    if (overlapping) {
-      throw new BadRequestException('Khung giờ bị trùng.');
-    }
+    if (overlapping) throw new BadRequestException('Khung giờ bị trùng.');
 
     const slot = await this.prisma.slot.create({
       data: {
         mentorId,
-
         startTime: start,
         endTime: end,
-
         isActive: dto.isActive ?? true,
-
         recurrentType: dto.recurrentType || 'NONE',
-
         recurrentUntil: dto.recurrentUntil
           ? new Date(dto.recurrentUntil)
           : null,
       },
     });
-
     return this.mapToSlotResponse(slot);
   }
 
@@ -130,70 +95,35 @@ export class SlotService {
   ): Promise<SlotResponse> {
     await this.ensureMentorIsActive(mentorId);
 
-    const slot = await this.prisma.slot.findUnique({
-      where: { id },
-    });
-
-    if (!slot || slot.mentorId !== mentorId) {
+    const slot = await this.prisma.slot.findUnique({ where: { id } });
+    if (!slot || slot.mentorId !== mentorId)
       throw new NotFoundException(Messages.SLOT.NOT_FOUND);
-    }
 
     const newStart = dto.startTime ? new Date(dto.startTime) : slot.startTime;
-
     const newEnd = dto.endTime ? new Date(dto.endTime) : slot.endTime;
-
-    if (newStart >= newEnd) {
+    if (newStart >= newEnd)
       throw new BadRequestException(
         'Thời gian kết thúc phải sau thời gian bắt đầu.',
       );
-    }
 
     const overlapping = await this.prisma.slot.findFirst({
       where: {
         mentorId,
-
-        id: {
-          not: id,
-        },
-
+        id: { not: id },
         isActive: true,
-
-        startTime: {
-          lt: newEnd,
-        },
-
-        endTime: {
-          gt: newStart,
-        },
+        startTime: { lt: newEnd },
+        endTime: { gt: newStart },
       },
     });
-
-    if (overlapping) {
-      throw new BadRequestException('Khung giờ sửa bị trùng.');
-    }
+    if (overlapping) throw new BadRequestException('Khung giờ sửa bị trùng.');
 
     const updatedSlot = await this.prisma.slot.update({
-      where: {
-        id,
-      },
-
+      where: { id },
       data: {
-        ...(dto.startTime && {
-          startTime: new Date(dto.startTime),
-        }),
-
-        ...(dto.endTime && {
-          endTime: new Date(dto.endTime),
-        }),
-
-        ...(dto.isActive !== undefined && {
-          isActive: dto.isActive,
-        }),
-
-        ...(dto.recurrentType && {
-          recurrentType: dto.recurrentType,
-        }),
-
+        ...(dto.startTime && { startTime: new Date(dto.startTime) }),
+        ...(dto.endTime && { endTime: new Date(dto.endTime) }),
+        ...(dto.isActive !== undefined && { isActive: dto.isActive }),
+        ...(dto.recurrentType && { recurrentType: dto.recurrentType }),
         ...(dto.recurrentUntil !== undefined && {
           recurrentUntil: dto.recurrentUntil
             ? new Date(dto.recurrentUntil)
@@ -201,37 +131,197 @@ export class SlotService {
         }),
       },
     });
-
     return this.mapToSlotResponse(updatedSlot);
   }
 
   async remove(id: number, mentorId: number): Promise<SlotResponse> {
-    const slot = await this.prisma.slot.findUnique({
-      where: { id },
-    });
-
-    if (!slot || slot.mentorId !== mentorId) {
+    const slot = await this.prisma.slot.findUnique({ where: { id } });
+    if (!slot || slot.mentorId !== mentorId)
       throw new NotFoundException(Messages.SLOT.NOT_FOUND);
-    }
-
-    const deletedSlot = await this.prisma.slot.delete({
-      where: { id },
-    });
-
+    const deletedSlot = await this.prisma.slot.delete({ where: { id } });
     return this.mapToSlotResponse(deletedSlot);
   }
 
+  // ========== AVAILABILITY (dynamic session generation) ==========
+
+  /**
+   * Lấy danh sách ngày có ít nhất một session khả dụng trong tháng.
+   */
+  async getAvailableDays(mentorId: number, planId: number, month: string) {
+    const plan = await this.prisma.coachingPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan || !plan.isActive)
+      throw new BadRequestException('Plan không hợp lệ');
+
+    const [year, monthNum] = month.split('-').map(Number);
+    const firstDay = new Date(year, monthNum - 1, 1);
+    const lastDay = new Date(year, monthNum, 0, 23, 59, 59);
+
+    // 1 query duy nhất cho tất cả dữ liệu trong tháng
+    const [windows, bookings, blockedEvents] = await Promise.all([
+      this.prisma.slot.findMany({
+        where: {
+          mentorId,
+          isActive: true,
+          startTime: { lte: lastDay },
+          endTime: { gte: firstDay },
+        },
+      }),
+      this.prisma.booking.findMany({
+        where: {
+          mentorId,
+          startTime: { lte: lastDay },
+          endTime: { gte: firstDay },
+          OR: [
+            {
+              status: BookingStatus.PENDING_PAYMENT,
+              holdExpiresAt: { gt: new Date() },
+            },
+            {
+              status: {
+                in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.ACCEPTED],
+              },
+            },
+          ],
+        },
+      }),
+      this.prisma.blockedEvent.findMany({
+        where: {
+          mentorId,
+          startTime: { lte: lastDay },
+          endTime: { gte: firstDay },
+        },
+      }),
+    ]);
+
+    const occupied = [...bookings, ...blockedEvents];
+    const durationMs = plan.duration * 60 * 1000;
+    const stepMs = this.STEP_MINUTES * 60 * 1000;
+
+    const availableDays: string[] = [];
+
+    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
+      const dayStart = new Date(d);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(d);
+      dayEnd.setHours(23, 59, 59, 999);
+
+      const dayWindows = windows.filter(
+        (w) => w.startTime < dayEnd && w.endTime > dayStart,
+      );
+
+      let hasSlot = false;
+      for (const window of dayWindows) {
+        let current = window.startTime.getTime();
+        const end = window.endTime.getTime();
+        while (current + durationMs <= end) {
+          const sStart = new Date(current);
+          const sEnd = new Date(current + durationMs);
+          const overlap = occupied.some(
+            (o) => sStart < o.endTime && sEnd > o.startTime,
+          );
+          if (!overlap) {
+            hasSlot = true;
+            break;
+          }
+          current += stepMs;
+        }
+        if (hasSlot) break;
+      }
+
+      if (hasSlot) {
+        availableDays.push(d.toISOString().split('T')[0]);
+      }
+    }
+
+    return availableDays;
+  }
+
+  /**
+   * Lấy danh sách session khả dụng trong một ngày cụ thể.
+   */
+  async getAvailableSessions(mentorId: number, planId: number, date: string) {
+    const plan = await this.prisma.coachingPlan.findUnique({
+      where: { id: planId },
+    });
+    if (!plan || !plan.isActive)
+      throw new BadRequestException('Plan không hợp lệ');
+
+    const dayStart = new Date(date + 'T00:00:00');
+    const dayEnd = new Date(date + 'T23:59:59');
+
+    const [windows, bookings, blockedEvents] = await Promise.all([
+      this.prisma.slot.findMany({
+        where: {
+          mentorId,
+          isActive: true,
+          startTime: { lte: dayEnd },
+          endTime: { gte: dayStart },
+        },
+      }),
+      this.prisma.booking.findMany({
+        where: {
+          mentorId,
+          startTime: { lte: dayEnd },
+          endTime: { gte: dayStart },
+          OR: [
+            {
+              status: BookingStatus.PENDING_PAYMENT,
+              holdExpiresAt: { gt: new Date() },
+            },
+            {
+              status: {
+                in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.ACCEPTED],
+              },
+            },
+          ],
+        },
+      }),
+      this.prisma.blockedEvent.findMany({
+        where: {
+          mentorId,
+          startTime: { lte: dayEnd },
+          endTime: { gte: dayStart },
+        },
+      }),
+    ]);
+
+    const occupied = [...bookings, ...blockedEvents];
+    const durationMs = plan.duration * 60 * 1000;
+    const stepMs = this.STEP_MINUTES * 60 * 1000;
+
+    const sessions: Array<{ startTime: string; endTime: string }> = [];
+
+    for (const window of windows) {
+      let current = window.startTime.getTime();
+      const end = window.endTime.getTime();
+      while (current + durationMs <= end) {
+        const sStart = new Date(current);
+        const sEnd = new Date(current + durationMs);
+        const overlap = occupied.some(
+          (o) => sStart < o.endTime && sEnd > o.startTime,
+        );
+        if (!overlap) {
+          sessions.push({
+            startTime: sStart.toISOString(),
+            endTime: sEnd.toISOString(),
+          });
+        }
+        current += stepMs;
+      }
+    }
+
+    return sessions;
+  }
+
+  // ========== HELPER ==========
+
   private async ensureMentorIsActive(mentorId: number) {
     const mentor = await this.prisma.user.findUnique({
-      where: {
-        id: mentorId,
-      },
-
-      select: {
-        status: true,
-      },
+      where: { id: mentorId },
+      select: { status: true },
     });
-
     if (!mentor || mentor.status !== 'ACTIVE') {
       throw new BadRequestException(
         'Tài khoản của bạn chưa được duyệt hoặc bị khóa.',

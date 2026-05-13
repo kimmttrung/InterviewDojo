@@ -5,13 +5,13 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card } from '@/shared/components/ui/card';
-import { Slot, SlotStatus } from '../types';
+import { Slot } from '../types';
 
 interface ScheduleCalendarProps {
   events: Slot[];
   onSelectRange: (start: Date, end: Date) => void;
   onEventClick: (slot: Slot) => void;
-  onEventChange: (updatedSlot: Slot) => void; // Thêm prop để xử lý khi kéo thả/resize
+  onEventChange: (updatedSlot: Slot) => void;
 }
 
 export default function ScheduleCalendar({
@@ -22,28 +22,16 @@ export default function ScheduleCalendar({
 }: ScheduleCalendarProps) {
   const calendarEvents = useMemo(() => {
     return events.map((slot) => {
-      let bgColor = '#10b981'; // AVAILABLE (Xanh)
-      let title = 'Available';
-
-      if (slot.status === SlotStatus.BLOCKED || slot.status === SlotStatus.BOOKED) {
-        bgColor = '#6b7280'; // BLOCKED/BOOKED (Xám)
-        // Nếu có booking, hiển thị tên Gói Dịch Vụ và tên Candidate
-        if (slot.bookingInfo) {
-          title = `${slot.bookingInfo.planName} - ${slot.bookingInfo.candidateName}`;
-        } else {
-          title = 'Blocked';
-        }
-      }
-
+      // Chỉ phân biệt active hay không, không còn status BLOCKED/BOOKED riêng
+      const bgColor = slot.isActive ? '#10b981' : '#6b7280'; // xanh nếu active, xám nếu không
       return {
         id: String(slot.id),
-        title: title,
+        title: slot.isActive ? 'Available' : 'Inactive',
         start: slot.startTime,
         end: slot.endTime,
         backgroundColor: bgColor,
         borderColor: bgColor,
-        // Chỉ cho phép kéo thả/resize nếu Slot đang AVAILABLE
-        editable: slot.status === SlotStatus.AVAILABLE,
+        editable: slot.isActive, // chỉ cho phép kéo thả nếu slot đang active
         extendedProps: {
           originalSlot: slot,
         },
@@ -51,20 +39,17 @@ export default function ScheduleCalendar({
     });
   }, [events]);
 
-  // Kéo tạo Slot mới
   const handleDateSelect = (selectInfo: any) => {
     const calendarApi = selectInfo.view.calendar;
     calendarApi.unselect();
     onSelectRange(selectInfo.start, selectInfo.end);
   };
 
-  // Click vào Slot để sửa/xóa
   const handleEventClick = (clickInfo: any) => {
     const slotData = clickInfo.event.extendedProps.originalSlot as Slot;
     onEventClick(slotData);
   };
 
-  // Kéo thả di chuyển (Drag & Drop) hoặc kéo giãn thời gian (Resize) Slot
   const handleEventChange = (changeInfo: any) => {
     const slotData = changeInfo.event.extendedProps.originalSlot as Slot;
     const updatedSlot = {
@@ -75,7 +60,6 @@ export default function ScheduleCalendar({
     onEventChange(updatedSlot);
   };
 
-  // Custom giao diện hiển thị bên trong Slot
   const renderEventContent = (eventInfo: any) => {
     return (
       <div className="p-1 overflow-hidden">
@@ -90,15 +74,15 @@ export default function ScheduleCalendar({
   return (
     <Card className="p-6 bg-white shadow-lg w-full">
       <div className="mb-4 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-800">Quản lý lịch rảnh (Available Slots)</h2>
+        <h2 className="text-xl font-bold text-gray-800">Quản lý lịch rảnh</h2>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-            <span className="text-sm font-medium">Available (Kéo thả để tạo)</span>
+            <span className="text-sm font-medium">Active</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-            <span className="text-sm font-medium">Booked (Có người đặt)</span>
+            <span className="text-sm font-medium">Inactive</span>
           </div>
         </div>
       </div>
@@ -111,18 +95,18 @@ export default function ScheduleCalendar({
           right: 'timeGridDay,timeGridWeek,dayGridMonth',
         }}
         initialView="timeGridWeek"
-        selectable={true} // Cho phép kéo để bôi đen vùng thời gian
+        selectable={true}
         selectMirror={true}
-        editable={true} // BẬT KÉO THẢ VÀ RESIZE
-        eventDurationEditable={true} // Cho phép kéo dài/thu ngắn thời gian
+        editable={true}
+        eventDurationEditable={true}
         dayMaxEvents={true}
         weekends={true}
         events={calendarEvents}
         select={handleDateSelect}
         eventClick={handleEventClick}
-        eventDrop={handleEventChange} // Bắt sự kiện Drop
-        eventResize={handleEventChange} // Bắt sự kiện Resize
-        eventContent={renderEventContent} // Render custom text
+        eventDrop={handleEventChange}
+        eventResize={handleEventChange}
+        eventContent={renderEventContent}
         slotMinTime="06:00:00"
         slotMaxTime="23:00:00"
         height="80vh"
