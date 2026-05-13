@@ -2,6 +2,8 @@ export const API_ENDPOINT = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
+    REFRESH: '/auth/refresh', // <<-- phải có dòng này
+    ME: '/auth/me',
   },
   USER: {
     UPDATE_ME: '/users/me',
@@ -28,10 +30,11 @@ export const API_ENDPOINT = {
   },
   QUESTIONS: {
     GET_ALL: '/questions',
+    GET_RANDOM: '/questions/random',
+    GET_ONE: (id: string) => `/questions/${id}`,
     CREATE: '/questions',
     UPDATE: (id: number) => `/questions/${id}`,
     DELETE: (id: number) => `/questions/${id}`,
-    GET_ONE: (id: string) => `/questions/${id}`,
   },
   CATEGORIES: {
     GET_ALL: '/categories',
@@ -42,6 +45,7 @@ export const API_ENDPOINT = {
   },
   COMPANIES: {
     GET_ALL: '/companies',
+    GET_INDUSTRIES: '/companies/industries',
     GET_ONE: (id: number) => `/companies/${id}`,
     CREATE: '/companies',
     UPDATE: (id: number) => `/companies/${id}`,
@@ -73,5 +77,11 @@ export const API_ENDPOINT = {
     UPDATE: (id: number | string) => `/slots/${id}`,
     DELETE: (id: number | string) => `/slots/${id}`,
     DELETE_BATCH: '/slots/batch',
+  },
+  SKILLS: {
+    GET_ALL: '/skills',
+  },
+  COACHING_CATEGORIES: {
+    GET_ALL: '/coaching-categories',
   },
 };

@@ -34,6 +34,7 @@ export const Messages = {
     TARGET_ROLE_UPDATED: 'Cập nhật target role thành công',
     MENTOR_PROFILE_CREATED: 'Tạo hồ sơ mentor thành công',
     AVATAR_UPLOADED: 'Cập nhật ảnh đại diện thành công',
+    NOT_FOUND: 'Không tìm thấy người dùng',
   },
 
   // Booking
@@ -47,6 +48,8 @@ export const Messages = {
     SLOT_UNAVAILABLE: 'Khung giờ này đã được đặt hoặc không khả dụng',
     PLAN_NOT_FOUND: 'Gói dịch vụ không tồn tại hoặc đã bị khóa',
     INVALID_TRANSITION: 'Không thể chuyển đổi sang trạng thái này',
+    NOT_ENOUGH_CREDIT:
+      'Số dư tài khoản không đủ, vui lòng nạp tiền để hoàn thành giao dịch',
   },
 
   // Feedback
@@ -71,6 +74,14 @@ export const Messages = {
 
     USER_RECORDINGS_FETCHED: 'Lấy bản ghi âm của người dùng thành công',
   },
+  QUESTIONS: {
+    FETCHED: 'Lấy danh sách câu hỏi thành công',
+    FETCH_ONE: 'Lấy thông tin câu hỏi thành công',
+    CREATED: 'Tạo câu hỏi thành công',
+    UPDATED: 'Cập nhật câu hỏi thành công',
+    DELETED: 'Xóa câu hỏi thành công',
+    RANDOM_FETCHED: 'Lấy câu hỏi ngẫu nhiên thành công',
+  },
 
   SLOT: {
     FETCHED: 'Lấy danh sách slot thành công',
@@ -88,8 +99,9 @@ export const Messages = {
     FETCHED: 'Lấy danh sách mentor thành công',
     DETAIL_FETCHED: 'Lấy thông tin mentor thành công',
     UPDATED: 'Cập nhật hồ sơ mentor thành công',
+    AVAILABLE_SLOTS_FETCHED: 'Lấy lịch rảnh của mentor thành công',
     NOT_FOUND: 'Không tìm thấy mentor',
-    FORBIDDEN: 'Bạn không có quyền truy cập',
+    NOT_MENTOR: 'Bạn không phải mentor',
   },
   PLAN: {
     FETCHED: 'Lấy danh sách gói dịch vụ thành công',
@@ -100,5 +112,24 @@ export const Messages = {
     APPROVED: 'Duyệt gói dịch vụ thành công',
     NOT_FOUND: 'Không tìm thấy gói dịch vụ hoặc không có quyền truy cập',
     FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
+  },
+
+  COACHING_CATEGORY: {
+    FETCHED: 'Lấy danh sách danh mục coaching thành công',
+    CREATED: 'Tạo danh mục coaching thành công',
+    UPDATED: 'Cập nhật danh mục coaching thành công',
+    DELETED: 'Xóa danh mục coaching thành công',
+  },
+
+  SKILL: {
+    FETCHED: 'Lấy danh sách kỹ năng thành công',
+  },
+
+  COMPANY: {
+    FETCHED: 'Lấy danh sách công ty thành công',
+    CREATED: 'Tạo công ty thành công',
+    UPDATED: 'Cập nhật công ty thành công',
+    DELETED: 'Xóa công ty thành công',
+    INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
   },
 } as const;

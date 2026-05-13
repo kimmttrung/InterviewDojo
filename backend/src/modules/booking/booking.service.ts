@@ -42,21 +42,51 @@ export class BookingService {
     data: CreateBookingDto,
   ): Promise<BookingResponse> {
     return this.prisma.$transaction(async (tx) => {
-      // 1. Kiểm tra Slot có hợp lệ và rảnh không
-      const slot = await tx.slot.findUnique({ where: { id: data.slotId } });
-      if (!slot || slot.status !== SlotStatus.AVAILABLE) {
+      const slot = await tx.slot.findFirst({
+        where: {
+          id: data.slotId,
+          status: SlotStatus.AVAILABLE,
+        },
+      });
+
+      if (!slot) {
         throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
       }
 
-      // 2. Kiểm tra gói dịch vụ có thuộc về Mentor của Slot này và đang active không
       const plan = await tx.coachingPlan.findUnique({
-        where: { id: data.coachingPlanId },
+        where: {
+          id: data.coachingPlanId,
+        },
       });
+
       if (!plan || !plan.isActive || plan.mentorId !== slot.mentorId) {
         throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
       }
 
-      // 3. Tạo Booking
+      const candidate = await tx.user.findUnique({
+        where: {
+          id: candidateId,
+        },
+        select: {
+          creditBalance: true,
+        },
+      });
+
+      if (!candidate || candidate.creditBalance < plan.price) {
+        throw new BadRequestException(Messages.BOOKING.NOT_ENOUGH_CREDIT);
+      }
+
+      await tx.user.update({
+        where: {
+          id: candidateId,
+        },
+        data: {
+          creditBalance: {
+            decrement: plan.price,
+          },
+        },
+      });
+
       const booking = await tx.booking.create({
         data: {
           candidateId,
@@ -64,14 +94,33 @@ export class BookingService {
           slotId: data.slotId,
           coachingPlanId: plan.id,
           status: BookingStatus.PENDING,
+          snapshotPlanTitle: plan.title,
+          snapshotPlanDescription: plan.description,
+          snapshotPlanPrice: plan.price,
+          snapshotPlanDuration: plan.duration,
+
+          answers: data.answers?.length
+            ? {
+                create: data.answers.map((answer) => ({
+                  questionId: answer.questionId,
+                  answerText: answer.answerText,
+                  fileUrl: answer.fileUrl,
+                })),
+              }
+            : undefined,
         },
-        include: { coachingPlan: true },
+        include: {
+          coachingPlan: true,
+        },
       });
 
-      // 4. Khóa Slot lại
       await tx.slot.update({
-        where: { id: data.slotId },
-        data: { status: SlotStatus.BOOKED },
+        where: {
+          id: data.slotId,
+        },
+        data: {
+          status: SlotStatus.BLOCKED,
+        },
       });
 
       return this.mapToBookingResponse(booking);
@@ -146,12 +195,41 @@ export class BookingService {
       throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
     }
 
+    if (booking.status !== BookingStatus.PENDING) {
+      throw new BadRequestException('Booking này đã được xử lý trước đó');
+    }
+
     return this.prisma.$transaction(async (tx) => {
-      // Nếu Mentor HỦY lịch (CANCELLED), nhả Slot đó ra để người khác có thể book lại
-      if (data.status === BookingStatus.CANCELLED) {
+      if (data.status === BookingStatus.REJECTED) {
+        await tx.user.update({
+          where: {
+            id: booking.candidateId,
+          },
+          data: {
+            creditBalance: {
+              increment: booking.snapshotPlanPrice ?? 0,
+            },
+          },
+        });
+
         await tx.slot.update({
-          where: { id: booking.slotId },
-          data: { status: SlotStatus.AVAILABLE },
+          where: {
+            id: booking.slotId,
+          },
+          data: {
+            status: SlotStatus.AVAILABLE,
+          },
+        });
+      }
+
+      if (data.status === BookingStatus.ACCEPTED) {
+        await tx.slot.update({
+          where: {
+            id: booking.slotId,
+          },
+          data: {
+            status: SlotStatus.BOOKED,
+          },
         });
       }
 

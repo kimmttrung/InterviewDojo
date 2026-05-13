@@ -5,7 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { createMock } from '@golevelup/ts-jest';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { RegisterDto, UserRole } from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
+import { Role } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { validate } from 'class-validator';
 
@@ -165,7 +166,7 @@ describe('RegisterDto Validation', () => {
   const validData: RegisterDto = {
     email: 'test@mail.com',
     password: '123456',
-    role: UserRole.CANDIDATE,
+    role: Role.CANDIDATE,
     name: 'Test',
   };
 
@@ -205,7 +206,7 @@ describe('RegisterDto Validation', () => {
   it('should fail if missing password', async () => {
     const dto = Object.assign(new RegisterDto(), {
       email: 'test@mail.com',
-      role: UserRole.CANDIDATE,
+      role: Role.CANDIDATE,
     });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
@@ -214,7 +215,7 @@ describe('RegisterDto Validation', () => {
   it('should fail if role is invalid', async () => {
     const dto = Object.assign(new RegisterDto(), {
       ...validData,
-      role: 'INVALID_ROLE' as UserRole,
+      role: 'INVALID_ROLE' as Role,
     });
     const errors = await validate(dto);
     expect(errors.length).toBeGreaterThan(0);
@@ -224,7 +225,7 @@ describe('RegisterDto Validation', () => {
     const dto = Object.assign(new RegisterDto(), {
       email: 'test@mail.com',
       password: '123456',
-      role: UserRole.CANDIDATE,
+      role: Role.CANDIDATE,
     });
     const errors = await validate(dto);
     expect(errors.length).toBe(0);

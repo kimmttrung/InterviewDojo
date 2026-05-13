@@ -17,7 +17,10 @@ export class StreamService {
       );
     }
 
-    this.client = new StreamClient(apiKey, secretKey);
+    // FIX: Tăng timeout lên 10 giây (10000ms) để tránh lỗi 'request aborted'
+    this.client = new StreamClient(apiKey, secretKey, {
+      timeout: 10000,
+    });
   }
 
   // 1. Tạo Token (Giữ nguyên của bạn, thêm bọc lỗi nếu cần)

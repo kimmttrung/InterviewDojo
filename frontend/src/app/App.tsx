@@ -30,11 +30,12 @@ import InterviewRoom from '../features/candidate/practice/interviews/peer-interv
 import SoloRecording from '../features/candidate/practice/interviews/solo-ai/pages/SoloRecording';
 import PeerMatchingPage from '../features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage';
 import QuestionBank from '../features/shared-domain/question-bank/pages/QuestionBank';
-import QuestionBankDetail from '../features/shared-domain/question-bank/pages/QuestionBankDetail';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
-// import { useAuthStore } from '@/stores/useAuthStore';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
+import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
+import { useAuthStore } from '@/stores/useAuthStore';
+import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -142,6 +143,15 @@ export function App() {
               }
             />
 
+            <Route
+              path="/mentors"
+              element={
+                <ProtectedRoute>
+                  <MentorListPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Question Bank (ai cũng xem được nếu đã login) */}
             <Route
               path="/question-bank"
@@ -155,7 +165,7 @@ export function App() {
               path="/questions/:id/:slug"
               element={
                 <ProtectedRoute>
-                  <QuestionBankDetail />
+                  <QuestionDetailContainer />
                 </ProtectedRoute>
               }
             />

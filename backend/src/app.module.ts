@@ -26,7 +26,8 @@ import { BookingModule } from './modules/booking/booking.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
-import { MentorsModule } from './modules/mentors/mentors.module';
+import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
+import { SkillModule } from './modules/skill/skill.module';
 
 @Module({
   imports: [
@@ -68,7 +69,8 @@ import { MentorsModule } from './modules/mentors/mentors.module';
     PlanModule,
     SlotModule,
     PaymentModule,
-    MentorsModule,
+    CoachingCategoryModule,
+    SkillModule,
   ],
   controllers: [AppController],
   providers: [

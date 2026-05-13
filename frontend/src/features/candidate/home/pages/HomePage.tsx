@@ -3,24 +3,52 @@ import { Layout } from '../../../../shared/components/layout/Layout';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
 import { Button } from '../../../../shared/components/ui/button';
+import { Link } from 'react-router-dom';
 
 export default function HomePage() {
   const features = [
-    { title: 'Share interview experience', icon: Share2, color: 'from-pink-500 to-rose-500' },
     {
-      title: 'Learn to ace SWE interviews',
+      title: 'Peer to peer matching',
+      icon: Share2,
+      color: 'from-pink-500 to-rose-500',
+      link: '/practice/matching',
+    },
+    {
+      title: 'Solo interview AI feedback',
       icon: BookOpen,
       color: 'from-indigo-500 to-purple-500',
+      link: '/practice/solo-recording',
     },
-    { title: 'Practice coding questions', icon: Code2, color: 'from-blue-500 to-cyan-500' },
-    { title: 'Senior+ behavioral prep', icon: Users, color: 'from-green-500 to-emerald-500' },
-    { title: 'Prep for AI companies', icon: Brain, color: 'from-purple-500 to-violet-500' },
+    {
+      title: 'Practice coding questions',
+      icon: Code2,
+      color: 'from-blue-500 to-cyan-500',
+      link: '/question-bank',
+    },
+    {
+      title: 'Senior+ behavioral prep',
+      icon: Users,
+      color: 'from-green-500 to-emerald-500',
+      link: '/share-interview',
+    },
+    {
+      title: 'Prep for AI companies',
+      icon: Brain,
+      color: 'from-purple-500 to-violet-500',
+      link: '/share-interview',
+    },
     {
       title: 'View interview questions',
       icon: MessageCircle,
       color: 'from-orange-500 to-amber-500',
+      link: '/share-interview',
     },
-    { title: 'Practice with an AI interviewer', icon: Target, color: 'from-red-500 to-pink-500' },
+    {
+      title: 'Practice with an AI interviewer',
+      icon: Target,
+      color: 'from-red-500 to-pink-500',
+      link: '/share-interview',
+    },
   ];
 
   return (
@@ -44,18 +72,17 @@ export default function HomePage() {
             const Icon = item.icon;
 
             return (
-              <Card
-                key={index}
-                className="p-4 flex flex-col items-center text-center transition-all duration-300 cursor-pointer hover:shadow-xl hover:-translate-y-1 border hover:border-primary/40"
-              >
-                <div
-                  className={`p-3 rounded-lg mb-2 text-white bg-gradient-to-r ${item.color} shadow`}
-                >
-                  <Icon className="h-5 w-5 text-primary" />
-                </div>
+              <Link key={index} to={item.link}>
+                <Card className="p-4 flex flex-col items-center text-center transition-all duration-300 cursor-pointer hover:shadow-xl hover:-translate-y-1 border hover:border-primary/40">
+                  <div
+                    className={`p-3 rounded-lg mb-2 text-white bg-gradient-to-r ${item.color} shadow`}
+                  >
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
 
-                <p className="text-sm font-medium">{item.title}</p>
-              </Card>
+                  <p className="text-sm font-medium">{item.title}</p>
+                </Card>
+              </Link>
             );
           })}
         </div>

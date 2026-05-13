@@ -1,9 +1,12 @@
 export interface PlanResponse {
   id: number;
-  mentorId: number;
+  mentorId: number; // ID của MentorProfile (nội bộ)
+  mentorUserId: number; // ID của User (tiện cho frontend)
+  categoryId: number;
+  categoryName: string | null;
   title: string;
   description: string | null;
-  durationMinutes: number;
+  duration: number;
   price: number;
   isActive: boolean;
   createdAt: Date;

@@ -26,18 +26,24 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 export class PlanController {
   constructor(private readonly planService: PlanService) {}
 
-  // Lấy danh sách gói của một Mentor cụ thể (Dành cho Candidate/Admin)
-  @Get('mentors/:mentor_id/allplans')
+  /**
+   * Candidate/Admin: Xem danh sách gói của một mentor cụ thể
+   * GET /plans/mentor/:mentorId
+   */
+  @Get('mentor/:mentorId')
   @ResponseMessage(Messages.PLAN.FETCHED)
   async getPlansByMentor(
-    @Param('mentor_id', ParseIntPipe) mentorId: number,
+    @Param('mentorId', ParseIntPipe) mentorId: number,
     @CurrentUser() user?: JwtPayload,
   ): Promise<PlanResponse[]> {
     return this.planService.findAllByMentor(mentorId, user);
   }
 
-  // Mentor tự lấy danh sách gói của mình
-  @Get('plans/me')
+  /**
+   * Mentor: Xem danh sách gói của chính mình
+   * GET /plans/me
+   */
+  @Get('me')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR)
   @ResponseMessage(Messages.PLAN.FETCHED)
@@ -45,8 +51,11 @@ export class PlanController {
     return this.planService.findAllByMentor(user.sub, user);
   }
 
-  // Mentor tạo mới gói dịch vụ
-  @Post('plans')
+  /**
+   * Mentor: Tạo gói dịch vụ mới
+   * POST /plans
+   */
+  @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR)
   @ResponseMessage(Messages.PLAN.CREATED)
@@ -57,38 +66,47 @@ export class PlanController {
     return this.planService.create(user.sub, createPlanDto);
   }
 
-  // Mentor cập nhật gói dịch vụ
-  @Put('mentor/me/:plan_id')
+  /**
+   * Mentor: Cập nhật gói dịch vụ
+   * PUT /plans/:planId
+   */
+  @Put(':planId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR)
   @ResponseMessage(Messages.PLAN.UPDATED)
   async updatePlan(
-    @Param('plan_id', ParseIntPipe) planId: number,
+    @Param('planId', ParseIntPipe) planId: number,
     @Body() updatePlanDto: UpdatePlanDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<PlanResponse> {
     return this.planService.update(planId, user.sub, updatePlanDto);
   }
 
-  // Mentor xóa/ẩn gói dịch vụ
-  @Delete('mentor/me/:plan_id')
+  /**
+   * Mentor: Xóa gói dịch vụ
+   * DELETE /plans/:planId
+   */
+  @Delete(':planId')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.MENTOR)
   @ResponseMessage(Messages.PLAN.DELETED)
   async removePlan(
-    @Param('plan_id', ParseIntPipe) planId: number,
+    @Param('planId', ParseIntPipe) planId: number,
     @CurrentUser() user: JwtPayload,
   ): Promise<PlanResponse> {
     return this.planService.remove(planId, user.sub);
   }
 
-  // Admin duyệt gói dịch vụ (Nếu cần thiết kế thêm logic duyệt)
-  @Patch('mentors/:mentor_id/:plan_id/approve')
+  /**
+   * Admin: Duyệt gói dịch vụ
+   * PATCH /plans/:planId/approve
+   */
+  @Patch(':planId/approve')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.ADMIN)
   @ResponseMessage(Messages.PLAN.APPROVED)
   async approvePlan(
-    @Param('plan_id', ParseIntPipe) planId: number,
+    @Param('planId', ParseIntPipe) planId: number,
   ): Promise<PlanResponse> {
     return this.planService.approve(planId);
   }

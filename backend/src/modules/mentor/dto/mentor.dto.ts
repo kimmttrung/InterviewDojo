@@ -1,13 +1,10 @@
-import { IsOptional, IsString, IsInt, IsEnum, Min } from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsOptional, IsString, IsInt, Min, IsUrl } from 'class-validator';
+
+import { Type, Transform } from 'class-transformer';
+
 import { ApprovalStatus } from '@prisma/client';
 
 export class QueryMentorDto {
-  @IsOptional()
-  @IsEnum(ApprovalStatus)
-  status?: ApprovalStatus;
-
-  // Hỗ trợ phân trang cơ bản
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -19,10 +16,55 @@ export class QueryMentorDto {
   @IsInt()
   @Min(1)
   limit?: number = 10;
+
+  @IsOptional()
+  @IsString()
+  status?: ApprovalStatus;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  roleIds?: number[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  companyIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  industry?: string;
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  skillIds?: number[];
+
+  @IsOptional()
+  @Transform(({ value }) =>
+    Array.isArray(value) ? value.map(Number) : value?.split(',').map(Number),
+  )
+  @IsInt({ each: true })
+  categoryIds?: number[];
+
+  @IsOptional()
+  @IsString()
+  search?: string;
 }
 
 export class UpdateMentorDto {
-  // Các trường thuộc bảng User
+  /**
+   * =========================
+   * User fields
+   * =========================
+   */
+
   @IsOptional()
   @IsString()
   name?: string;
@@ -32,6 +74,7 @@ export class UpdateMentorDto {
   bio?: string;
 
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(0)
   experienceYears?: number;
@@ -40,12 +83,25 @@ export class UpdateMentorDto {
   @IsString()
   avatarUrl?: string;
 
-  // Các trường thuộc bảng MentorProfile
   @IsOptional()
-  @IsString()
-  cvUrl?: string;
+  @IsUrl()
+  linkedInLink?: string;
+
+  @IsOptional()
+  @IsUrl()
+  githubLink?: string;
+
+  /**
+   * =========================
+   * MentorProfile fields
+   * =========================
+   */
 
   @IsOptional()
   @IsString()
-  certificateUrl?: string;
+  headline?: string;
+
+  @IsOptional()
+  @IsUrl()
+  introductionVideoUrl?: string;
 }

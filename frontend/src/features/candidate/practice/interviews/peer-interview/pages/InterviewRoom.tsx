@@ -1,6 +1,6 @@
 // features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 
@@ -9,75 +9,96 @@ import { QuestionPanel } from '../components/QuestionPanel';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { VideoCallSection } from '../components/VideoCallSection';
 import { ChatAndNotes } from '../components/ChatAndNotes';
-import { useVideoCall } from '@/hooks/useVideoCall';
-import { useQuestions } from '@/hooks/useQuestions';
-import { useLocalStorage } from '@/hooks/useLocalStorage';
-import { useSocketStore } from '@/stores/useSocketStore';
-import { useCurrentUser } from '@/features/auth'; // ✅ import hook
-import { WorkMode } from '@/shared/types/interview';
+import { useVideoCall } from '../../../../../../hooks/useVideoCall';
+import { useQuestions } from '../../../../../../hooks/useQuestions';
+import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
+import { useSocketStore } from '../../../../../../stores/useSocketStore';
+import { WorkMode } from '../../../../../../shared/types/interview';
+import { QuestionType } from '../../../../../shared-domain/question-bank/types/question.types';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
+import { useRandomQuestion } from '@/features/shared-domain/question-bank/hooks/useQuestions';
 
 export default function InterviewRoom() {
-  const { roomId } = useParams<{ roomId: string }>();
+  const { roomId } = useParams();
   const [searchParams] = useSearchParams();
 
-  const { data: currentUser, isLoading: isUserLoading } = useCurrentUser();
-  const userId = currentUser?.id?.toString() || searchParams.get('userId') || 'guest';
+  // Lấy userId từ auth store (ưu tiên) hoặc từ query param
+  const { userId: authUserId, isAuthenticated } = useAuthStore();
+  const { data: currentUser } = useCurrentUser();
+  const userId =
+    isAuthenticated && authUserId ? String(authUserId) : searchParams.get('userId') || 'guest';
   const token = searchParams.get('token');
 
-  const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+  // Filter state (client state) – có thể sync qua socket
+  const [selectedType, setSelectedType] = useState<QuestionType | undefined>();
+  const [selectedDifficulty, setSelectedDifficulty] = useState<string | undefined>();
+  const [displayedQuestion, setDisplayedQuestion] = useState<any>(null);
 
+  // Random question hook
   const {
-    codingQuestions,
-    currentQuestion,
-    isLoading,
-    setCurrentQuestion,
-    fetchQuestions,
-    getRandomQuestion,
-    setIsLoading,
-  } = useQuestions();
+    data: randomQuestion,
+    refetch,
+    isFetching,
+  } = useRandomQuestion({
+    type: selectedType,
+    difficulty: selectedDifficulty as any,
+  });
 
-  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
-  const [questionMode, setQuestionMode] = useLocalStorage<'code' | 'theory'>(
-    'questionMode',
-    'code',
-  );
-
-  const { connect, joinRoom, emit, socket } = useSocketStore();
-
-  // ==================== SOCKET CONNECTION ====================
+  // Cập nhật displayedQuestion khi random thành công
   useEffect(() => {
-    if (!userId || !roomId) return;
-    connect(userId);
-    joinRoom(roomId);
+    if (randomQuestion) {
+      setDisplayedQuestion(randomQuestion);
+    }
+  }, [randomQuestion]);
 
-    const handleReceiveQuestion = (data: { question: any; mode: 'code' | 'theory' }) => {
-      setCurrentQuestion(data.question);
-      setQuestionMode(data.mode);
-      setWorkMode(data.mode === 'code' ? 'code' : 'theory');
+  // currentQuestion sẽ lấy từ randomQuestion hoặc null
+  const currentQuestion = randomQuestion || null;
+  const isLoading = isFetching;
+
+  // Lấy các hàm từ Zustand Socket Store
+  const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
+  const { emit, socket } = useSocketStore();
+
+  // Socket listeners
+  useEffect(() => {
+    const handleReceiveQuestion = (data: any) => {
+      console.log('📥 Nhận câu hỏi từ đối phương:', data);
+      setDisplayedQuestion(data.question); // hiển thị câu hỏi nhận được
+    };
+
+    const handleSyncFilters = (data: { type?: QuestionType; difficulty?: string }) => {
+      setSelectedType(data.type);
+      setSelectedDifficulty(data.difficulty);
     };
 
     socket?.on('receive_question', handleReceiveQuestion);
+    socket?.on('sync_filters', handleSyncFilters);
+
     return () => {
       socket?.off('receive_question', handleReceiveQuestion);
+      socket?.off('sync_filters', handleSyncFilters);
     };
-  }, [userId, roomId, socket, connect, joinRoom, setCurrentQuestion, setQuestionMode, setWorkMode]);
+  }, [socket]);
 
-  useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
+  const handleTypeChange = (type?: QuestionType) => {
+    setSelectedType(type);
+    emit('update_filters', { roomId, type, difficulty: selectedDifficulty });
+  };
 
-  const handleRandom = useCallback(
-    (type: 'code' | 'theory') => {
-      const question = getRandomQuestion(type);
-      if (!question) return;
-      console.log('question:', question);
-      setCurrentQuestion(question);
-      setQuestionMode(type);
-      setWorkMode(type === 'code' ? 'code' : 'theory');
-      emit('send_question', { roomId, question, mode: type });
-    },
-    [getRandomQuestion, setCurrentQuestion, setQuestionMode, setWorkMode, emit, roomId],
-  );
+  const handleDifficultyChange = (difficulty?: string) => {
+    setSelectedDifficulty(difficulty);
+    emit('update_filters', { roomId, type: selectedType, difficulty });
+  };
+
+  // Xử lý random: gọi API, sau đó gửi câu hỏi qua socket
+  const handleRandom = async () => {
+    const result = await refetch();
+    const question = result.data ?? null;
+    setDisplayedQuestion(question);
+    emit('send_question', { roomId, question });
+  };
 
   useEffect(() => {
     return () => {
@@ -89,7 +110,7 @@ export default function InterviewRoom() {
   }, []);
 
   // ✅ Hiển thị loading khi đang fetch user (tránh gọi useVideoCall với userId chưa sẵn sàng)
-  if (isUserLoading || !client || !call) {
+  if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
 
@@ -100,15 +121,18 @@ export default function InterviewRoom() {
           <InterviewHeader roomId={roomId!} />
           <main className="flex-1 flex overflow-hidden">
             <QuestionPanel
-              question={currentQuestion}
-              mode={questionMode}
+              question={displayedQuestion}
               onRandom={handleRandom}
-              isLoading={isLoading}
+              isLoading={isFetching}
+              selectedType={selectedType}
+              selectedDifficulty={selectedDifficulty}
+              onTypeChange={handleTypeChange}
+              onDifficultyChange={handleDifficultyChange}
             />
             <WorkspaceTabs
               workMode={workMode}
               setWorkMode={setWorkMode}
-              currentQuestion={currentQuestion}
+              currentQuestion={displayedQuestion}
               roomId={roomId!}
               userId={userId}
             />

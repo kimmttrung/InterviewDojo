@@ -7,7 +7,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
-import { RegisterDto, UserRole } from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
@@ -21,27 +21,35 @@ export class AuthService {
   ) {}
 
   async register(dto: RegisterDto) {
-    const existingUser = await this.prisma.user.findUnique({
-      where: { email: dto.email },
-    });
-    if (existingUser) {
-      throw new BadRequestException('Email đã tồn tại');
-    }
-    if (dto.role === UserRole.ADMIN) {
-      throw new BadRequestException('Không được phép đăng ký ADMIN');
-    }
+    try {
+      const existingUser = await this.prisma.user.findUnique({
+        where: { email: dto.email },
+      });
 
-    const hashedPassword = await bcrypt.hash(dto.password, 10);
-    const newUser = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        password: hashedPassword,
-        name: dto.name,
-        role: (dto.role as Role) ?? Role.CANDIDATE,
-      },
-    });
+      if (existingUser) {
+        throw new BadRequestException('Email đã tồn tại');
+      }
 
-    return this.generateTokens(newUser.id, newUser.email, newUser.role);
+      if (dto.role === Role.ADMIN) {
+        throw new BadRequestException('Không được phép đăng ký ADMIN');
+      }
+
+      const hashedPassword = await bcrypt.hash(dto.password, 10);
+
+      const newUser = await this.prisma.user.create({
+        data: {
+          email: dto.email,
+          password: hashedPassword,
+          name: dto.name,
+          role: dto.role ?? Role.CANDIDATE,
+        },
+      });
+
+      return this.generateTokens(newUser.id, newUser.email, newUser.role);
+    } catch (error) {
+      console.error('REGISTER ERROR DETAIL:', error);
+      throw error;
+    }
   }
 
   async login(dto: LoginDto) {
@@ -126,7 +134,7 @@ export class AuthService {
     });
   }
 
-  private async generateTokens(userId: number, email: string, role: string) {
+  private async generateTokens(userId: number, email: string, role: Role) {
     const payload: JwtPayload = { sub: userId, email, role };
     const [accessToken, refreshToken] = await Promise.all([
       this.jwtService.signAsync(payload, {
