@@ -26,6 +26,7 @@ import { BookingModule } from './modules/booking/booking.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { MentorBookingModule } from './modules/mentor-booking/mentor-booking.module';
 
 @Module({
   imports: [
@@ -67,6 +68,7 @@ import { PaymentModule } from './modules/payment/payment.module';
     PlanModule,
     SlotModule,
     PaymentModule,
+    MentorBookingModule,
   ],
   controllers: [AppController],
   providers: [
