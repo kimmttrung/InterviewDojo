@@ -6,6 +6,7 @@ import {
   BookingStatus,
   ApprovalStatus,
   UserStatus,
+  CoachingQuestionType,
 } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
@@ -18,15 +19,27 @@ const prisma = new PrismaClient({
 });
 
 async function main() {
-  console.log('🌱 Seeding booking test data for mentor...');
+  console.log('🌱 Seeding updated booking test data...');
 
-  // 1. Mentor (active & approved)
+  // 1. Tạo Category cho Coaching (Bắt buộc theo schema mới)
+  const category = await prisma.coachingCategory.upsert({
+    where: { slug: 'system-design' },
+    update: {},
+    create: {
+      slug: 'system-design',
+      name: 'System Design',
+      description: 'Master large scale system architecture',
+      isActive: true,
+    },
+  });
+
+  // 2. Mentor (active & approved)
   const mentor = await prisma.user.upsert({
     where: { email: 'mentor@example.com' },
     update: {},
     create: {
       email: 'mentor@example.com',
-      password: '$2b$10$hashed_placeholder', // trong thực tế dùng bcrypt, có thể để dummy
+      password: '$2b$10$hashed_placeholder',
       name: 'Mentor Alpha',
       role: Role.MENTOR,
       status: UserStatus.ACTIVE,
@@ -43,7 +56,7 @@ async function main() {
   const mentorId = mentor.id;
   const mentorProfileId = mentor.mentorProfile!.id;
 
-  // 2. Candidate
+  // 3. Candidate
   const candidate = await prisma.user.upsert({
     where: { email: 'candidate@example.com' },
     update: {},
@@ -56,10 +69,11 @@ async function main() {
     },
   });
 
-  // 3. Coaching plan with a text question
+  // 4. Coaching plan gắn với Category
   const coachingPlan = await prisma.coachingPlan.create({
     data: {
       mentorId: mentorProfileId,
+      categoryId: category.id, // Gắn category vừa tạo
       title: 'Mock Interview: System Design',
       description: 'Practice system design interview for senior roles',
       duration: 60,
@@ -69,7 +83,7 @@ async function main() {
         create: [
           {
             question: 'What specific topic would you like to focus on?',
-            type: 'TEXT',
+            type: CoachingQuestionType.TEXT,
             isRequired: true,
             orderIndex: 1,
           },
@@ -79,14 +93,14 @@ async function main() {
     include: { questions: true },
   });
 
-  // 4. Slots & Bookings
+  // 5. Slots & Bookings
 
-  // Slot 2 hours for PENDING booking
+  // CASE 1: PENDING booking
   const slotPending = await prisma.slot.create({
     data: {
       mentorId: mentorId,
       startTime: new Date('2026-06-01T09:00:00Z'),
-      endTime: new Date('2026-06-01T11:00:00Z'),
+      endTime: new Date('2026-06-01T10:00:00Z'),
       status: SlotStatus.AVAILABLE,
     },
   });
@@ -97,10 +111,14 @@ async function main() {
       mentorId: mentorId,
       candidateId: candidate.id,
       coachingPlanId: coachingPlan.id,
+      // Mapping dữ liệu snapshot từ plan
       snapshotPlanTitle: coachingPlan.title,
       snapshotPlanDescription: coachingPlan.description,
       snapshotPlanPrice: coachingPlan.price,
       snapshotPlanDuration: coachingPlan.duration,
+      // Theo schema mới, Booking cũng cần startTime/endTime
+      startTime: slotPending.startTime,
+      endTime: slotPending.endTime,
       status: BookingStatus.PENDING,
       answers: {
         create: {
@@ -112,7 +130,7 @@ async function main() {
     },
   });
 
-  // Slot already BOOKED for ACCEPTED booking
+  // CASE 2: ACCEPTED booking (Slot phải chuyển sang BOOKED)
   const slotAccepted = await prisma.slot.create({
     data: {
       mentorId: mentorId,
@@ -121,6 +139,7 @@ async function main() {
       status: SlotStatus.BOOKED,
     },
   });
+
   await prisma.booking.create({
     data: {
       slotId: slotAccepted.id,
@@ -131,11 +150,13 @@ async function main() {
       snapshotPlanDescription: coachingPlan.description,
       snapshotPlanPrice: coachingPlan.price,
       snapshotPlanDuration: coachingPlan.duration,
+      startTime: slotAccepted.startTime,
+      endTime: slotAccepted.endTime,
       status: BookingStatus.ACCEPTED,
     },
   });
 
-  // Slot AVAILABLE for REJECTED booking
+  // CASE 3: REJECTED booking (Slot vẫn AVAILABLE)
   const slotRejected = await prisma.slot.create({
     data: {
       mentorId: mentorId,
@@ -144,6 +165,7 @@ async function main() {
       status: SlotStatus.AVAILABLE,
     },
   });
+
   await prisma.booking.create({
     data: {
       slotId: slotRejected.id,
@@ -151,12 +173,14 @@ async function main() {
       candidateId: candidate.id,
       coachingPlanId: coachingPlan.id,
       snapshotPlanTitle: coachingPlan.title,
+      startTime: slotRejected.startTime,
+      endTime: slotRejected.endTime,
       status: BookingStatus.REJECTED,
     },
   });
 
   console.log(
-    '✅ Seed1 completed: mentor, candidate, slots and bookings (PENDING, ACCEPTED, REJECTED)',
+    '✅ Seed completed: Categories, Plans, Slots and Bookings created.',
   );
 }
 

@@ -160,7 +160,7 @@ export class MentorBookingService {
         where: { id: bookingId, mentorId },
         include: { slot: true },
       });
-      if (!booking)
+      if (!booking || booking.mentorId !== mentorId)
         throw new NotFoundException(Messages.MENTOR_BOOKING.NOT_FOUND);
       if (booking.status !== 'PENDING')
         throw new BadRequestException(Messages.MENTOR_BOOKING.INVALID_STATUS);
@@ -171,8 +171,8 @@ export class MentorBookingService {
       const updatedSlot = await splitSlotIfNeeded(
         tx, // tx có kiểu tương thích
         booking.slot,
-        booking.slot.startTime,
-        booking.slot.endTime,
+        booking.startTime, // Không phải booking.slot.startTime
+        booking.endTime,
         booking.id,
       );
 
@@ -191,7 +191,7 @@ export class MentorBookingService {
           bookingId: updatedBooking.id,
           intervieweeId: booking.candidateId,
           scheduledAt: updatedSlot.startTime,
-          durationMinutes: booking.snapshotPlanDuration || 60,
+          durationMinutes: booking.snapshotPlanDuration || 30,
           status: 'SCHEDULED',
           source: 'MENTOR_BOOKING',
           mode: 'MEET',
@@ -228,6 +228,21 @@ export class MentorBookingService {
       if (booking.status !== 'PENDING')
         throw new BadRequestException(Messages.MENTOR_BOOKING.INVALID_STATUS);
 
+      // 1. Hoàn tiền cho Candidate (Credit Balance)
+      await tx.user.update({
+        where: { id: booking.candidateId },
+        data: {
+          creditBalance: { increment: booking.snapshotPlanPrice ?? 0 },
+        },
+      });
+
+      // 2. Mở lại Slot status thành AVAILABLE
+      await tx.slot.update({
+        where: { id: booking.slotId },
+        data: { status: 'AVAILABLE' },
+      });
+
+      // 3. Cập nhật trạng thái Booking sang REJECTED
       const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
         data: { status: 'REJECTED' },
