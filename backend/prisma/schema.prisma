@@ -289,6 +289,9 @@ model Booking {
 
   status                     BookingStatus  @default(PENDING)
 
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+
   createdAt                  DateTime       @default(now()) @map("created_at")
 
   slot          Slot          @relation(fields: [slotId], references: [id], onDelete: Cascade)
@@ -314,6 +317,7 @@ model BookingActionLog {
   action        String
   note          String?
   createdAt     DateTime @default(now()) @map("created_at")
+  
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   actor   User    @relation(fields: [actorId], references: [id])

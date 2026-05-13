@@ -26,6 +26,7 @@ import { BookingModule } from './modules/booking/booking.module';
 import { PlanModule } from './modules/plan/plan.module';
 import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
+import { MentorBookingModule } from './modules/mentor-booking/mentor-booking.module';
 import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
 import { SkillModule } from './modules/skill/skill.module';
 
@@ -69,6 +70,7 @@ import { SkillModule } from './modules/skill/skill.module';
     PlanModule,
     SlotModule,
     PaymentModule,
+    MentorBookingModule,
     CoachingCategoryModule,
     SkillModule,
   ],

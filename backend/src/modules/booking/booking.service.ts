@@ -26,6 +26,8 @@ export class BookingService {
       candidateId: booking.candidateId,
       coachingPlanId: booking.coachingPlanId,
       status: booking.status,
+      startTime: booking.startTime, // Mapping dữ liệu mới
+      endTime: booking.endTime,
       createdAt: booking.createdAt,
       planDetails: booking.coachingPlan
         ? {
@@ -51,6 +53,15 @@ export class BookingService {
 
       if (!slot) {
         throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
+      }
+
+      // Kiểm tra thời gian booking gửi lên có nằm trong khoảng của Slot không
+      const bStart = new Date(data.startTime);
+      const bEnd = new Date(data.endTime);
+      if (bStart < slot.startTime || bEnd > slot.endTime) {
+        throw new BadRequestException(
+          'Thời gian chọn nằm ngoài khung giờ của Mentor',
+        );
       }
 
       const plan = await tx.coachingPlan.findUnique({
@@ -94,6 +105,8 @@ export class BookingService {
           slotId: data.slotId,
           coachingPlanId: plan.id,
           status: BookingStatus.PENDING,
+          startTime: bStart, // LƯU VÀO DB
+          endTime: bEnd, // LƯU VÀO DB
           snapshotPlanTitle: plan.title,
           snapshotPlanDescription: plan.description,
           snapshotPlanPrice: plan.price,
