@@ -77,4 +77,24 @@ export class SlotController {
   ): Promise<SlotResponse> {
     return this.slotService.remove(id, user.sub);
   }
+
+  @Get('mentors/:mentorId/available-days')
+  @ResponseMessage(Messages.SLOT.GET_AVAILABLE_DAYS)
+  async getAvailableDays(
+    @Param('mentorId', ParseIntPipe) mentorId: number,
+    @Query('planId', ParseIntPipe) planId: number,
+    @Query('month') month: string,
+  ) {
+    return this.slotService.getAvailableDays(mentorId, planId, month);
+  }
+
+  @Get('mentors/:mentorId/available-sessions')
+  @ResponseMessage(Messages.SLOT.GET_AVAILABLE_SESSIONS)
+  async getAvailableSessions(
+    @Param('mentorId', ParseIntPipe) mentorId: number,
+    @Query('planId', ParseIntPipe) planId: number,
+    @Query('date') date: string,
+  ) {
+    return this.slotService.getAvailableSessions(mentorId, planId, date);
+  }
 }

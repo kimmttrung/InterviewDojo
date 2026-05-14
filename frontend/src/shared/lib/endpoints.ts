@@ -77,11 +77,17 @@ export const API_ENDPOINT = {
     UPDATE: (id: number | string) => `/slots/${id}`,
     DELETE: (id: number | string) => `/slots/${id}`,
     DELETE_BATCH: '/slots/batch',
+    GET_AVAILABLE_DAYS: (mentorId: number | string) => `/slots/mentors/${mentorId}/available-days`,
+    GET_AVAILABLE_SESSIONS: (mentorId: number | string) =>
+      `/slots/mentors/${mentorId}/available-sessions`,
   },
   SKILLS: {
     GET_ALL: '/skills',
   },
   COACHING_CATEGORIES: {
     GET_ALL: '/coaching-categories',
+  },
+  PLANS: {
+    GET_BY_USER: (userId: number | string) => `/plans/users/${userId}`,
   },
 };

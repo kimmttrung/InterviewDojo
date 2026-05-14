@@ -18,7 +18,7 @@ import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard'
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
 import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedulePage';
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfile';
-import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
+import MentorDetailPage from '../features/candidate/mentor-booking/pages/MentorDetailPage';
 
 import AdminDashboard from '../features/admin/dashboard/pages/AdminDashboard';
 import CategoriesPage from '../features/admin/category-management/pages/CategoriesPage';
@@ -181,7 +181,7 @@ export function App() {
             />
 
             <Route
-              path="/mentors/:mentorId"
+              path="/mentors/:id"
               element={
                 <ProtectedRoute roles={['CANDIDATE']}>
                   <MentorDetailPage />

@@ -1,8 +1,8 @@
 // features/candidate/list-mentor/pages/MentorListPage.tsx
 import { useState } from 'react';
 import { useMentors } from '../hooks/useMentors';
-import { MentorCard } from '@/features/candidate/list-mentor/conponents/MentorCard';
-import { MentorFilters } from '@/features/candidate/list-mentor/conponents/MentorFilters';
+import { MentorCard } from '@/features/candidate/list-mentor/components/MentorCard';
+import { MentorFilters } from '@/features/candidate/list-mentor/components/MentorFilters';
 import { Layout } from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import { Loader2 } from 'lucide-react';
