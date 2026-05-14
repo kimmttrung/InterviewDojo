@@ -76,6 +76,6 @@ export class CompaniesController {
   @ApiOperation({ summary: 'Lấy danh sách ngành nghề' })
   @ResponseMessage(Messages.COMPANY.INDUSTRIES_FETCHED)
   async findAllIndustries() {
-    return this.companiesService.findAllIndustries();
+    return await this.companiesService.findAllIndustries();
   }
 }

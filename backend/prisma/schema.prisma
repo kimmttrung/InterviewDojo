@@ -236,6 +236,7 @@ model Experience {
   startDate   DateTime  @map("start_date")
   endDate     DateTime? @map("end_date")
   isCurrent   Boolean   @default(false) @map("is_current")
+  proofUrl    String?   @map("proof_url")
 
   mentor  MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   company Company       @relation(fields: [companyId], references: [id])

@@ -12,7 +12,7 @@ export class CoachingCategoryService {
   constructor(private prisma: PrismaService) {}
 
   async findAll() {
-    return this.prisma.coachingCategory.findMany({
+    return await this.prisma.coachingCategory.findMany({
       orderBy: { name: 'asc' },
     });
   }

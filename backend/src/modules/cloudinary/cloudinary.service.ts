@@ -139,12 +139,14 @@ export class CloudinaryService {
   //   });
   // }
 
-  async uploadVideo(file: UploadedFileType): Promise<UploadApiResponse> {
+  async uploadVideo(
+    file: UploadedFileType,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     if (!file?.buffer) {
       throw new BadRequestException('Video file is required');
     }
 
-    // Sửa: Sử dụng helper và mảng ALLOWED_VIDEO_TYPES
     if (!this.isValidMimetype(file.mimetype, ALLOWED_VIDEO_TYPES)) {
       throw new BadRequestException(
         `Invalid video type: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
@@ -153,7 +155,9 @@ export class CloudinaryService {
 
     return this.uploadStream(file.buffer, {
       resource_type: 'video',
-      folder: 'interview_dojo/solo_recordings_video',
+
+      folder,
+
       chunk_size: 6_000_000,
     });
   }
