@@ -23,15 +23,65 @@ const prisma = new PrismaClient({
 async function main() {
   const passwordHash = await bcrypt.hash('123456', 10);
 
-  // Xóa dữ liệu mentor cũ (tùy chọn)
+  // Xóa dữ liệu cũ (tùy chọn)
   await prisma.userSkill.deleteMany({});
   await prisma.experience.deleteMany({});
+  await prisma.coachingPlan.deleteMany({}); // Thêm xóa CoachingPlan nếu có
+  await prisma.coachingCategory.deleteMany({}); // Thêm xóa CoachingCategory
   await prisma.mentorProfile.deleteMany({});
   await prisma.user.deleteMany({ where: { role: Role.MENTOR } });
   await prisma.skill.deleteMany({});
   await prisma.company.deleteMany({});
   await prisma.jobRole.deleteMany({});
-  // Tạo skills
+
+  // ==================== TẠO COACHING CATEGORIES ====================
+  const coachingCategoriesData = [
+    {
+      slug: 'technical-interview',
+      name: 'Technical Interview Prep',
+      description:
+        'Mock interviews focusing on Data Structures, Algorithms, and live coding.',
+    },
+    {
+      slug: 'system-design',
+      name: 'System Design Prep',
+      description:
+        'Deep dives into scalable architecture, distributed systems, and design trade-offs.',
+    },
+    {
+      slug: 'behavioral-interview',
+      name: 'Behavioral & Culture Fit',
+      description:
+        'Mastering the STAR method and answering leadership principle questions.',
+    },
+    {
+      slug: 'resume-review',
+      name: 'Resume & Profile Review',
+      description:
+        'Actionable feedback on your resume, LinkedIn profile, and GitHub portfolio.',
+    },
+    {
+      slug: 'career-mentorship',
+      name: 'Career Strategy & Mentorship',
+      description:
+        'Long-term guidance for career growth, job transitions, and salary negotiation.',
+    },
+    {
+      slug: 'leadership-coaching',
+      name: 'Leadership Coaching',
+      description:
+        'Mentorship for transitioning from Senior Engineer to Tech Lead or Engineering Manager.',
+    },
+  ];
+
+  const categories = await Promise.all(
+    coachingCategoriesData.map((c) =>
+      prisma.coachingCategory.create({ data: c }),
+    ),
+  );
+  console.log(`✅ Seeded ${categories.length} coaching categories!`);
+
+  // ==================== TẠO SKILLS ====================
   const skillsData = [
     { name: 'React', type: SkillType.HARDSKILL },
     { name: 'Node.js', type: SkillType.HARDSKILL },
@@ -58,7 +108,7 @@ async function main() {
     skillsData.map((s) => prisma.skill.create({ data: s })),
   );
 
-  // Tạo companies
+  // ==================== TẠO COMPANIES ====================
   const companiesData = [
     {
       name: 'Google',
@@ -211,7 +261,7 @@ async function main() {
     companiesData.map((c) => prisma.company.create({ data: c })),
   );
 
-  // Tạo job roles
+  // ==================== TẠO JOB ROLES ====================
   const rolesData = [
     { name: 'Software Engineer' },
     { name: 'Product Manager' },
@@ -228,7 +278,7 @@ async function main() {
     rolesData.map((r) => prisma.jobRole.create({ data: r })),
   );
 
-  // Danh sách 30 mentor mẫu
+  // ==================== TẠO MENTORS ====================
   const mentorTemplates = [
     {
       name: 'Nguyen Van A',
@@ -413,7 +463,6 @@ async function main() {
     },
   ];
 
-  // Hàm tạo mentor
   const createMentor = async (
     name: string,
     email: string,
@@ -442,7 +491,7 @@ async function main() {
       m.headline,
     );
 
-    // Thêm 1-2 experiences, chọn ngẫu nhiên company và role
+    // Thêm 1-2 experiences
     const numExp = 1 + (i % 2);
     for (let j = 0; j < numExp; j++) {
       const companyIdx = (i * 3 + j) % companies.length;
@@ -452,14 +501,14 @@ async function main() {
           mentorId: profile.id,
           companyId: companies[companyIdx].id,
           jobRoleId: roles[roleIdx].id,
-          isCurrent: j === 0, // experience đầu tiên là hiện tại
+          isCurrent: j === 0,
           startDate: new Date(2020, j * 12, 1),
           description: `Worked at ${companies[companyIdx].name} as ${roles[roleIdx].name}`,
         },
       });
     }
 
-    // Thêm 3-7 skills ngẫu nhiên
+    // Thêm 3-7 skills
     const numSkills = 3 + (i % 5);
     const shuffledSkills = [...skills].sort(() => 0.5 - Math.random());
     const selectedSkills = shuffledSkills.slice(0, numSkills);
@@ -475,6 +524,24 @@ async function main() {
             SkillLevel.EXPERT,
           ][i % 4],
           experienceMonths: 12 + Math.floor(Math.random() * 60),
+        },
+      });
+    }
+
+    // (Tùy chọn bổ sung thêm): Tạo luôn 1-2 Coaching Plan ngẫu nhiên cho mỗi mentor
+    // liên kết với danh mục vừa tạo ở trên để bạn có data test luôn.
+    const numPlans = 1 + (i % 2);
+    for (let p = 0; p < numPlans; p++) {
+      const categoryIdx = (i + p) % categories.length;
+      await prisma.coachingPlan.create({
+        data: {
+          mentorId: profile.id,
+          categoryId: categories[categoryIdx].id,
+          title: `1-on-1 ${categories[categoryIdx].name} Session`,
+          description: `I will help you with ${categories[categoryIdx].name.toLowerCase()} and share my industry experience.`,
+          duration: 60, // 60 phút
+          price: 50.0 + (i % 5) * 10, // $50 - $90
+          isActive: true,
         },
       });
     }

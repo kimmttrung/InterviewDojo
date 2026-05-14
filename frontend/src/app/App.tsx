@@ -17,7 +17,7 @@ import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
 import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedulePage';
-import MentorProfile from '../features/mentor/profile-management/pages/MentorProfile';
+import MentorProfile from '../features/mentor/profile-management/pages/MentorProfileManagement';
 import MentorDetailPage from '../features/candidate/book-mentor/pages/MentorDetailPage';
 
 import AdminDashboard from '../features/admin/dashboard/pages/AdminDashboard';

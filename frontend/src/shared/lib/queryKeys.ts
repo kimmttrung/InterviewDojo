@@ -23,5 +23,13 @@ export const queryKeys = {
   },
   mentor: {
     list: (filters: Record<string, any>) => ['mentors', filters] as const,
+
+    profile: ['mentor-profile'] as const,
+
+    experiences: ['mentor-experiences'] as const,
+
+    coachingPlans: ['mentor-coaching-plans'] as const,
+
+    skills: ['mentor-skills'] as const,
   },
 } as const;

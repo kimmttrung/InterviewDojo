@@ -40,7 +40,10 @@ export class SoloRecordingExternalService {
     }
 
     try {
-      const uploaded = await this.cloudinaryService.uploadVideo(file);
+      const uploaded = await this.cloudinaryService.uploadVideo(
+        file,
+        'interview_dojo/solo_recordings_video',
+      );
       return {
         videoUrl: uploaded.secure_url,
         publicId: uploaded.public_id,

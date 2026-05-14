@@ -4,7 +4,7 @@ import { MentorLayout } from '../../dashboard/components/MentorLayout';
 import ScheduleCalendar from '../components/ScheduleCalendar';
 import SlotEditModal from '../components/SlotEditModal';
 import { Slot, SlotStatus } from '../types';
-import { scheduleService } from '../service/schedule.service';
+import { scheduleService } from '../services/schedule.service';
 import { toast } from 'sonner';
 import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
 import { ApprovalStatus } from '@/shared/types/enum';

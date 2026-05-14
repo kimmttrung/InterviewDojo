@@ -1,14 +1,12 @@
-import { api } from '../../../../shared/lib/api'; // Sử dụng instance api chung của dự án
+import { api } from '../../../../shared/lib/api';
 import { Slot, SlotStatus } from '../types';
 import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
 
 export const scheduleService = {
   getSlots: async (mentorId: number) => {
-    // Sử dụng 'api' (đã có sẵn interceptor gắn Token từ useAuthStore)
     const response = await api.get(API_ENDPOINT.SLOTS.GET_ALL, {
       params: { mentorId },
     });
-    // NestJS trả về format { success: true, data: [...], message: "..." }
     return response.data?.data || response.data;
   },
 
@@ -19,7 +17,6 @@ export const scheduleService = {
       status: SlotStatus.AVAILABLE,
     };
 
-    // Gọi POST tới /api/v1/slots
     const response = await api.post(API_ENDPOINT.SLOTS.CREATE, payload);
     return response.data?.data || response.data;
   },
