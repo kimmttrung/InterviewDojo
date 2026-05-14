@@ -125,12 +125,33 @@ const ExperienceCard = ({
         </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium text-slate-700">End Date</label>
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-slate-700">End Date</label>
+            <label className="flex items-center gap-2 text-sm text-slate-600">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                checked={experience.isCurrent || false}
+                onChange={(e) => {
+                  const checked = e.target.checked;
+                  updateExperience(index, {
+                    isCurrent: checked,
+                    // Nếu tích chọn "Now", tự động reset endDate về rỗng
+                    ...(checked ? { endDate: '' } : {}),
+                  });
+                }}
+              />
+              I currently work here
+            </label>
+          </div>
           <Input
             type="date"
             min={experience.startDate}
-            value={experience.endDate || ''}
+            // Nếu đang là current, ép hiển thị rỗng
+            value={experience.isCurrent ? '' : experience.endDate || ''}
             disabled={experience.isCurrent}
+            // Làm mờ background để user dễ nhận biết là đang bị disable
+            className={experience.isCurrent ? 'bg-slate-100 opacity-70' : ''}
             onChange={(e) => updateExperience(index, { endDate: e.target.value })}
           />
         </div>

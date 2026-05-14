@@ -1,9 +1,10 @@
+// src/features/mentor/schedule/components/SlotEditModal.tsx
 import React, { useState } from 'react';
 import { X, Trash2, Save, CalendarRange } from 'lucide-react';
 import { Card } from '@/shared/components/ui/card';
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
-import { Slot, SlotStatus, RecurrenceType } from '../types';
+import { Slot, RecurrenceType } from '../types';
 
 interface SlotEditModalProps {
   slot: Slot;
@@ -21,20 +22,18 @@ const formatForInput = (date: Date) => {
 export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: SlotEditModalProps) {
   const [startTime, setStartTime] = useState(formatForInput(slot.startTime));
   const [endTime, setEndTime] = useState(formatForInput(slot.endTime));
-  const [recurrence, setRecurrence] = useState<RecurrenceType>(slot.recurrence || 'NONE');
-  // Thêm state quản lý ngày kết thúc lặp
+  const [recurrence, setRecurrence] = useState<RecurrenceType>(slot.recurrentType || 'NONE');
   const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
-
-  const isReadOnly = slot.status === SlotStatus.BOOKED;
+  const [isActive, setIsActive] = useState(slot.isActive);
 
   const handleSave = () => {
     onUpdate(slot.id, {
       startTime: new Date(startTime),
       endTime: new Date(endTime),
-      recurrence,
-      // Gửi ngày kết thúc lặp nếu có chọn lặp
-      ...(recurrence !== 'NONE' &&
-        recurrenceEndDate && { recurrenceEndDate: new Date(recurrenceEndDate) }),
+      recurrentType: recurrence,
+      recurrentUntil:
+        recurrence !== 'NONE' && recurrenceEndDate ? new Date(recurrenceEndDate) : null,
+      isActive,
     });
     onClose();
   };
@@ -49,21 +48,19 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
           <X size={20} />
         </button>
 
-        <h2 className="text-xl font-bold mb-4">Chỉnh sửa Slot</h2>
+        <h2 className="text-xl font-bold mb-4">Chỉnh sửa Availability Window</h2>
 
         <div className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-600 mb-1">Trạng thái</label>
-            <span
-              className={`px-3 py-1 rounded-full text-xs font-bold ${slot.status === SlotStatus.AVAILABLE ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}`}
+          <div className="flex items-center justify-between">
+            <label className="text-sm font-medium text-gray-600">Trạng thái</label>
+            <button
+              onClick={() => setIsActive(!isActive)}
+              className={`px-3 py-1 rounded-full text-xs font-bold ${
+                isActive ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'
+              }`}
             >
-              {slot.status}
-            </span>
-            {isReadOnly && (
-              <p className="text-xs text-red-500 mt-2">
-                * Slot này đã được đặt, bạn không thể chỉnh sửa thời gian.
-              </p>
-            )}
+              {isActive ? 'ACTIVE' : 'INACTIVE'}
+            </button>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -73,7 +70,6 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
                 type="datetime-local"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                disabled={isReadOnly}
               />
             </div>
             <div>
@@ -82,12 +78,10 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
                 type="datetime-local"
                 value={endTime}
                 onChange={(e) => setEndTime(e.target.value)}
-                disabled={isReadOnly}
               />
             </div>
           </div>
 
-          {/* AC: Chế độ lặp lịch */}
           <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
             <div>
               <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
@@ -96,7 +90,6 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
               <select
                 value={recurrence}
                 onChange={(e) => setRecurrence(e.target.value as RecurrenceType)}
-                disabled={isReadOnly}
                 className="w-full border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-emerald-500 outline-none"
               >
                 <option value="NONE">Không lặp lại</option>
@@ -105,7 +98,6 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
               </select>
             </div>
 
-            {/* Chỉ hiện ô chọn Ngày kết thúc khi bật chế độ lặp */}
             {recurrence !== 'NONE' && (
               <div className="animate-in fade-in slide-in-from-top-2">
                 <label className="block text-sm font-medium text-emerald-600 mb-1">
@@ -115,8 +107,7 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
                   type="date"
                   value={recurrenceEndDate}
                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
-                  disabled={isReadOnly}
-                  min={new Date().toISOString().split('T')[0]} // Không cho chọn ngày trong quá khứ
+                  min={new Date().toISOString().split('T')[0]}
                 />
               </div>
             )}
@@ -131,14 +122,12 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
               onDelete(slot.id);
               onClose();
             }}
-            disabled={isReadOnly}
           >
             <Trash2 size={16} /> Xóa
           </Button>
           <Button
             className="flex-1 flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700"
             onClick={handleSave}
-            disabled={isReadOnly || (recurrence !== 'NONE' && !recurrenceEndDate)}
           >
             <Save size={16} /> Lưu thay đổi
           </Button>

@@ -120,6 +120,17 @@ export const Messages = {
     NOT_FOUND: 'Không tìm thấy gói dịch vụ hoặc không có quyền truy cập',
     FORBIDDEN: 'Bạn không có quyền thực hiện thao tác này',
   },
+  MENTOR_BOOKING: {
+    FETCHED: 'Lấy danh sách booking thành công',
+    DETAIL_FETCHED: 'Lấy chi tiết booking thành công',
+    ACCEPT_SUCCESS: 'Đã chấp nhận booking',
+    REJECT_SUCCESS: 'Đã từ chối booking',
+    NOT_FOUND: 'Không tìm thấy booking',
+    NOT_AUTHORIZED: 'Bạn không có quyền xử lý booking này',
+    INVALID_STATUS: 'Booking không ở trạng thái PENDING',
+    SLOT_UNAVAILABLE: 'Slot đã bị block hoặc không khả dụng',
+    MENTOR_NOT_ACTIVE: 'Tài khoản mentor chưa được kích hoạt',
+  },
 
   COACHING_CATEGORY: {
     FETCHED: 'Lấy danh sách danh mục coaching thành công',

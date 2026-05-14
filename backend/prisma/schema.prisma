@@ -15,18 +15,6 @@ enum Role {
   ADMIN
 }
 
-enum SlotStatus {
-  AVAILABLE
-  BOOKED
-  BLOCKED
-}
-
-enum BookingStatus {
-  PENDING
-  ACCEPTED
-  REJECTED
-}
-
 enum SlotRecurrentType {
   NONE
   WEEKLY
@@ -98,12 +86,32 @@ enum CoachingQuestionType {
   FILE
 }
 
+enum BookingStatus {
+  PENDING_PAYMENT
+  PENDING_ACCEPTANCE
+  ACCEPTED
+  REJECTED
+  CANCELLED
+  COMPLETED
+  EXPIRED
+  REFUNDED
+}
+
 enum PaymentStatus {
   PENDING
-  SUCCESS
+  PAID
   FAILED
   REFUNDED
+  PARTIALLY_REFUNDED
   EXPIRED
+}
+
+enum WalletTransactionType {
+  DEPOSIT
+  PAYMENT
+  REFUND
+  PAYOUT
+  PLATFORM_FEE
 }
 
 enum MatchStatus {
@@ -126,6 +134,7 @@ enum PaymentProvider {
   MOMO
   STRIPE
   PAYPAL
+  INTERNAL_WALLET
 }
 
 enum Currency {
@@ -148,53 +157,55 @@ enum SessionMode {
 // ==================== USER & PROFILE ====================
 
 model User {
-  id              Int      @id @default(autoincrement())
-  email           String   @unique
+  id              Int        @id @default(autoincrement())
+  email           String     @unique
   password        String
   name            String?
   bio             String?
-  experienceYears Int      @default(0) @map("experience_years")
-  avatarUrl       String?  @map("avatar_url")
-  linkedInLink    String?  @map("linkedIn_link")
-  githubLink      String?  @map("github_link")
-  creditBalance   Float    @default(0.0) @map("credit_balance")
-  role            Role     @default(CANDIDATE)
-  status          UserStatus   @default(ACTIVE)
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
-  targetRoleId    Int?     @map("target_role_id")
+  experienceYears Int        @default(0) @map("experience_years")
+  avatarUrl       String?    @map("avatar_url")
+  linkedInLink    String?    @map("linkedIn_link")
+  githubLink      String?    @map("github_link")
+  creditBalance   Float      @default(0.0) @map("credit_balance")
+  role            Role       @default(CANDIDATE)
+  status          UserStatus @default(ACTIVE)
+  createdAt       DateTime   @default(now()) @map("created_at")
+  updatedAt       DateTime   @updatedAt @map("updated_at")
+  targetRoleId    Int?       @map("target_role_id")
 
-  targetRole        JobRole?         @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
+  targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
   mentorProfile       MentorProfile?
-  slots               Slot[]           @relation("MentorSlots")
-  bookingsAsMentor     Booking[] @relation("MentorBookings")
-  bookingsAsCandidate  Booking[] @relation("CandidateBookings")
+  slots               Slot[]              @relation("MentorSlots")
+  blockedEvents       BlockedEvent[]
+  walletTransactions  WalletTransaction[]
+  bookingsAsMentor    Booking[]           @relation("MentorBookings")
+  bookingsAsCandidate Booking[]           @relation("CandidateBookings")
   codeSubmissions     CodeSubmission[]
   skills              UserSkill[]
   bookmarks           UserBookmark[]
-  mockSessions        MockSession[]    @relation("IntervieweeSessions")
-  feedbacksGiven      Feedback[]       @relation("ReviewerFeedbacks")
-  feedbacksReceived   Feedback[]       @relation("RevieweeFeedbacks")
-  matchedAsCandidateA Match[] @relation("CandidateA")
-  matchedAsCandidateB Match[] @relation("CandidateB")
-  mentorApprovalLogs MentorApprovalLog[]
-  bookingActionLogs  BookingActionLog[]
+  mockSessions        MockSession[]       @relation("IntervieweeSessions")
+  feedbacksGiven      Feedback[]          @relation("ReviewerFeedbacks")
+  feedbacksReceived   Feedback[]          @relation("RevieweeFeedbacks")
+  matchedAsCandidateA Match[]             @relation("CandidateA")
+  matchedAsCandidateB Match[]             @relation("CandidateB")
+  mentorApprovalLogs  MentorApprovalLog[]
+  bookingActionLogs   BookingActionLog[]
 
   @@map("users")
 }
 
 model MentorProfile {
-  id                     Int      @id @default(autoincrement())
-  userId                 Int      @unique @map("user_id")
-  headline               String
-  introductionVideoUrl   String?  @map("introdcution_video_url")
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
-  approvalStatus ApprovalStatus @default(INCOMPLETE) @map("approval_status")
-  user         User              @relation(fields: [userId], references: [id], onDelete: Cascade)
-  experiences  Experience[]
-  coachingPlans CoachingPlan[]
-  approvalLogs MentorApprovalLog[]
+  id                   Int                 @id @default(autoincrement())
+  userId               Int                 @unique @map("user_id")
+  headline             String
+  introductionVideoUrl String?             @map("introdcution_video_url")
+  createdAt            DateTime            @default(now()) @map("created_at")
+  updatedAt            DateTime            @updatedAt @map("updated_at")
+  approvalStatus       ApprovalStatus      @default(INCOMPLETE) @map("approval_status")
+  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences          Experience[]
+  coachingPlans        CoachingPlan[]
+  approvalLogs         MentorApprovalLog[]
 
   @@map("mentor_profiles")
 }
@@ -227,7 +238,7 @@ model Experience {
   isCurrent   Boolean   @default(false) @map("is_current")
   proofUrl    String?   @map("proof_url")
 
-  mentor MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+  mentor  MentorProfile @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   company Company       @relation(fields: [companyId], references: [id])
   jobRole JobRole       @relation(fields: [jobRoleId], references: [id])
 
@@ -261,60 +272,82 @@ model JobRole {
 // ==================== SCHEDULING & BOOKING ====================
 
 model Slot {
-  id              Int                 @id @default(autoincrement())
-  mentorId        Int                 @map("mentor_id")
-  startTime       DateTime            @map("start_time")
-  endTime         DateTime            @map("end_time")
-  recurrentType   SlotRecurrentType   @default(NONE) @map("recurrent_type")
-  recurrentUntil  DateTime?           @map("recurrent_until")
-  status          SlotStatus          @default(AVAILABLE)
-  createdAt       DateTime            @default(now()) @map("created_at")
+  id             Int               @id @default(autoincrement())
+  mentorId       Int               @map("mentor_id")
+  startTime      DateTime          @map("start_time")
+  endTime        DateTime          @map("end_time")
+  recurrentType  SlotRecurrentType @default(NONE) @map("recurrent_type")
+  recurrentUntil DateTime?         @map("recurrent_until")
+  isActive       Boolean           @default(true) @map("is_active")
+  createdAt      DateTime          @default(now()) @map("created_at")
 
   mentor   User      @relation("MentorSlots", fields: [mentorId], references: [id], onDelete: Cascade)
-  booking  Booking?
+  bookings Booking[]
 
+  @@index([mentorId, startTime, endTime])
   @@map("slots")
 }
 
+model BlockedEvent {
+  id        Int      @id @default(autoincrement())
+  mentorId  Int      @map("mentor_id")
+  startTime DateTime @map("start_time")
+  endTime   DateTime @map("end_time")
+  reason    String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  mentor User @relation(fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@index([mentorId, startTime, endTime])
+  @@map("blocked_events")
+}
+
 model Booking {
-  id                         Int            @id @default(autoincrement())
-  slotId                     Int            @unique @map("slot_id")
-  mentorId                   Int            @map("mentor_id")
-  candidateId                Int            @map("candidate_id")
-  coachingPlanId            Int            @map("coaching_plan_id")
+  id             Int  @id @default(autoincrement())
+  slotId         Int? @map("slot_id")
+  mentorId       Int  @map("mentor_id")
+  candidateId    Int  @map("candidate_id")
+  coachingPlanId Int  @map("coaching_plan_id")
 
-  snapshotPlanTitle          String         @map("snapshot_plan_title")
-  snapshotPlanDescription    String?        @map("snapshot_plan_description")
-  snapshotPlanPrice          Float?         @map("snapshot_plan_price")
-  snapshotPlanDuration       Int?           @map("snapshot_plan_duration")
+  startTime              DateTime  @map("start_time")
+  endTime                DateTime  @map("end_time")
+  holdExpiresAt          DateTime? @map("hold_expires_at")
+  mentorResponseDeadline DateTime? @map("mentor_response_deadline")
 
-  status                     BookingStatus  @default(PENDING)
+  snapshotPlanTitle       String  @map("snapshot_plan_title")
+  snapshotPlanDescription String? @map("snapshot_plan_description")
+  snapshotPlanPrice       Float?  @map("snapshot_plan_price")
+  snapshotPlanDuration    Int?    @map("snapshot_plan_duration")
 
-  createdAt                  DateTime       @default(now()) @map("created_at")
+  status BookingStatus @default(PENDING_PAYMENT)
 
-  slot          Slot          @relation(fields: [slotId], references: [id], onDelete: Cascade)
-  mentor        User          @relation("MentorBookings", fields: [mentorId], references: [id])
-  candidate     User          @relation("CandidateBookings", fields: [candidateId], references: [id])
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  coachingPlan  CoachingPlan  @relation(fields: [coachingPlanId], references: [id])
+  slot         Slot?        @relation(fields: [slotId], references: [id])
+  mentor       User         @relation("MentorBookings", fields: [mentorId], references: [id])
+  candidate    User         @relation("CandidateBookings", fields: [candidateId], references: [id])
+  coachingPlan CoachingPlan @relation(fields: [coachingPlanId], references: [id])
 
-  payments      Payment[]
-  mockSessions  MockSession[]
-  answers       CoachingPlanAnswer[]
-  logs          BookingActionLog[]
+  payments     Payment[]
+  mockSessions MockSession[]
+  answers      CoachingPlanAnswer[]
+  logs         BookingActionLog[]
 
+  @@index([mentorId, startTime, endTime])
+  @@index([status])
   @@map("bookings")
 }
 
 model BookingActionLog {
-  id            Int      @id @default(autoincrement())
-  bookingId     Int      @map("booking_id")
-  actorId       Int      @map("actor_id")
-  statusBefore  String?  @map("status_before")
-  statusAfter   String?  @map("status_after")
-  action        String
-  note          String?
-  createdAt     DateTime @default(now()) @map("created_at")
+  id           Int      @id @default(autoincrement())
+  bookingId    Int      @map("booking_id")
+  actorId      Int      @map("actor_id")
+  statusBefore String?  @map("status_before")
+  statusAfter  String?  @map("status_after")
+  action       String
+  note         String?
+  createdAt    DateTime @default(now()) @map("created_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
   actor   User    @relation(fields: [actorId], references: [id])
@@ -323,19 +356,19 @@ model BookingActionLog {
 }
 
 model CoachingPlan {
-  id          Int      @id @default(autoincrement())
-  mentorId    Int      @map("mentor_id")
+  id          Int     @id @default(autoincrement())
+  mentorId    Int     @map("mentor_id")
   title       String
   description String?
   duration    Int
   price       Float
-  isActive    Boolean  @default(true) @map("is_active")
+  isActive    Boolean @default(true) @map("is_active")
 
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
-  categoryId   Int               @map("category_id")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+  categoryId Int      @map("category_id")
 
-  category     CoachingCategory  @relation(fields: [categoryId], references: [id])
+  category  CoachingCategory       @relation(fields: [categoryId], references: [id])
   mentor    MentorProfile          @relation(fields: [mentorId], references: [id], onDelete: Cascade)
   bookings  Booking[]
   questions CoachingPlanQuestion[]
@@ -352,43 +385,43 @@ model CoachingCategory {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  plans       CoachingPlan[]
+  plans CoachingPlan[]
 
   @@map("coaching_categories")
 }
 
 model CoachingPlanQuestion {
-  id              Int                   @id @default(autoincrement())
-  coachingPlanId  Int                   @map("coaching_plan_id")
+  id             Int @id @default(autoincrement())
+  coachingPlanId Int @map("coaching_plan_id")
 
-  question        String
-  type            CoachingQuestionType
-  placeholder     String?
+  question    String
+  type        CoachingQuestionType
+  placeholder String?
 
-  isRequired      Boolean               @default(false) @map("is_required")
-  orderIndex      Int                   @default(0) @map("order_index")
+  isRequired Boolean @default(false) @map("is_required")
+  orderIndex Int     @default(0) @map("order_index")
 
-  createdAt       DateTime              @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  coachingPlan CoachingPlan @relation(fields: [coachingPlanId], references: [id], onDelete: Cascade)
+  coachingPlan CoachingPlan         @relation(fields: [coachingPlanId], references: [id], onDelete: Cascade)
   answers      CoachingPlanAnswer[]
 
   @@map("coaching_plan_questions")
 }
 
 model CoachingPlanAnswer {
-  id          Int      @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  bookingId   Int      @map("booking_id")
-  questionId  Int      @map("question_id")
+  bookingId  Int @map("booking_id")
+  questionId Int @map("question_id")
 
-  answerText  String?  @map("answer_text")
-  fileUrl     String?  @map("file_url")
+  answerText String? @map("answer_text")
+  fileUrl    String? @map("file_url")
 
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
-  booking   Booking              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-  question  CoachingPlanQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  booking  Booking              @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  question CoachingPlanQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
   @@unique([bookingId, questionId])
   @@map("coaching_plan_answers")
@@ -414,7 +447,7 @@ model Question {
   type        QuestionType
   isPublished Boolean      @default(false) @map("is_published")
   createdAt   DateTime     @default(now()) @map("created_at")
-  updatedAt  DateTime     @updatedAt @map("updated_at")
+  updatedAt   DateTime     @updatedAt @map("updated_at")
 
   categories   QuestionCategory[]
   companies    QuestionCompany[]
@@ -422,7 +455,6 @@ model Question {
   bookmarks    UserBookmark[]
   mockSessions MockSessionQuestion[]
 
-  // Polymorphic relations
   theoryQuestion TheoryQuestion?
   codingQuestion CodingQuestion?
 
@@ -431,7 +463,7 @@ model Question {
 
 model TheoryQuestion {
   questionId Int  @id @map("question_id")
-  data       Json // Cấu trúc json tự do cho trắc nghiệm / tự luận
+  data       Json
 
   question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
 
@@ -439,14 +471,14 @@ model TheoryQuestion {
 }
 
 model CodingQuestion {
-  questionId     Int     @id @map("question_id")
+  questionId     Int      @id @map("question_id")
   description    String
   constraints    String?
   hints          String[]
   tags           String[]
-  timeLimit      Int     @default(2000) @map("time_limit") // ms
-  memoryLimit    Int     @default(256000) @map("memory_limit") // KB
-  codeforcesLink String? @map("codeforces_link")
+  timeLimit      Int      @default(2000) @map("time_limit") // ms
+  memoryLimit    Int      @default(256000) @map("memory_limit") // KB
+  codeforcesLink String?  @map("codeforces_link")
 
   question    Question         @relation(fields: [questionId], references: [id], onDelete: Cascade)
   testCases   TestCase[]
@@ -454,8 +486,6 @@ model CodingQuestion {
 
   @@map("coding_questions")
 }
-
-// ---- Junction Tables cho Question ----
 
 model QuestionCategory {
   questionId Int @map("question_id")
@@ -546,11 +576,11 @@ model Skill {
 }
 
 model UserSkill {
-  userId  Int        @map("user_id")
-  skillId Int        @map("skill_id")
-  experienceMonths Int        @map("experience_months") // Calculated by month
-  level   SkillLevel
-  proofUrl String? @map("proof_url")
+  userId           Int        @map("user_id")
+  skillId          Int        @map("skill_id")
+  experienceMonths Int        @map("experience_months")
+  level            SkillLevel
+  proofUrl         String?    @map("proof_url")
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   skill Skill @relation(fields: [skillId], references: [id], onDelete: Cascade)
@@ -575,62 +605,63 @@ model UserBookmark {
 }
 
 // ==================== MOCK SESSION ====================
+
 model Match {
-  id            Int           @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  candidateAId  Int           @map("candidate_a_id")
-  candidateBId  Int           @map("candidate_b_id")
+  candidateAId Int @map("candidate_a_id")
+  candidateBId Int @map("candidate_b_id")
 
-  status        MatchStatus   @default(WAITING)
-  strategy      MatchStrategy
+  status   MatchStatus   @default(WAITING)
+  strategy MatchStrategy
 
-  matchScore    Float?        @map("match_score")
+  matchScore Float? @map("match_score")
 
-  matchedAt     DateTime?     @map("matched_at")
-  createdAt     DateTime      @default(now()) @map("created_at")
+  matchedAt DateTime? @map("matched_at")
+  createdAt DateTime  @default(now()) @map("created_at")
 
   candidateA User @relation("CandidateA", fields: [candidateAId], references: [id], onDelete: Cascade)
   candidateB User @relation("CandidateB", fields: [candidateBId], references: [id], onDelete: Cascade)
 
   mockSessions MockSession[]
 
-  @@index([candidateAId, candidateBId])
   @@unique([candidateAId, candidateBId])
+  @@index([candidateAId, candidateBId])
   @@map("matches")
 }
 
 model MockSession {
-  id              Int           @id @default(autoincrement())
+  id Int @id @default(autoincrement())
 
-  bookingId       Int?          @map("booking_id")
-  matchId         Int?          @map("match_id")
+  bookingId Int? @map("booking_id")
+  matchId   Int? @map("match_id")
 
-  intervieweeId   Int           @map("interviewee_id")
+  intervieweeId Int @map("interviewee_id")
 
-  scheduledAt     DateTime      @map("scheduled_at")
-  durationMinutes Int           @map("duration_minutes")
+  scheduledAt     DateTime @map("scheduled_at")
+  durationMinutes Int      @map("duration_minutes")
 
-  status          SessionStatus @default(SCHEDULED)
+  status SessionStatus @default(SCHEDULED)
 
-  recordingUrl    String?       @map("recording_url")
-  meetingLink     String?       @map("meeting_link")
+  recordingUrl String? @map("recording_url")
+  meetingLink  String? @map("meeting_link")
 
-  startedAt       DateTime?
-  endedAt         DateTime?
+  startedAt DateTime?
+  endedAt   DateTime?
 
-  source          SessionSource
-  mode            SessionMode
+  source SessionSource
+  mode   SessionMode
 
-  booking     Booking? @relation(fields: [bookingId], references: [id])
-  match       Match?   @relation(fields: [matchId], references: [id])
+  booking Booking? @relation(fields: [bookingId], references: [id])
+  match   Match?   @relation(fields: [matchId], references: [id])
 
   interviewee User @relation("IntervieweeSessions", fields: [intervieweeId], references: [id])
 
   soloSession SoloSession?
   meetSession MeetSession?
 
-  feedbacks   Feedback[]
-  questions   MockSessionQuestion[]
+  feedbacks Feedback[]
+  questions MockSessionQuestion[]
 
   @@map("mock_sessions")
 }
@@ -679,31 +710,51 @@ model Feedback {
   createdAt    DateTime @default(now()) @map("created_at")
 
   session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  reviewer User?        @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
-  reviewee User?        @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
+  reviewer User?       @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
+  reviewee User?       @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
 
   @@map("feedbacks")
 }
 
-// ==================== PAYMENT ====================
+// ==================== PAYMENT & WALLET ====================
+
 model Payment {
-  id                     Int      @id @default(autoincrement())
-  bookingId              Int      @map("booking_id")
+  id        Int @id @default(autoincrement())
+  bookingId Int @map("booking_id")
 
-  amount                 Float
-  currency               Currency
+  amount   Float
+  currency Currency
 
-  provider               PaymentProvider
-  providerTransactionId  String?  @map("provider_transaction_id")
+  provider              PaymentProvider
+  providerTransactionId String?         @map("provider_transaction_id")
 
-  status                 PaymentStatus @default(PENDING)
+  status PaymentStatus @default(PENDING)
 
-  paymentUrl             String? @map("payment_url")
+  paymentUrl     String?   @map("payment_url")
+  refundedAmount Float?    @default(0) @map("refunded_amount")
+  paidAt         DateTime? @map("paid_at")
+  refundedAt     DateTime? @map("refunded_at")
 
-  createdAt              DateTime @default(now()) @map("created_at")
-  updatedAt              DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
   booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
 
   @@map("payments")
+}
+
+model WalletTransaction {
+  id            Int                   @id @default(autoincrement())
+  userId        Int                   @map("user_id")
+  type          WalletTransactionType
+  amount        Float
+  balanceBefore Float                 @map("balance_before")
+  balanceAfter  Float                 @map("balance_after")
+  referenceId   String?               @map("reference_id")
+  createdAt     DateTime              @default(now()) @map("created_at")
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@map("wallet_transactions")
 }

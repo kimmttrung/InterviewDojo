@@ -106,6 +106,9 @@ export class UpdateExperienceDto {
   startDate: Date;
 
   @IsOptional()
+  @ValidateIf(
+    (object, value) => value !== null && value !== undefined && value !== '',
+  )
   @IsDateString()
   endDate?: Date;
 

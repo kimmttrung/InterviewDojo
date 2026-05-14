@@ -1,6 +1,7 @@
-import { api } from '../../../../shared/lib/api';
-import { Slot, SlotStatus } from '../types';
-import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
+// src/features/mentor/schedule/service/schedule.service.ts
+import { api } from '@/shared/lib/api';
+import { Slot } from '../types';
+import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
 export const scheduleService = {
   getSlots: async (mentorId: number) => {
@@ -14,21 +15,25 @@ export const scheduleService = {
     const payload = {
       startTime: data.startTime.toISOString(),
       endTime: data.endTime.toISOString(),
-      status: SlotStatus.AVAILABLE,
+      isActive: true, // mặc định active
+      recurrentType: data.recurrentType || 'NONE',
+      recurrentUntil: data.recurrentUntil ? data.recurrentUntil.toISOString() : undefined,
     };
-
     const response = await api.post(API_ENDPOINT.SLOTS.CREATE, payload);
     return response.data?.data || response.data;
   },
 
   updateSlot: async (id: number, data: Partial<Slot>) => {
-    const payload = {
-      ...data,
+    const payload: any = {
       ...(data.startTime && { startTime: data.startTime.toISOString() }),
       ...(data.endTime && { endTime: data.endTime.toISOString() }),
+      ...(data.recurrentType !== undefined && { recurrentType: data.recurrentType }),
+      ...(data.recurrentUntil !== undefined && {
+        recurrentUntil: data.recurrentUntil ? data.recurrentUntil.toISOString() : null,
+      }),
+      ...(data.isActive !== undefined && { isActive: data.isActive }),
     };
-
-    const response = await api.patch(API_ENDPOINT.SLOTS.UPDATE(id), payload);
+    const response = await api.put(API_ENDPOINT.SLOTS.UPDATE(id), payload);
     return response.data?.data || response.data;
   },
 

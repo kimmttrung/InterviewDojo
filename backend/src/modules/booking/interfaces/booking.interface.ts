@@ -4,6 +4,8 @@ export interface BookingResponse {
   mentorId: number;
   candidateId: number;
   coachingPlanId: number;
+  startTime: Date; // Bổ sung
+  endTime: Date; // Bổ sung
   status: string;
   createdAt: Date;
   // Bổ sung thông tin gói để Client dễ hiển thị

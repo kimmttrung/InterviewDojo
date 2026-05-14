@@ -16,7 +16,7 @@ type MentorProfileState = {
     companyId: number;
     jobRoleId: number;
     startDate: string;
-    endDate: string;
+    endDate?: string;
     isCurrent: boolean;
     proofUrl?: string;
     description?: string;

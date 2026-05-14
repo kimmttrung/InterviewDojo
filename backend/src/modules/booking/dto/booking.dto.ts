@@ -61,6 +61,12 @@ export class CreateBookingDto {
   @Min(1)
   coachingPlanId!: number;
 
+  @IsString() // Hoặc IsDateString()
+  startTime!: string; // ISO String gửi từ Client
+
+  @IsString()
+  endTime!: string; // ISO String gửi từ Client
+
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

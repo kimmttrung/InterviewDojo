@@ -5,8 +5,6 @@ import {
   ApprovalStatus,
   SkillType,
   SkillLevel,
-  SlotStatus,
-  BookingStatus,
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
