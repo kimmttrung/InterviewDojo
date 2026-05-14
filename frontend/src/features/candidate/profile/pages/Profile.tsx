@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '../../../../shared/components/ui/avatar';
 import { Input } from '../../../../shared/components/ui/input';
 import { Label } from '../../../../shared/components/ui/label';
 import { Textarea } from '../../../../shared/components/ui/textarea';

@@ -17,8 +17,13 @@ export const API_ENDPOINT = {
     CREATE_LIST: 'target-roles/bulk',
   },
   MENTOR: {
-    UPDATE_ME: '/mentors/me',
+    UPDATE_PROFILE: '/mentors/me',
     GET_LIST: '/mentors',
+    GET_MY_PROFILE: '/mentors/me',
+    EXPERIENCES: '/mentors/experiences',
+    SKILLS: '/mentors/skills',
+    COACHING_PLANS: '/mentor/coaching-plans',
+    UPLOAD_INTRODUCTION_VIDEO: '/mentors/upload/introduction-video',
   },
   MENTORS: {
     GET_ALL: '/mentors',

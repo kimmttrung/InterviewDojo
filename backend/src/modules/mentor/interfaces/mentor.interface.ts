@@ -16,9 +16,11 @@ export interface MentorResponse {
     introductionVideoUrl: string | null;
     approvalStatus: ApprovalStatus;
     createdAt: Date;
-    experiences?: MentorExperience[];
+
+    experiences: MentorExperience[];
   } | null;
-  skills?: MentorSkill[];
+
+  skills: MentorSkill[];
 }
 
 export interface MentorExperience {

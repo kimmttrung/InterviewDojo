@@ -1,6 +1,6 @@
 // src/features/mentor/schedule/hooks/useSchedule.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { scheduleService } from '../service/schedule.service';
+import { scheduleService } from '../services/schedule.service';
 import { Slot } from '../types';
 
 export const useSchedule = (

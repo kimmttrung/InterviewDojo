@@ -23,7 +23,9 @@ export class AuthService {
   async register(dto: RegisterDto) {
     try {
       const existingUser = await this.prisma.user.findUnique({
-        where: { email: dto.email },
+        where: {
+          email: dto.email,
+        },
       });
 
       if (existingUser) {
@@ -36,13 +38,43 @@ export class AuthService {
 
       const hashedPassword = await bcrypt.hash(dto.password, 10);
 
-      const newUser = await this.prisma.user.create({
-        data: {
-          email: dto.email,
-          password: hashedPassword,
-          name: dto.name,
-          role: dto.role ?? Role.CANDIDATE,
-        },
+      const role = dto.role ?? Role.CANDIDATE;
+
+      /**
+       * Dùng transaction để:
+       * - tạo user
+       * - nếu là mentor thì tạo luôn mentor_profile
+       *
+       * đảm bảo atomic
+       */
+      const newUser = await this.prisma.$transaction(async (tx) => {
+        const createdUser = await tx.user.create({
+          data: {
+            email: dto.email,
+            password: hashedPassword,
+            name: dto.name,
+            role,
+          },
+        });
+
+        /**
+         * Nếu đăng ký mentor
+         * -> tạo luôn mentor profile
+         */
+        if (role === Role.MENTOR) {
+          await tx.mentorProfile.create({
+            data: {
+              userId: createdUser.id,
+
+              // Prisma schema đang required
+              headline: '',
+
+              // approval mặc định INCOMPLETE
+            },
+          });
+        }
+
+        return createdUser;
       });
 
       return this.generateTokens(newUser.id, newUser.email, newUser.role);
