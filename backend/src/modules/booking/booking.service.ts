@@ -1,3 +1,4 @@
+// src/modules/booking/booking.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -12,12 +13,19 @@ import {
 } from './dto/booking.dto';
 import { BookingResponse } from './interfaces/booking.interface';
 import { Messages } from '../../common/constants/messages.constant';
-import { Role, BookingStatus, SlotStatus } from '@prisma/client';
+import {
+  Role,
+  BookingStatus,
+  PaymentStatus,
+  WalletTransactionType,
+  Prisma,
+} from '@prisma/client';
 
 @Injectable()
 export class BookingService {
   constructor(private prisma: PrismaService) {}
 
+  // ========== MAPPER ==========
   private mapToBookingResponse(booking: any): BookingResponse {
     return {
       id: booking.id,
@@ -26,7 +34,7 @@ export class BookingService {
       candidateId: booking.candidateId,
       coachingPlanId: booking.coachingPlanId,
       status: booking.status,
-      startTime: booking.startTime, // Mapping dữ liệu mới
+      startTime: booking.startTime,
       endTime: booking.endTime,
       createdAt: booking.createdAt,
       planDetails: booking.coachingPlan
@@ -39,82 +47,74 @@ export class BookingService {
     };
   }
 
+  // ========== TẠO BOOKING (PENDING_PAYMENT) ==========
   async create(
     candidateId: number,
     data: CreateBookingDto,
   ): Promise<BookingResponse> {
-    return this.prisma.$transaction(async (tx) => {
-      const slot = await tx.slot.findFirst({
-        where: {
-          id: data.slotId,
-          status: SlotStatus.AVAILABLE,
-        },
-      });
+    const { slotId, coachingPlanId, startTime, endTime, answers } = data;
 
-      if (!slot) {
+    return this.prisma.$transaction(async (tx) => {
+      // 1. Kiểm tra slot tồn tại và active
+      const slot = await tx.slot.findUnique({ where: { id: slotId } });
+      if (!slot || !slot.isActive) {
         throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
       }
 
-      // Kiểm tra thời gian booking gửi lên có nằm trong khoảng của Slot không
-      const bStart = new Date(data.startTime);
-      const bEnd = new Date(data.endTime);
+      // 2. Kiểm tra thời gian booking có nằm trong window không
+      const bStart = new Date(startTime);
+      const bEnd = new Date(endTime);
       if (bStart < slot.startTime || bEnd > slot.endTime) {
         throw new BadRequestException(
           'Thời gian chọn nằm ngoài khung giờ của Mentor',
         );
       }
 
+      // 3. Kiểm tra plan hợp lệ
       const plan = await tx.coachingPlan.findUnique({
-        where: {
-          id: data.coachingPlanId,
-        },
+        where: { id: coachingPlanId },
       });
-
       if (!plan || !plan.isActive || plan.mentorId !== slot.mentorId) {
         throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
       }
 
-      const candidate = await tx.user.findUnique({
+      // 4. Kiểm tra overlap với các booking đã tồn tại
+      const overlapping = await tx.booking.findFirst({
         where: {
-          id: candidateId,
-        },
-        select: {
-          creditBalance: true,
+          mentorId: slot.mentorId,
+          status: {
+            in: [
+              BookingStatus.PENDING_PAYMENT,
+              BookingStatus.PENDING_ACCEPTANCE,
+              BookingStatus.ACCEPTED,
+            ],
+          },
+          startTime: { lt: bEnd },
+          endTime: { gt: bStart },
         },
       });
-
-      if (!candidate || candidate.creditBalance < plan.price) {
-        throw new BadRequestException(Messages.BOOKING.NOT_ENOUGH_CREDIT);
+      if (overlapping) {
+        throw new BadRequestException('Khung giờ đã được đặt');
       }
 
-      await tx.user.update({
-        where: {
-          id: candidateId,
-        },
-        data: {
-          creditBalance: {
-            decrement: plan.price,
-          },
-        },
-      });
-
+      // 5. Tạo booking với trạng thái PENDING_PAYMENT
       const booking = await tx.booking.create({
         data: {
           candidateId,
           mentorId: slot.mentorId,
-          slotId: data.slotId,
+          slotId,
           coachingPlanId: plan.id,
-          status: BookingStatus.PENDING,
-          startTime: bStart, // LƯU VÀO DB
-          endTime: bEnd, // LƯU VÀO DB
+          startTime: bStart,
+          endTime: bEnd,
+          status: BookingStatus.PENDING_PAYMENT,
+          holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 phút
           snapshotPlanTitle: plan.title,
           snapshotPlanDescription: plan.description,
           snapshotPlanPrice: plan.price,
           snapshotPlanDuration: plan.duration,
-
-          answers: data.answers?.length
+          answers: answers?.length
             ? {
-                create: data.answers.map((answer) => ({
+                create: answers.map((answer) => ({
                   questionId: answer.questionId,
                   answerText: answer.answerText,
                   fileUrl: answer.fileUrl,
@@ -122,31 +122,175 @@ export class BookingService {
               }
             : undefined,
         },
-        include: {
-          coachingPlan: true,
-        },
+        include: { coachingPlan: true },
       });
 
-      await tx.slot.update({
-        where: {
-          id: data.slotId,
-        },
-        data: {
-          status: SlotStatus.BLOCKED,
-        },
-      });
+      // TODO: Tạo Redis hold (gọi RedisService)
+      // await this.redisService.set(`hold:mentor:${slot.mentorId}:${startTime}:${endTime}`, booking.id, 300);
 
       return this.mapToBookingResponse(booking);
     });
   }
 
+  // ========== THANH TOÁN (VÍ) ==========
+  async pay(bookingId: number, candidateId: number): Promise<BookingResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking || booking.candidateId !== candidateId) {
+        throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
+      }
+      if (booking.status !== BookingStatus.PENDING_PAYMENT) {
+        throw new BadRequestException(
+          'Booking không ở trạng thái chờ thanh toán',
+        );
+      }
+      if (booking.holdExpiresAt && new Date() > booking.holdExpiresAt) {
+        throw new BadRequestException('Booking đã hết hạn thanh toán');
+      }
+
+      // Kiểm tra số dư
+      const user = await tx.user.findUnique({ where: { id: candidateId } });
+      if (!user || user.creditBalance < booking.snapshotPlanPrice!) {
+        throw new BadRequestException('Số dư không đủ');
+      }
+
+      const price = booking.snapshotPlanPrice!;
+
+      // Trừ tiền
+      const newBalance = user.creditBalance - price;
+      await tx.user.update({
+        where: { id: candidateId },
+        data: { creditBalance: newBalance },
+      });
+
+      // Wallet transaction
+      await tx.walletTransaction.create({
+        data: {
+          userId: candidateId,
+          type: WalletTransactionType.PAYMENT,
+          amount: -price,
+          balanceBefore: user.creditBalance,
+          balanceAfter: newBalance,
+          referenceId: `booking:${bookingId}`,
+        },
+      });
+
+      // Payment record
+      await tx.payment.create({
+        data: {
+          bookingId,
+          amount: price,
+          currency: 'VND',
+          provider: 'INTERNAL_WALLET',
+          status: PaymentStatus.PAID,
+          paidAt: new Date(),
+        },
+      });
+
+      // Cập nhật booking
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: {
+          status: BookingStatus.PENDING_ACCEPTANCE,
+          mentorResponseDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+        },
+        include: { coachingPlan: true },
+      });
+
+      // TODO: Xóa Redis hold
+      // await this.redisService.del(`hold:mentor:${booking.mentorId}:${booking.startTime}:${booking.endTime}`);
+
+      return this.mapToBookingResponse(updated);
+    });
+  }
+
+  // ========== MENTOR ACCEPT ==========
+  async accept(bookingId: number, mentorId: number): Promise<BookingResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking || booking.mentorId !== mentorId) {
+        throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
+      }
+      if (booking.status !== BookingStatus.PENDING_ACCEPTANCE) {
+        throw new BadRequestException(
+          'Booking không ở trạng thái chờ xác nhận',
+        );
+      }
+
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.ACCEPTED },
+        include: { coachingPlan: true },
+      });
+
+      return this.mapToBookingResponse(updated);
+    });
+  }
+
+  // ========== MENTOR REJECT ==========
+  async reject(bookingId: number, mentorId: number): Promise<BookingResponse> {
+    return this.prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking || booking.mentorId !== mentorId) {
+        throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
+      }
+      if (booking.status !== BookingStatus.PENDING_ACCEPTANCE) {
+        throw new BadRequestException(
+          'Booking không ở trạng thái chờ xác nhận',
+        );
+      }
+
+      const price = booking.snapshotPlanPrice!;
+
+      // Hoàn tiền cho candidate
+      const user = await tx.user.findUnique({
+        where: { id: booking.candidateId },
+      });
+      const newBalance = (user?.creditBalance ?? 0) + price;
+      await tx.user.update({
+        where: { id: booking.candidateId },
+        data: { creditBalance: newBalance },
+      });
+
+      // Wallet transaction (refund)
+      await tx.walletTransaction.create({
+        data: {
+          userId: booking.candidateId,
+          type: WalletTransactionType.REFUND,
+          amount: price,
+          balanceBefore: user?.creditBalance ?? 0,
+          balanceAfter: newBalance,
+          referenceId: `booking:${bookingId}:refund`,
+        },
+      });
+
+      // Cập nhật payment
+      await tx.payment.updateMany({
+        where: { bookingId, status: PaymentStatus.PAID },
+        data: {
+          status: PaymentStatus.REFUNDED,
+          refundedAt: new Date(),
+          refundedAmount: price,
+        },
+      });
+
+      const updated = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: BookingStatus.REJECTED },
+        include: { coachingPlan: true },
+      });
+
+      return this.mapToBookingResponse(updated);
+    });
+  }
+
+  // ========== FIND ALL (giữ nguyên) ==========
   async findAll(query: QueryBookingDto, currentUser: any): Promise<any> {
     const { page = 1, limit = 10, status } = query;
     const skip = (page - 1) * limit;
 
     const whereCondition: any = { status };
 
-    // RBAC
     if (currentUser.role === Role.CANDIDATE) {
       whereCondition.candidateId = currentUser.sub;
     } else if (currentUser.role === Role.MENTOR) {
@@ -157,7 +301,7 @@ export class BookingService {
       this.prisma.booking.count({ where: whereCondition }),
       this.prisma.booking.findMany({
         where: whereCondition,
-        include: { coachingPlan: true }, // Nối bảng để lấy detail của Plan
+        include: { coachingPlan: true },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -170,6 +314,7 @@ export class BookingService {
     };
   }
 
+  // ========== FIND BY ID (giữ nguyên) ==========
   async findById(
     bookingId: number,
     currentUser: any,
@@ -178,81 +323,31 @@ export class BookingService {
       where: { id: bookingId },
       include: { coachingPlan: true },
     });
-
-    if (!booking) {
-      throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
-    }
+    if (!booking) throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
 
     const isOwner =
       booking.candidateId === currentUser.sub ||
       booking.mentorId === currentUser.sub;
     const isAdmin = currentUser.role === Role.ADMIN;
-
-    if (!isOwner && !isAdmin) {
+    if (!isOwner && !isAdmin)
       throw new ForbiddenException(Messages.BOOKING.NOT_FOUND);
-    }
 
     return this.mapToBookingResponse(booking);
   }
 
+  // ========== CẬP NHẬT TRẠNG THÁI (đã được thay bằng accept/reject riêng) ==========
+  // Giữ lại để tương thích ngược hoặc xóa sau khi refactor controller.
   async updateStatus(
     bookingId: number,
     mentorId: number,
     data: UpdateBookingStatusDto,
   ): Promise<BookingResponse> {
-    const booking = await this.prisma.booking.findUnique({
-      where: { id: bookingId },
-    });
-
-    if (!booking || booking.mentorId !== mentorId) {
-      throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
+    // Đơn giản chuyển hướng sang accept hoặc reject dựa trên status mới
+    if (data.status === BookingStatus.ACCEPTED) {
+      return this.accept(bookingId, mentorId);
+    } else if (data.status === BookingStatus.REJECTED) {
+      return this.reject(bookingId, mentorId);
     }
-
-    if (booking.status !== BookingStatus.PENDING) {
-      throw new BadRequestException('Booking này đã được xử lý trước đó');
-    }
-
-    return this.prisma.$transaction(async (tx) => {
-      if (data.status === BookingStatus.REJECTED) {
-        await tx.user.update({
-          where: {
-            id: booking.candidateId,
-          },
-          data: {
-            creditBalance: {
-              increment: booking.snapshotPlanPrice ?? 0,
-            },
-          },
-        });
-
-        await tx.slot.update({
-          where: {
-            id: booking.slotId,
-          },
-          data: {
-            status: SlotStatus.AVAILABLE,
-          },
-        });
-      }
-
-      if (data.status === BookingStatus.ACCEPTED) {
-        await tx.slot.update({
-          where: {
-            id: booking.slotId,
-          },
-          data: {
-            status: SlotStatus.BOOKED,
-          },
-        });
-      }
-
-      const updatedBooking = await tx.booking.update({
-        where: { id: bookingId },
-        data: { status: data.status },
-        include: { coachingPlan: true },
-      });
-
-      return this.mapToBookingResponse(updatedBooking);
-    });
+    throw new BadRequestException('Trạng thái không hợp lệ');
   }
 }

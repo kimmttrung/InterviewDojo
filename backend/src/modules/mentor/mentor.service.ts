@@ -1,3 +1,4 @@
+// src/modules/mentor/mentor.service.ts
 import {
   Injectable,
   NotFoundException,
@@ -11,7 +12,7 @@ import {
   MentorDetailResponse,
 } from './interfaces/mentor.interface';
 import { Messages } from '../../common/constants/messages.constant';
-import { Role, ApprovalStatus, SlotStatus, Prisma } from '@prisma/client';
+import { Role, ApprovalStatus, Prisma } from '@prisma/client';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 
 // ==================== REUSABLE INCLUDES ====================
@@ -20,7 +21,7 @@ const mentorListInclude = {
     include: {
       experiences: {
         orderBy: [{ isCurrent: 'desc' }, { startDate: 'desc' }],
-        take: 2, // chỉ lấy 2 experiences cho listing
+        take: 2,
         include: { company: true, jobRole: true },
       },
     },
@@ -28,7 +29,7 @@ const mentorListInclude = {
   skills: {
     include: { skill: true },
     orderBy: { experienceMonths: 'desc' },
-    take: 5, // chỉ lấy 5 skills cho listing
+    take: 5,
   },
 } satisfies Prisma.UserInclude;
 
@@ -314,7 +315,7 @@ export class MentorService {
   }
 
   /**
-   * Lấy slot trống của mentor
+   * Lấy slot trống của mentor (kiến trúc mới - chỉ lấy slot active)
    */
   async findAvailableSlots(mentorId: number) {
     const mentor = await this.prisma.user.findFirst({
@@ -335,7 +336,7 @@ export class MentorService {
     return this.prisma.slot.findMany({
       where: {
         mentorId,
-        status: SlotStatus.AVAILABLE,
+        isActive: true,
         startTime: { gte: new Date() },
       },
       orderBy: { startTime: 'asc' },
@@ -344,7 +345,7 @@ export class MentorService {
         mentorId: true,
         startTime: true,
         endTime: true,
-        status: true,
+        isActive: true,
       },
     });
   }
