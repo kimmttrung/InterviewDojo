@@ -10,6 +10,7 @@ import {
   CreateBookingDto,
   QueryBookingDto,
   UpdateBookingStatusDto,
+  PaymentDto,
 } from './dto/booking.dto';
 import { BookingResponse } from './interfaces/booking.interface';
 import { Messages } from '../../common/constants/messages.constant';
@@ -25,7 +26,6 @@ import {
 export class BookingService {
   constructor(private prisma: PrismaService) {}
 
-  // ========== MAPPER ==========
   private mapToBookingResponse(booking: any): BookingResponse {
     return {
       id: booking.id,
@@ -33,109 +33,142 @@ export class BookingService {
       mentorId: booking.mentorId,
       candidateId: booking.candidateId,
       coachingPlanId: booking.coachingPlanId,
-      status: booking.status,
       startTime: booking.startTime,
       endTime: booking.endTime,
+      status: booking.status,
       createdAt: booking.createdAt,
+      holdExpiresAt: booking.holdExpiresAt,
+      mentorResponseDeadline: booking.mentorResponseDeadline,
       planDetails: booking.coachingPlan
         ? {
             title: booking.coachingPlan.title,
             price: booking.coachingPlan.price,
             duration: booking.coachingPlan.duration,
+            description: booking.coachingPlan.description,
+          }
+        : undefined,
+      candidate: booking.candidate
+        ? {
+            id: booking.candidate.id,
+            name: booking.candidate.name,
+            email: booking.candidate.email,
+            avatarUrl: booking.candidate.avatarUrl,
+          }
+        : undefined,
+      mentor: booking.mentor
+        ? {
+            id: booking.mentor.id,
+            name: booking.mentor.name,
+            email: booking.mentor.email,
+            avatarUrl: booking.mentor.avatarUrl,
           }
         : undefined,
     };
   }
 
-  // ========== TẠO BOOKING (PENDING_PAYMENT) ==========
   async create(
     candidateId: number,
-    data: CreateBookingDto,
+    dto: CreateBookingDto,
   ): Promise<BookingResponse> {
-    const { slotId, coachingPlanId, startTime, endTime, answers } = data;
+    const { slotId, coachingPlanId, startTime, endTime, answers } = dto;
+    const start = new Date(startTime);
+    const end = new Date(endTime);
+
+    if (start >= end) {
+      throw new BadRequestException('startTime phải trước endTime');
+    }
+    if (start < new Date()) {
+      throw new BadRequestException('Không thể đặt lịch trong quá khứ');
+    }
 
     return this.prisma.$transaction(async (tx) => {
-      // 1. Kiểm tra slot tồn tại và active
-      const slot = await tx.slot.findUnique({ where: { id: slotId } });
+      // 1. Lấy slot và kiểm tra active
+      const slot = await tx.slot.findUnique({
+        where: { id: slotId },
+        include: { mentor: true },
+      });
+      console.log('check slot', slot);
       if (!slot || !slot.isActive) {
         throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
       }
-
-      // 2. Kiểm tra thời gian booking có nằm trong window không
-      const bStart = new Date(startTime);
-      const bEnd = new Date(endTime);
-      if (bStart < slot.startTime || bEnd > slot.endTime) {
-        throw new BadRequestException(
-          'Thời gian chọn nằm ngoài khung giờ của Mentor',
-        );
+      if (start < slot.startTime || end > slot.endTime) {
+        throw new BadRequestException('Thời gian không nằm trong slot');
       }
 
-      // 3. Kiểm tra plan hợp lệ
+      // 2. Lấy coaching plan và kiểm tra mentor khớp
       const plan = await tx.coachingPlan.findUnique({
         where: { id: coachingPlanId },
+        include: {
+          mentor: true,
+        },
       });
-      if (!plan || !plan.isActive || plan.mentorId !== slot.mentorId) {
+      console.log('check plan', plan);
+      if (!plan || !plan.isActive || plan.mentor.userId !== slot.mentorId) {
         throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
       }
 
-      // 4. Kiểm tra overlap với các booking đã tồn tại
-      const overlapping = await tx.booking.findFirst({
+      // 3. Kiểm tra overlap với các booking đang active (trừ PENDING_PAYMENT có thể bỏ qua nếu hold)
+      const conflicting = await tx.booking.findFirst({
         where: {
           mentorId: slot.mentorId,
           status: {
-            in: [
-              BookingStatus.PENDING_PAYMENT,
-              BookingStatus.PENDING_ACCEPTANCE,
-              BookingStatus.ACCEPTED,
-            ],
+            in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.ACCEPTED],
           },
-          startTime: { lt: bEnd },
-          endTime: { gt: bStart },
+          startTime: { lt: end },
+          endTime: { gt: start },
         },
       });
-      if (overlapping) {
-        throw new BadRequestException('Khung giờ đã được đặt');
+      if (conflicting) {
+        throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
       }
 
-      // 5. Tạo booking với trạng thái PENDING_PAYMENT
+      // 4. Tạo booking với trạng thái PENDING_PAYMENT, hold 5 phút
       const booking = await tx.booking.create({
         data: {
           candidateId,
           mentorId: slot.mentorId,
           slotId,
-          coachingPlanId: plan.id,
-          startTime: bStart,
-          endTime: bEnd,
+          coachingPlanId,
+          startTime: start,
+          endTime: end,
           status: BookingStatus.PENDING_PAYMENT,
-          holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 phút
+          holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
           snapshotPlanTitle: plan.title,
           snapshotPlanDescription: plan.description,
           snapshotPlanPrice: plan.price,
           snapshotPlanDuration: plan.duration,
           answers: answers?.length
             ? {
-                create: answers.map((answer) => ({
-                  questionId: answer.questionId,
-                  answerText: answer.answerText,
-                  fileUrl: answer.fileUrl,
+                create: answers.map((a) => ({
+                  questionId: a.questionId,
+                  answerText: a.answerText,
+                  fileUrl: a.fileUrl,
                 })),
               }
             : undefined,
         },
-        include: { coachingPlan: true },
+        include: {
+          coachingPlan: true,
+          candidate: {
+            select: { id: true, name: true, email: true, avatarUrl: true },
+          },
+        },
       });
 
-      // TODO: Tạo Redis hold (gọi RedisService)
-      // await this.redisService.set(`hold:mentor:${slot.mentorId}:${startTime}:${endTime}`, booking.id, 300);
-
+      // TODO: Redis hold nếu cần
       return this.mapToBookingResponse(booking);
     });
   }
 
-  // ========== THANH TOÁN (VÍ) ==========
-  async pay(bookingId: number, candidateId: number): Promise<BookingResponse> {
+  async payWithWallet(
+    bookingId: number,
+    candidateId: number,
+  ): Promise<BookingResponse> {
     return this.prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { candidate: true },
+      });
       if (!booking || booking.candidateId !== candidateId) {
         throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
       }
@@ -148,22 +181,20 @@ export class BookingService {
         throw new BadRequestException('Booking đã hết hạn thanh toán');
       }
 
-      // Kiểm tra số dư
+      const price = booking.snapshotPlanPrice;
+      if (!price) throw new BadRequestException('Giá không xác định');
+
       const user = await tx.user.findUnique({ where: { id: candidateId } });
-      if (!user || user.creditBalance < booking.snapshotPlanPrice!) {
-        throw new BadRequestException('Số dư không đủ');
+      if (!user || user.creditBalance < price) {
+        throw new BadRequestException(Messages.BOOKING.NOT_ENOUGH_CREDIT);
       }
 
-      const price = booking.snapshotPlanPrice!;
-
-      // Trừ tiền
       const newBalance = user.creditBalance - price;
       await tx.user.update({
         where: { id: candidateId },
         data: { creditBalance: newBalance },
       });
 
-      // Wallet transaction
       await tx.walletTransaction.create({
         data: {
           userId: candidateId,
@@ -175,7 +206,6 @@ export class BookingService {
         },
       });
 
-      // Payment record
       await tx.payment.create({
         data: {
           bookingId,
@@ -187,24 +217,19 @@ export class BookingService {
         },
       });
 
-      // Cập nhật booking
-      const updated = await tx.booking.update({
+      const updatedBooking = await tx.booking.update({
         where: { id: bookingId },
         data: {
           status: BookingStatus.PENDING_ACCEPTANCE,
-          mentorResponseDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24h
+          mentorResponseDeadline: new Date(Date.now() + 24 * 60 * 60 * 1000),
         },
-        include: { coachingPlan: true },
+        include: { coachingPlan: true, candidate: true },
       });
 
-      // TODO: Xóa Redis hold
-      // await this.redisService.del(`hold:mentor:${booking.mentorId}:${booking.startTime}:${booking.endTime}`);
-
-      return this.mapToBookingResponse(updated);
+      return this.mapToBookingResponse(updatedBooking);
     });
   }
 
-  // ========== MENTOR ACCEPT ==========
   async accept(bookingId: number, mentorId: number): Promise<BookingResponse> {
     return this.prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
@@ -213,95 +238,147 @@ export class BookingService {
       }
       if (booking.status !== BookingStatus.PENDING_ACCEPTANCE) {
         throw new BadRequestException(
-          'Booking không ở trạng thái chờ xác nhận',
+          'Chỉ có thể chấp nhận booking ở trạng thái chờ xác nhận',
         );
+      }
+
+      // Kiểm tra lại conflict (phòng trường hợp có booking khác vừa được accept)
+      const conflicting = await tx.booking.findFirst({
+        where: {
+          mentorId,
+          id: { not: bookingId },
+          status: {
+            in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.ACCEPTED],
+          },
+          startTime: { lt: booking.endTime },
+          endTime: { gt: booking.startTime },
+        },
+      });
+      if (conflicting) {
+        throw new BadRequestException('Khung giờ đã bị trùng với booking khác');
       }
 
       const updated = await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.ACCEPTED },
-        include: { coachingPlan: true },
+        include: { coachingPlan: true, candidate: true },
+      });
+
+      await tx.bookingActionLog.create({
+        data: {
+          bookingId,
+          actorId: mentorId,
+          statusBefore: booking.status,
+          statusAfter: BookingStatus.ACCEPTED,
+          action: 'ACCEPT',
+        },
       });
 
       return this.mapToBookingResponse(updated);
     });
   }
 
-  // ========== MENTOR REJECT ==========
-  async reject(bookingId: number, mentorId: number): Promise<BookingResponse> {
+  async reject(
+    bookingId: number,
+    mentorId: number,
+    reason?: string,
+  ): Promise<BookingResponse> {
     return this.prisma.$transaction(async (tx) => {
-      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      const booking = await tx.booking.findUnique({
+        where: { id: bookingId },
+        include: { candidate: true },
+      });
       if (!booking || booking.mentorId !== mentorId) {
         throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
       }
       if (booking.status !== BookingStatus.PENDING_ACCEPTANCE) {
         throw new BadRequestException(
-          'Booking không ở trạng thái chờ xác nhận',
+          'Chỉ có thể từ chối booking ở trạng thái chờ xác nhận',
         );
       }
 
-      const price = booking.snapshotPlanPrice!;
-
-      // Hoàn tiền cho candidate
-      const user = await tx.user.findUnique({
-        where: { id: booking.candidateId },
-      });
-      const newBalance = (user?.creditBalance ?? 0) + price;
-      await tx.user.update({
-        where: { id: booking.candidateId },
-        data: { creditBalance: newBalance },
-      });
-
-      // Wallet transaction (refund)
-      await tx.walletTransaction.create({
-        data: {
-          userId: booking.candidateId,
-          type: WalletTransactionType.REFUND,
-          amount: price,
-          balanceBefore: user?.creditBalance ?? 0,
-          balanceAfter: newBalance,
-          referenceId: `booking:${bookingId}:refund`,
-        },
-      });
-
-      // Cập nhật payment
-      await tx.payment.updateMany({
-        where: { bookingId, status: PaymentStatus.PAID },
-        data: {
-          status: PaymentStatus.REFUNDED,
-          refundedAt: new Date(),
-          refundedAmount: price,
-        },
-      });
+      // Hoàn tiền nếu đã thanh toán (thực tế booking đã được thanh toán trước khi vào PENDING_ACCEPTANCE)
+      const price = booking.snapshotPlanPrice;
+      if (price) {
+        const user = await tx.user.findUnique({
+          where: { id: booking.candidateId },
+        });
+        if (user) {
+          const newBalance = user.creditBalance + price;
+          await tx.user.update({
+            where: { id: booking.candidateId },
+            data: { creditBalance: newBalance },
+          });
+          await tx.walletTransaction.create({
+            data: {
+              userId: booking.candidateId,
+              type: WalletTransactionType.REFUND,
+              amount: price,
+              balanceBefore: user.creditBalance,
+              balanceAfter: newBalance,
+              referenceId: `booking:${bookingId}:refund`,
+            },
+          });
+        }
+        await tx.payment.updateMany({
+          where: { bookingId, status: PaymentStatus.PAID },
+          data: {
+            status: PaymentStatus.REFUNDED,
+            refundedAt: new Date(),
+            refundedAmount: price,
+          },
+        });
+      }
 
       const updated = await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.REJECTED },
-        include: { coachingPlan: true },
+        include: { coachingPlan: true, candidate: true },
+      });
+
+      await tx.bookingActionLog.create({
+        data: {
+          bookingId,
+          actorId: mentorId,
+          statusBefore: booking.status,
+          statusAfter: BookingStatus.REJECTED,
+          action: 'REJECT',
+          note: reason,
+        },
       });
 
       return this.mapToBookingResponse(updated);
     });
   }
 
-  // ========== FIND ALL (giữ nguyên) ==========
-  async findAll(query: QueryBookingDto, currentUser: any): Promise<any> {
+  async findAll(query: QueryBookingDto, currentUser: any) {
     const { page = 1, limit = 10, status } = query;
     const skip = (page - 1) * limit;
 
-    const whereCondition: any = { status };
+    const where: any = {};
+    if (status) where.status = status;
 
     if (currentUser.role === Role.CANDIDATE) {
-      whereCondition.candidateId = currentUser.sub;
+      where.candidateId = currentUser.sub;
     } else if (currentUser.role === Role.MENTOR) {
-      whereCondition.mentorId = currentUser.sub;
+      where.mentorId = currentUser.sub;
+    } else if (currentUser.role !== Role.ADMIN) {
+      throw new ForbiddenException('Không có quyền');
     }
 
-    const [total, bookings] = await this.prisma.$transaction([
-      this.prisma.booking.count({ where: whereCondition }),
+    const [total, bookings] = await Promise.all([
+      this.prisma.booking.count({ where }),
       this.prisma.booking.findMany({
-        where: whereCondition,
-        include: { coachingPlan: true },
+        where,
+        include: {
+          coachingPlan: true,
+          candidate: {
+            select: { id: true, name: true, email: true, avatarUrl: true },
+          },
+          mentor: {
+            select: { id: true, name: true, email: true, avatarUrl: true },
+          },
+        },
         skip,
         take: limit,
         orderBy: { createdAt: 'desc' },
@@ -310,18 +387,30 @@ export class BookingService {
 
     return {
       items: bookings.map(this.mapToBookingResponse),
-      meta: { total, page, limit, totalPages: Math.ceil(total / limit) },
+      meta: {
+        total,
+        page,
+        limit,
+        totalPages: Math.ceil(total / limit),
+      },
     };
   }
 
-  // ========== FIND BY ID (giữ nguyên) ==========
   async findById(
     bookingId: number,
     currentUser: any,
   ): Promise<BookingResponse> {
     const booking = await this.prisma.booking.findUnique({
       where: { id: bookingId },
-      include: { coachingPlan: true },
+      include: {
+        coachingPlan: true,
+        candidate: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+        mentor: {
+          select: { id: true, name: true, email: true, avatarUrl: true },
+        },
+      },
     });
     if (!booking) throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
 
@@ -335,19 +424,17 @@ export class BookingService {
     return this.mapToBookingResponse(booking);
   }
 
-  // ========== CẬP NHẬT TRẠNG THÁI (đã được thay bằng accept/reject riêng) ==========
-  // Giữ lại để tương thích ngược hoặc xóa sau khi refactor controller.
+  // Giữ lại cho tương thích nếu cần
   async updateStatus(
     bookingId: number,
     mentorId: number,
-    data: UpdateBookingStatusDto,
-  ): Promise<BookingResponse> {
-    // Đơn giản chuyển hướng sang accept hoặc reject dựa trên status mới
-    if (data.status === BookingStatus.ACCEPTED) {
+    dto: UpdateBookingStatusDto,
+  ) {
+    if (dto.status === BookingStatus.ACCEPTED) {
       return this.accept(bookingId, mentorId);
-    } else if (data.status === BookingStatus.REJECTED) {
+    } else if (dto.status === BookingStatus.REJECTED) {
       return this.reject(bookingId, mentorId);
     }
-    throw new BadRequestException('Trạng thái không hợp lệ');
+    throw new BadRequestException('Chỉ hỗ trợ ACCEPT hoặc REJECT');
   }
 }
