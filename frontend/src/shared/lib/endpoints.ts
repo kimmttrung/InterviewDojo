@@ -96,4 +96,13 @@ export const API_ENDPOINT = {
   PLANS: {
     GET_BY_USER: (userId: number | string) => `/plans/users/${userId}`,
   },
+  BOOKING: {
+    GET_ALL: '/bookings',
+    GET_ONE: (id: number | string) => `/bookings/${id}`,
+    CREATE: '/bookings',
+    PAY: (id: number | string) => `/bookings/${id}/pay`,
+    ACCEPT: (id: number | string) => `/bookings/${id}/accept`,
+    REJECT: (id: number | string) => `/bookings/${id}/reject`,
+    UPDATE_STATUS: (id: number | string) => `/bookings/${id}/status`,
+  },
 };

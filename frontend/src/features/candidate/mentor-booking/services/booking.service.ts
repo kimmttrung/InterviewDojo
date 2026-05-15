@@ -6,7 +6,11 @@ export const bookingService = {
   getMentorDetail: (id: number) =>
     api.get(API_ENDPOINT.MENTORS.GET_ONE(id)).then((r) => r.data.data),
 
-  getMentorPlans: (userId: number) => api.get(`/plans/users/${userId}`).then((r) => r.data.data),
+  getMentorPlans: (userId: number) =>
+    api.get(`/plans/users/${userId}`).then((r) => {
+      console.log('Plans response:', r.data);
+      return r.data.data; // hoặc r.data nếu response không bọc
+    }),
 
   getAvailableDays: (mentorId: number, planId: number, month: string) =>
     api

@@ -28,9 +28,13 @@ import { Role } from '@prisma/client';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UploadedFileType } from '@/common/types/uploaded-file.type';
 import { FileInterceptor } from '@nestjs/platform-express';
+import { BookingService } from '../booking/booking.service';
 @Controller('mentors')
 export class MentorController {
-  constructor(private readonly mentorService: MentorService) {}
+  constructor(
+    private readonly mentorService: MentorService,
+    private readonly bookingService: BookingService,
+  ) {}
 
   @Get()
   @ResponseMessage(Messages.MENTOR.FETCHED)
@@ -93,5 +97,28 @@ export class MentorController {
     const data = await this.mentorService.uploadIntroductionVideo(file);
 
     return data;
+  }
+
+  @Patch('bookings/:bookingId/accept')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MENTOR)
+  @ResponseMessage(Messages.MENTOR_BOOKING.ACCEPT_SUCCESS)
+  async acceptBooking(
+    @Param('bookingId', ParseIntPipe) bookingId: number,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.bookingService.accept(bookingId, Number(user.sub));
+  }
+
+  @Patch('bookings/:bookingId/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.MENTOR)
+  @ResponseMessage(Messages.MENTOR_BOOKING.REJECT_SUCCESS)
+  async rejectBooking(
+    @Param('bookingId', ParseIntPipe) bookingId: number,
+    @Body('reason') reason: string,
+    @CurrentUser() user: JwtPayload,
+  ) {
+    return this.bookingService.reject(bookingId, Number(user.sub), reason);
   }
 }

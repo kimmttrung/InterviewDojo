@@ -26,6 +26,14 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 export class PlanController {
   constructor(private readonly planService: PlanService) {}
 
+  @Get('users/:userId')
+  @ResponseMessage(Messages.PLAN.FETCHED)
+  async getPlansByUser(
+    @Param('userId', ParseIntPipe) userId: number,
+    @CurrentUser() user?: JwtPayload,
+  ): Promise<PlanResponse[]> {
+    return this.planService.findAllByMentor(userId, user);
+  }
   /**
    * Candidate/Admin: Xem danh sách gói của một mentor cụ thể
    * GET /plans/mentor/:mentorId
