@@ -12,7 +12,7 @@ interface ApprovalGuardProps {
 
 export default function ApprovalGuard({ status, children }: ApprovalGuardProps) {
   const isApproved = status === ApprovalStatus.APPROVED;
-
+  console.log('check', isApproved);
   return (
     <div className="relative min-h-[400px]">
       {/* 1. Lớp Overlay cảnh báo hiển thị trên cùng nếu chưa được Approved */}

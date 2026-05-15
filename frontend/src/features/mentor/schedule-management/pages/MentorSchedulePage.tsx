@@ -9,11 +9,15 @@ import { toast } from 'sonner';
 import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
 import { ApprovalStatus } from '@/shared/types/enum';
 import { useAuthStore } from '@/stores/useAuthStore';
+import { useMentorProfile } from '../../profile-management/hooks/useMentorProfile';
 
 export default function MentorSchedulePage() {
   const { user } = useAuthStore();
   const mentorId = user?.id;
-  const mentorStatus = user?.approvalStatus || ApprovalStatus.PENDING;
+
+  const { data: mentorProfile } = useMentorProfile();
+  const mentorStatus = mentorProfile?.approvalStatus || ApprovalStatus.PENDING;
+  console.log('check mentorStatus', mentorStatus);
 
   const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);

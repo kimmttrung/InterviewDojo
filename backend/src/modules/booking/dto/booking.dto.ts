@@ -1,3 +1,4 @@
+// src/modules/booking/dto/booking.dto.ts
 import {
   IsInt,
   IsOptional,
@@ -5,17 +6,12 @@ import {
   IsArray,
   IsString,
   ValidateNested,
+  IsDateString,
+  Min,
 } from 'class-validator';
-
 import { Type } from 'class-transformer';
-
 import { BookingStatus } from '@prisma/client';
 
-import { Min } from 'class-validator';
-
-/**
- * Query booking
- */
 export class QueryBookingDto {
   @IsOptional()
   @IsEnum(BookingStatus)
@@ -24,17 +20,16 @@ export class QueryBookingDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1)
   page?: number = 1;
 
   @IsOptional()
   @Type(() => Number)
   @IsInt()
+  @Min(1)
   limit?: number = 10;
 }
 
-/**
- * Booking answer
- */
 export class CreateBookingAnswerDto {
   @IsInt()
   @Min(1)
@@ -49,9 +44,6 @@ export class CreateBookingAnswerDto {
   fileUrl?: string;
 }
 
-/**
- * Create booking
- */
 export class CreateBookingDto {
   @IsInt()
   @Min(1)
@@ -61,11 +53,11 @@ export class CreateBookingDto {
   @Min(1)
   coachingPlanId!: number;
 
-  @IsString() // Hoặc IsDateString()
-  startTime!: string; // ISO String gửi từ Client
+  @IsDateString()
+  startTime!: string;
 
-  @IsString()
-  endTime!: string; // ISO String gửi từ Client
+  @IsDateString()
+  endTime!: string;
 
   @IsOptional()
   @IsArray()
@@ -74,10 +66,12 @@ export class CreateBookingDto {
   answers?: CreateBookingAnswerDto[];
 }
 
-/**
- * Update booking status
- */
 export class UpdateBookingStatusDto {
   @IsEnum(BookingStatus)
   status!: BookingStatus;
+}
+
+export class PaymentDto {
+  @IsEnum(['INTERNAL_WALLET', 'VNPAY', 'MOMO'])
+  method!: string;
 }

@@ -1,3 +1,4 @@
+// src/modules/booking/booking.controller.ts
 import {
   Controller,
   Get,
@@ -8,12 +9,14 @@ import {
   Query,
   ParseIntPipe,
   UseGuards,
+  BadRequestException,
 } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import {
   CreateBookingDto,
   QueryBookingDto,
   UpdateBookingStatusDto,
+  PaymentDto,
 } from './dto/booking.dto';
 import { BookingResponse } from './interfaces/booking.interface';
 import { Messages } from '../../common/constants/messages.constant';
@@ -34,10 +37,46 @@ export class BookingController {
   @Roles(Role.CANDIDATE)
   @ResponseMessage(Messages.BOOKING.CREATED)
   async create(
-    @Body() createBookingDto: CreateBookingDto,
+    @Body() dto: CreateBookingDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<BookingResponse> {
-    return this.bookingService.create(user.sub, createBookingDto);
+    return this.bookingService.create(Number(user.sub), dto);
+  }
+
+  @Post(':id/pay')
+  @Roles(Role.CANDIDATE)
+  @ResponseMessage('Thanh toán thành công')
+  async pay(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() paymentDto: PaymentDto,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<BookingResponse> {
+    if (paymentDto.method === 'INTERNAL_WALLET') {
+      return this.bookingService.payWithWallet(id, Number(user.sub));
+    }
+    // TODO: Thêm các cổng thanh toán khác
+    throw new BadRequestException('Phương thức thanh toán chưa hỗ trợ');
+  }
+
+  @Patch(':id/accept')
+  @Roles(Role.MENTOR)
+  @ResponseMessage(Messages.BOOKING.STATUS_UPDATED)
+  async accept(
+    @Param('id', ParseIntPipe) id: number,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<BookingResponse> {
+    return this.bookingService.accept(id, Number(user.sub));
+  }
+
+  @Patch(':id/reject')
+  @Roles(Role.MENTOR)
+  @ResponseMessage(Messages.BOOKING.STATUS_UPDATED)
+  async reject(
+    @Param('id', ParseIntPipe) id: number,
+    @Body('reason') reason: string,
+    @CurrentUser() user: JwtPayload,
+  ): Promise<BookingResponse> {
+    return this.bookingService.reject(id, Number(user.sub), reason);
   }
 
   @Get()
@@ -45,31 +84,28 @@ export class BookingController {
   async findAll(
     @Query() query: QueryBookingDto,
     @CurrentUser() user: JwtPayload,
-  ): Promise<any> {
+  ) {
     return this.bookingService.findAll(query, user);
   }
 
-  @Get(':book_id')
+  @Get(':id')
   @ResponseMessage(Messages.BOOKING.DETAIL_FETCHED)
   async findById(
-    @Param('book_id', ParseIntPipe) bookId: number,
+    @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
   ): Promise<BookingResponse> {
-    return this.bookingService.findById(bookId, user);
+    return this.bookingService.findById(id, user);
   }
 
-  @Patch(':book_id/status')
+  // Optional: nếu vẫn muốn giữ endpoint /status cũ
+  @Patch(':id/status')
   @Roles(Role.MENTOR)
   @ResponseMessage(Messages.BOOKING.STATUS_UPDATED)
   async updateStatus(
-    @Param('book_id', ParseIntPipe) bookId: number,
-    @Body() updateBookingStatusDto: UpdateBookingStatusDto,
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateBookingStatusDto,
     @CurrentUser() user: JwtPayload,
   ): Promise<BookingResponse> {
-    return this.bookingService.updateStatus(
-      bookId,
-      user.sub,
-      updateBookingStatusDto,
-    );
+    return this.bookingService.updateStatus(id, Number(user.sub), dto);
   }
 }
