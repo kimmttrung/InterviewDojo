@@ -1,29 +1,28 @@
 // features/mentor/bookings/hooks/useMentorBookings.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { bookingService } from '../services/booking.service';
 import { toast } from 'sonner';
-import { acceptBooking, getMentorBookings, rejectBooking } from '../services/booking.service';
 
 export const MENTOR_BOOKINGS_QUERY_KEY = ['mentor-bookings'];
 
 export const useMentorBookings = (filters?: { status?: string; page?: number; limit?: number }) => {
   return useQuery({
     queryKey: [...MENTOR_BOOKINGS_QUERY_KEY, filters],
-    queryFn: () => getMentorBookings(filters),
-    staleTime: 60 * 1000, // 1 minute
+    queryFn: () => bookingService.getMentorBookings(filters),
+    staleTime: 60 * 1000,
   });
 };
 
 export const useAcceptBooking = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: acceptBooking,
-    onSuccess: (_, bookingId) => {
-      toast.success('Đã chấp nhận booking');
+    mutationFn: bookingService.acceptBooking,
+    onSuccess: () => {
+      toast.success('Accepted booking successfully');
       queryClient.invalidateQueries({ queryKey: MENTOR_BOOKINGS_QUERY_KEY });
-      // optionally invalidate slot availability if needed
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Không thể chấp nhận booking');
+      toast.error(error?.response?.data?.message || 'Failed to accept booking');
     },
   });
 };
@@ -32,13 +31,13 @@ export const useRejectBooking = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ bookingId, reason }: { bookingId: number; reason?: string }) =>
-      rejectBooking(bookingId, reason),
+      bookingService.rejectBooking(bookingId, reason),
     onSuccess: () => {
-      toast.success('Đã từ chối booking');
+      toast.success('Rejected booking successfully');
       queryClient.invalidateQueries({ queryKey: MENTOR_BOOKINGS_QUERY_KEY });
     },
     onError: (error: any) => {
-      toast.error(error?.response?.data?.message || 'Không thể từ chối booking');
+      toast.error(error?.response?.data?.message || 'Failed to reject booking');
     },
   });
 };
