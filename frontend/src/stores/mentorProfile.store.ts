@@ -1,4 +1,9 @@
 import { create } from 'zustand';
+import type {
+  SkillType,
+  SkillLevel,
+  CoachingQuestionType,
+} from '../features/mentor/profile-management/types/mentor.types';
 
 type MentorProfileState = {
   profile: {
@@ -25,10 +30,10 @@ type MentorProfileState = {
   skills: Array<{
     id?: number;
     skillId: number;
-    type: string;
+    type: SkillType;
     experienceMonths: number;
     proofUrl?: string;
-    level: string;
+    level: SkillLevel;
   }>;
 
   coachingPlans: Array<{
@@ -41,7 +46,7 @@ type MentorProfileState = {
     questions?: Array<{
       id?: number;
       question: string;
-      type: string; // 'TEXT' hoặc 'FILE'
+      type: CoachingQuestionType;
       isRequired?: boolean;
     }>;
   }>;

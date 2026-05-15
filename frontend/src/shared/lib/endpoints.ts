@@ -15,6 +15,7 @@ export const API_ENDPOINT = {
     GET: 'target-roles',
     CREATE: 'target-roles',
     CREATE_LIST: 'target-roles/bulk',
+    GET_ONE: (id: number) => `/target-roles/${id}`,
   },
   MENTOR: {
     UPDATE_PROFILE: '/mentors/me',
