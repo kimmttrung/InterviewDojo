@@ -13,24 +13,37 @@ interface SlotEditModalProps {
   onDelete: (id: number) => void;
 }
 
+// Format datetime-local (YYYY-MM-DDThh:mm)
 const formatForInput = (date: Date) => {
   const d = new Date(date);
   d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
   return d.toISOString().slice(0, 16);
 };
 
+// Format date (YYYY-MM-DD)
+const formatDateForInput = (date: Date) => {
+  const d = new Date(date);
+  d.setMinutes(d.getMinutes() - d.getTimezoneOffset());
+  return d.toISOString().split('T')[0];
+};
+
 export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: SlotEditModalProps) {
   const [startTime, setStartTime] = useState(formatForInput(slot.startTime));
   const [endTime, setEndTime] = useState(formatForInput(slot.endTime));
   const [recurrence, setRecurrence] = useState<RecurrenceType>(slot.recurrentType || 'NONE');
-  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>('');
   const [isActive, setIsActive] = useState(slot.isActive);
+
+  // 🔥 Sửa lỗi: Khởi tạo giá trị từ slot nếu có
+  const [recurrenceEndDate, setRecurrenceEndDate] = useState<string>(
+    slot.recurrentUntil ? formatDateForInput(new Date(slot.recurrentUntil)) : '',
+  );
 
   const handleSave = () => {
     onUpdate(slot.id, {
       startTime: new Date(startTime),
       endTime: new Date(endTime),
       recurrentType: recurrence,
+      // Đảm bảo có ngày end date nếu chọn lặp
       recurrentUntil:
         recurrence !== 'NONE' && recurrenceEndDate ? new Date(recurrenceEndDate) : null,
       isActive,
@@ -84,7 +97,7 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
 
           <div className="space-y-3 p-3 bg-gray-50 rounded-lg border">
             <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1 flex items-center gap-2">
+              <label className="block text-sm font-medium text-gray-600 mb-1 items-center gap-2">
                 <CalendarRange size={16} /> Chế độ lặp lịch
               </label>
               <select
@@ -107,6 +120,7 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
                   type="date"
                   value={recurrenceEndDate}
                   onChange={(e) => setRecurrenceEndDate(e.target.value)}
+                  // Chặn không cho chọn ngày quá khứ so với thời điểm tạo
                   min={new Date().toISOString().split('T')[0]}
                 />
               </div>
@@ -120,7 +134,6 @@ export default function SlotEditModal({ slot, onClose, onUpdate, onDelete }: Slo
             className="flex-1 flex items-center justify-center gap-2"
             onClick={() => {
               onDelete(slot.id);
-              onClose();
             }}
           >
             <Trash2 size={16} /> Xóa
