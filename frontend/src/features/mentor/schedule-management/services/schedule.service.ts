@@ -1,13 +1,12 @@
-// src/features/mentor/schedule/service/schedule.service.ts
+// src/features/mentor/schedule/services/schedule.service.ts
 import { api } from '@/shared/lib/api';
 import { Slot } from '../types';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
 export const scheduleService = {
-  getSlots: async (mentorId: number) => {
-    const response = await api.get(API_ENDPOINT.SLOTS.GET_ALL, {
-      params: { mentorId },
-    });
+  // 🔥 Đã xóa tham số mentorId và params
+  getSlots: async () => {
+    const response = await api.get(API_ENDPOINT.SLOTS.GET_ALL);
     return response.data?.data || response.data;
   },
 
@@ -15,7 +14,7 @@ export const scheduleService = {
     const payload = {
       startTime: data.startTime.toISOString(),
       endTime: data.endTime.toISOString(),
-      isActive: true, // mặc định active
+      isActive: true,
       recurrentType: data.recurrentType || 'NONE',
       recurrentUntil: data.recurrentUntil ? data.recurrentUntil.toISOString() : undefined,
     };
@@ -33,7 +32,7 @@ export const scheduleService = {
       }),
       ...(data.isActive !== undefined && { isActive: data.isActive }),
     };
-    const response = await api.put(API_ENDPOINT.SLOTS.UPDATE(id), payload);
+    const response = await api.patch(API_ENDPOINT.SLOTS.UPDATE(id), payload);
     return response.data?.data || response.data;
   },
 

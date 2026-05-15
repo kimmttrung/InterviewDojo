@@ -1,15 +1,15 @@
 // src/features/mentor/schedule/pages/MentorSchedulePage.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { MentorLayout } from '../../dashboard/components/MentorLayout';
 import ScheduleCalendar from '../components/ScheduleCalendar';
 import SlotEditModal from '../components/SlotEditModal';
 import { Slot } from '../types';
-import { scheduleService } from '../services/schedule.service';
-import { toast } from 'sonner';
 import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
 import { ApprovalStatus } from '@/shared/types/enum';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useMentorProfile } from '../../profile-management/hooks/useMentorProfile';
+// 🔥 1. Import hook useSchedule bạn vừa tạo
+import { useSchedule } from '../hooks/useSchedule';
 
 export default function MentorSchedulePage() {
   const { user } = useAuthStore();
@@ -17,85 +17,61 @@ export default function MentorSchedulePage() {
 
   const { data: mentorProfile } = useMentorProfile();
   const mentorStatus = mentorProfile?.approvalStatus || ApprovalStatus.PENDING;
-  console.log('check mentorStatus', mentorStatus);
 
-  const [slots, setSlots] = useState<Slot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<Slot | null>(null);
 
-  useEffect(() => {
-    if (!mentorId) return;
-    const fetchSlots = async () => {
-      try {
-        const response = await scheduleService.getSlots(mentorId);
-        const slotArray = Array.isArray(response) ? response : response?.data || [];
-        // Map dữ liệu từ API sang Slot (đảm bảo startTime, endTime là Date)
-        const mapped: Slot[] = slotArray.map((s: any) => ({
-          ...s,
-          startTime: new Date(s.startTime),
-          endTime: new Date(s.endTime),
-        }));
-        setSlots(mapped);
-      } catch (error) {
-        toast.error('Không thể tải lịch làm việc');
-      }
-    };
-    fetchSlots();
-  }, [mentorId]);
+  // 🔥 2. Gọi hook useSchedule thay vì tự viết useQuery/useMutation dài dòng
+  const {
+    slots,
+    loading: isLoading,
+    createSlot,
+    updateSlot,
+    deleteSlot,
+  } = useSchedule(mentorId, mentorStatus === ApprovalStatus.ACTIVE);
 
-  const handleSelectRange = async (start: Date, end: Date) => {
-    try {
-      const newSlotData = {
-        mentorId: mentorId as number,
-        startTime: start,
-        endTime: end,
-        isActive: true,
-      };
-      const createdSlot = await scheduleService.createSlot(newSlotData);
-      setSlots((prev) => [...prev, createdSlot]);
-      toast.success('Đã mở lịch thành công');
-    } catch (error) {
-      toast.error('Có lỗi xảy ra khi tạo lịch');
-    }
+  // ==========================================
+  // 3. HANDLERS TRUYỀN VÀO CALENDAR & MODAL
+  // ==========================================
+  const handleSelectRange = (start: Date, end: Date) => {
+    // Gọi hàm createSlot từ hook
+    createSlot({
+      mentorId: mentorId!,
+      startTime: start,
+      endTime: end,
+      isActive: true,
+    });
   };
 
-  const handleEventChange = async (updatedSlot: Slot) => {
-    try {
-      setSlots((prev) => prev.map((s) => (s.id === updatedSlot.id ? updatedSlot : s)));
-      await scheduleService.updateSlot(updatedSlot.id, {
+  const handleEventChange = (updatedSlot: Slot) => {
+    // Khi kéo thả/kéo dài giờ trên lịch
+    updateSlot({
+      id: updatedSlot.id,
+      data: {
         startTime: updatedSlot.startTime,
         endTime: updatedSlot.endTime,
-      });
-      toast.success('Đã cập nhật thời gian');
-    } catch (error) {
-      toast.error('Lỗi cập nhật');
-      // rollback có thể thêm ở đây
-    }
+      },
+    });
   };
 
-  const handleModalUpdate = async (id: number, data: Partial<Slot>) => {
-    try {
-      const updated = await scheduleService.updateSlot(id, data);
-      setSlots((prev) => prev.map((s) => (s.id === id ? { ...s, ...updated } : s)));
-      toast.success('Đã cập nhật Slot');
-    } catch (error) {
-      toast.error('Lỗi cập nhật');
-    }
+  const handleModalUpdate = (id: number, data: Partial<Slot>) => {
+    updateSlot({ id, data });
   };
 
-  const handleModalDelete = async (id: number) => {
-    try {
-      await scheduleService.deleteSlot(id);
-      setSlots((prev) => prev.filter((s) => s.id !== id));
-      toast.success('Đã xóa Slot');
-    } catch (error) {
-      toast.error('Lỗi xóa Slot');
-    }
+  const handleModalDelete = (id: number) => {
+    deleteSlot(id);
+    setSelectedSlot(null); // Đóng modal sau khi xóa
   };
 
   return (
     <MentorLayout>
-      <div className="p-6">
+      <div className="p-6 relative">
         <ApprovalGuard status={mentorStatus}>
+          {isLoading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-white/50 backdrop-blur-sm">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-500"></div>
+            </div>
+          )}
+
           <ScheduleCalendar
             events={slots}
             onSelectRange={handleSelectRange}
