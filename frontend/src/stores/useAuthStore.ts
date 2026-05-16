@@ -34,8 +34,9 @@ export const useAuthStore = create<AuthState>()(
           accessToken,
           refreshToken,
           isAuthenticated: true,
-          // Chỉ cập nhật user nếu được truyền (kể cả null)
-          ...(user !== undefined ? { user } : {}),
+          // // Chỉ cập nhật user nếu được truyền (kể cả null)
+          // ...(user !== undefined ? { user } : {}),
+          user: user ?? null,
         }),
       clearAuth: () =>
         set({ user: null, accessToken: null, refreshToken: null, isAuthenticated: false }),

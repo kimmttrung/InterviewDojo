@@ -14,7 +14,7 @@ import {
   formatLocalDate,
   DEFAULT_TIMEZONE,
 } from '../../common/utils/timezone';
-
+import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 @Injectable()
 export class SlotService {
   private readonly STEP_MINUTES = 30; // bước nhảy mặc định khi sinh session
@@ -38,20 +38,32 @@ export class SlotService {
 
   async findAll(
     query: QuerySlotDto,
-    currentUser: any,
+    currentUser: JwtPayload,
   ): Promise<SlotResponse[]> {
     const { mentorId, startDate, endDate } = query;
+
     const targetMentorId =
-      currentUser.role === 'MENTOR' ? currentUser.id : mentorId;
+      currentUser.role === 'MENTOR' ? currentUser.sub : mentorId;
+
+    if (!targetMentorId) {
+      throw new BadRequestException('mentorId is required');
+    }
 
     const slots = await this.prisma.slot.findMany({
       where: {
         mentorId: targetMentorId,
-        ...(startDate && { startTime: { gte: new Date(startDate) } }),
-        ...(endDate && { endTime: { lte: new Date(endDate) } }),
+        ...(startDate && {
+          startTime: { gte: new Date(startDate) },
+        }),
+        ...(endDate && {
+          endTime: { lte: new Date(endDate) },
+        }),
       },
-      orderBy: { startTime: 'asc' },
+      orderBy: {
+        startTime: 'asc',
+      },
     });
+
     return slots.map(this.mapToSlotResponse);
   }
 

@@ -9,5 +9,6 @@ export const useMentorProfile = () => {
     queryKey: queryKeys.mentor.profile,
 
     queryFn: mentorProfileService.getMyMentorProfile,
+    staleTime: 5 * 60 * 1000,
   });
 };
