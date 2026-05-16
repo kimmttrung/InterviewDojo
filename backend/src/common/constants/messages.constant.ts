@@ -93,6 +93,8 @@ export const Messages = {
     NOT_FOUND: 'Không tìm thấy slot hoặc không có quyền truy cập',
     INVALID_STATUS:
       'Chỉ có thể thao tác với slot đang ở trạng thái trống (AVAILABLE)',
+    GET_AVAILABLE_DAYS: 'Lấy danh sách ngày khả dụng thành công',
+    GET_AVAILABLE_SESSIONS: 'Lấy danh sách khung giờ khả dụng thành công',
   },
 
   MENTOR: {

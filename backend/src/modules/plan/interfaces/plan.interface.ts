@@ -1,7 +1,8 @@
+// interfaces/plan.interface.ts
 export interface PlanResponse {
   id: number;
-  mentorId: number; // ID của MentorProfile (nội bộ)
-  mentorUserId: number; // ID của User (tiện cho frontend)
+  mentorId: number;
+  mentorUserId: number;
   categoryId: number;
   categoryName: string | null;
   title: string;
@@ -10,4 +11,13 @@ export interface PlanResponse {
   price: number;
   isActive: boolean;
   createdAt: Date;
+  questions?: PlanQuestion[];
+}
+
+export interface PlanQuestion {
+  id: number;
+  question: string;
+  type: string;
+  isRequired: boolean;
+  orderIndex: number;
 }

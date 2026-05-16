@@ -2,6 +2,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avat
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
+import { useNavigate } from 'react-router-dom';
 
 interface MentorProps {
   mentor: {
@@ -28,6 +29,7 @@ interface MentorProps {
 }
 
 export function MentorCard({ mentor }: MentorProps) {
+  const navigate = useNavigate();
   const currentExp = mentor.mentorProfile?.experiences?.find((exp) => exp.isCurrent);
   const company = currentExp?.company;
   const role = currentExp?.jobRole;
@@ -38,7 +40,10 @@ export function MentorCard({ mentor }: MentorProps) {
   const moreSkillsCount = (mentor.skills?.length || 0) - topSkills.length;
 
   return (
-    <Card className="p-4 sm:p-6 shadow border border-gray-200 relative flex flex-col overflow-hidden hover:shadow-md transition duration-150 group">
+    <Card
+      onClick={() => navigate(`/mentors/${mentor.id}`)}
+      className="cursor-pointer p-4 sm:p-6 shadow border border-gray-200 relative flex flex-col overflow-hidden hover:shadow-md transition duration-150 group"
+    >
       {/* Avatar và tên */}
       <div className="flex items-start w-full">
         <Avatar className="h-16 w-16 mr-4 shrink-0">

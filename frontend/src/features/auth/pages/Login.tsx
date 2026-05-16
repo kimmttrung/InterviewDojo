@@ -37,10 +37,10 @@ export default function Login() {
       console.log('check res', res);
       const { accessToken, refreshToken, user, redirect } = res.data.data;
 
-      // ✅ Cập nhật Zustand store (tự động persist)
-      setAuth({ accessToken, refreshToken, userId: user.id });
-      // queryClient.setQueryData(['current-user'], user);
-      queryClient.invalidateQueries({ queryKey: ['current-user'] });
+      // Cập nhật Zustand store (tự động persist)
+      setAuth({ accessToken, refreshToken, user });
+      queryClient.setQueryData(['current-user'], user);
+      // queryClient.invalidateQueries({ queryKey: ['current-user'] });
 
       showToast.success(t('Login successful'));
 

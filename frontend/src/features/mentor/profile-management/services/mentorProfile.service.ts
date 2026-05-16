@@ -3,13 +3,14 @@
 import { api } from '@/shared/lib/api';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
+import type { SaveMentorProfilePayload } from '../types/mentorProfile.payload';
+
 import type {
   CoachingCategoryOption,
   CompanyOption,
   JobRoleOption,
-  MentorProfilePayload,
   SkillOption,
-} from '../mentorProfile.type';
+} from '../types/mentorMasterData';
 
 export const mentorProfileService = {
   // =========================
@@ -28,7 +29,7 @@ export const mentorProfileService = {
     return response.data.data;
   },
 
-  updateProfile: async (payload: MentorProfilePayload) => {
+  updateProfile: async (payload: SaveMentorProfilePayload) => {
     const response = await api.put(API_ENDPOINT.MENTOR.UPDATE_PROFILE, payload);
 
     return response.data.data;

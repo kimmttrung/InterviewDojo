@@ -65,11 +65,11 @@ export class MentorController {
     return mentorProfile;
   }
 
-  @Get(':id/available-slots')
-  @ResponseMessage(Messages.MENTOR.AVAILABLE_SLOTS_FETCHED)
-  findAvailableSlots(@Param('id', ParseIntPipe) id: number) {
-    return this.mentorService.findAvailableSlots(id);
-  }
+  // @Get(':id/available-slots')
+  // @ResponseMessage(Messages.MENTOR.AVAILABLE_SLOTS_FETCHED)
+  // findAvailableSlots(@Param('id', ParseIntPipe) id: number) {
+  //   return this.mentorService.findAvailableSlots(id);
+  // }
 
   @Get(':id')
   @ResponseMessage(Messages.MENTOR.DETAIL_FETCHED)

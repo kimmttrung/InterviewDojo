@@ -31,24 +31,21 @@ export class PlanService {
   }
 
   async findAllByMentor(
-    userId: number, // User.id
+    userId: number,
     currentUser?: any,
   ): Promise<PlanResponse[]> {
     const isAdmin = currentUser?.role === Role.ADMIN;
     const isOwner = currentUser?.sub === userId;
 
-    // Lấy MentorProfile.id từ userId
     const mentorProfile = await this.prisma.mentorProfile.findUnique({
       where: { userId },
     });
 
-    if (!mentorProfile) {
-      return []; // Mentor chưa có profile thì không có plan nào
-    }
+    if (!mentorProfile) return [];
 
     const whereCondition: any = { mentorId: mentorProfile.id };
     if (!isAdmin && !isOwner) {
-      whereCondition.isActive = true; // Candidate chỉ xem được plan active
+      whereCondition.isActive = true;
     }
 
     const plans = await this.prisma.coachingPlan.findMany({
@@ -56,11 +53,32 @@ export class PlanService {
       include: {
         category: true,
         mentor: { select: { userId: true } },
+        questions: { orderBy: { orderIndex: 'asc' } }, // thêm questions
       },
       orderBy: { createdAt: 'desc' },
     });
 
-    return plans.map((plan) => this.mapToPlanResponse(plan));
+    return plans.map((plan) => ({
+      id: plan.id,
+      mentorId: plan.mentorId,
+      mentorUserId: plan.mentor?.userId ?? null,
+      categoryId: plan.categoryId,
+      categoryName: plan.category?.name ?? null,
+      title: plan.title,
+      description: plan.description,
+      duration: plan.duration,
+      price: plan.price,
+      isActive: plan.isActive,
+      createdAt: plan.createdAt,
+      questions: plan.questions.map((q) => ({
+        // thêm questions vào response
+        id: q.id,
+        question: q.question,
+        type: q.type,
+        isRequired: q.isRequired,
+        orderIndex: q.orderIndex,
+      })),
+    }));
   }
 
   async create(
