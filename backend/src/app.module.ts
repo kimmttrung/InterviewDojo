@@ -28,6 +28,7 @@ import { SlotModule } from './modules/slot/slot.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
 import { SkillModule } from './modules/skill/skill.module';
+import { WalletModule } from './modules/wallet/wallet.module';
 
 @Module({
   imports: [
@@ -71,6 +72,7 @@ import { SkillModule } from './modules/skill/skill.module';
     PaymentModule,
     CoachingCategoryModule,
     SkillModule,
+    WalletModule,
   ],
   controllers: [AppController],
   providers: [

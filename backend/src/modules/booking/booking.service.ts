@@ -70,94 +70,150 @@ export class BookingService {
     candidateId: number,
     dto: CreateBookingDto,
   ): Promise<BookingResponse> {
-    const { slotId, coachingPlanId, startTime, endTime, answers } = dto;
+    const { coachingPlanId, startTime, endTime, answers } = dto;
+
     const start = new Date(startTime);
     const end = new Date(endTime);
 
     if (start >= end) {
       throw new BadRequestException('startTime phải trước endTime');
     }
+
     if (start < new Date()) {
       throw new BadRequestException('Không thể đặt lịch trong quá khứ');
     }
 
-    return this.prisma.$transaction(async (tx) => {
-      // 1. Lấy slot và kiểm tra active
-      const slot = await tx.slot.findUnique({
-        where: { id: slotId },
-        include: { mentor: true },
-      });
-      console.log('check slot', slot);
-      if (!slot || !slot.isActive) {
-        throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
-      }
-      if (start < slot.startTime || end > slot.endTime) {
-        throw new BadRequestException('Thời gian không nằm trong slot');
-      }
-
-      // 2. Lấy coaching plan và kiểm tra mentor khớp
-      const plan = await tx.coachingPlan.findUnique({
-        where: { id: coachingPlanId },
-        include: {
-          mentor: true,
-        },
-      });
-      console.log('check plan', plan);
-      if (!plan || !plan.isActive || plan.mentor.userId !== slot.mentorId) {
-        throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
-      }
-
-      // 3. Kiểm tra overlap với các booking đang active (trừ PENDING_PAYMENT có thể bỏ qua nếu hold)
-      const conflicting = await tx.booking.findFirst({
-        where: {
-          mentorId: slot.mentorId,
-          status: {
-            in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.ACCEPTED],
+    return this.prisma.$transaction(
+      async (tx) => {
+        // 1. Lấy coaching plan
+        const plan = await tx.coachingPlan.findUnique({
+          where: { id: coachingPlanId },
+          include: {
+            mentor: true,
           },
-          startTime: { lt: end },
-          endTime: { gt: start },
-        },
-      });
-      if (conflicting) {
-        throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
-      }
+        });
 
-      // 4. Tạo booking với trạng thái PENDING_PAYMENT, hold 5 phút
-      const booking = await tx.booking.create({
-        data: {
-          candidateId,
-          mentorId: slot.mentorId,
-          slotId,
-          coachingPlanId,
-          startTime: start,
-          endTime: end,
-          status: BookingStatus.PENDING_PAYMENT,
-          holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
-          snapshotPlanTitle: plan.title,
-          snapshotPlanDescription: plan.description,
-          snapshotPlanPrice: plan.price,
-          snapshotPlanDuration: plan.duration,
-          answers: answers?.length
-            ? {
-                create: answers.map((a) => ({
-                  questionId: a.questionId,
-                  answerText: a.answerText,
-                  fileUrl: a.fileUrl,
-                })),
-              }
-            : undefined,
-        },
-        include: {
-          coachingPlan: true,
-          candidate: {
-            select: { id: true, name: true, email: true, avatarUrl: true },
+        if (!plan || !plan.isActive) {
+          throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
+        }
+
+        const mentorId = plan.mentor.userId;
+
+        // 2. Validate duration
+        const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+
+        if (durationMinutes !== plan.duration) {
+          throw new BadRequestException('Duration không khớp coaching plan');
+        }
+
+        // 3. Resolve slot
+        const slot = await tx.slot.findFirst({
+          where: {
+            mentorId,
+            isActive: true,
+            startTime: {
+              lte: start,
+            },
+            endTime: {
+              gte: end,
+            },
           },
-        },
-      });
+        });
 
-      // TODO: Redis hold nếu cần
-      return this.mapToBookingResponse(booking);
-    });
+        if (!slot) {
+          throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
+        }
+
+        // 4. Check overlap booking
+        const conflicting = await tx.booking.findFirst({
+          where: {
+            mentorId,
+
+            OR: [
+              {
+                status: {
+                  in: [
+                    BookingStatus.PENDING_ACCEPTANCE,
+                    BookingStatus.ACCEPTED,
+                  ],
+                },
+              },
+              {
+                status: BookingStatus.PENDING_PAYMENT,
+                holdExpiresAt: {
+                  gt: new Date(),
+                },
+              },
+            ],
+
+            startTime: {
+              lt: end,
+            },
+
+            endTime: {
+              gt: start,
+            },
+          },
+        });
+
+        if (conflicting) {
+          throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
+        }
+
+        // 5. Create booking
+        const booking = await tx.booking.create({
+          data: {
+            candidateId,
+            mentorId,
+
+            slotId: slot.id,
+
+            coachingPlanId,
+
+            startTime: start,
+            endTime: end,
+
+            status: BookingStatus.PENDING_PAYMENT,
+
+            holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
+
+            snapshotPlanTitle: plan.title,
+            snapshotPlanDescription: plan.description,
+            snapshotPlanPrice: plan.price,
+            snapshotPlanDuration: plan.duration,
+
+            answers: answers?.length
+              ? {
+                  create: answers.map((a) => ({
+                    questionId: a.questionId,
+                    answerText: a.answerText,
+                    fileUrl: a.fileUrl,
+                  })),
+                }
+              : undefined,
+          },
+
+          include: {
+            coachingPlan: true,
+
+            candidate: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+                avatarUrl: true,
+              },
+            },
+          },
+        });
+
+        return this.mapToBookingResponse(booking);
+      },
+
+      {
+        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+      },
+    );
   }
 
   async payWithWallet(
@@ -386,7 +442,7 @@ export class BookingService {
     ]);
 
     return {
-      items: bookings.map(this.mapToBookingResponse),
+      items: bookings.map((b) => this.mapToBookingResponse(b)),
       meta: {
         total,
         page,
