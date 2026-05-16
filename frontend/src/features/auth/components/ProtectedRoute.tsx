@@ -1,5 +1,4 @@
 import { Navigate } from 'react-router-dom';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useCurrentUser } from '../hooks/useCurrentUser';
 
 interface ProtectedRouteProps {

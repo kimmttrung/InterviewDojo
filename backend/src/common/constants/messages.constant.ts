@@ -152,4 +152,9 @@ export const Messages = {
     DELETED: 'Xóa công ty thành công',
     INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
   },
+
+  WALLET: {
+    FETCHED: 'Lấy số dư ví thành công',
+    TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
+  },
 } as const;

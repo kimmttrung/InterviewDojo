@@ -34,9 +34,9 @@ import QuestionsPage from '../features/admin/question-management/pages/Questions
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
-import { useAuthStore } from '@/stores/useAuthStore';
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
+import WalletPage from '@/features/wallet/pages/WalletPage';
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -83,6 +83,14 @@ export function App() {
               element={
                 <ProtectedRoute roles={['CANDIDATE']}>
                   <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <WalletPage />
                 </ProtectedRoute>
               }
             />

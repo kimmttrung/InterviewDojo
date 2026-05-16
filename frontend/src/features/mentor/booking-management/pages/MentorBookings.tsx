@@ -55,7 +55,6 @@ const formatDateTime = (dateStr: string) => {
 };
 
 export default function MentorBookings() {
-  const { user } = useAuthStore();
   const { data: mentorProfile } = useMentorProfile();
   const mentorStatus = mentorProfile?.approvalStatus;
 

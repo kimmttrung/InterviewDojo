@@ -24,10 +24,14 @@ export default function InterviewRoom() {
   const [searchParams] = useSearchParams();
 
   // Lấy userId từ auth store (ưu tiên) hoặc từ query param
-  const { userId: authUserId, isAuthenticated } = useAuthStore();
-  const { data: currentUser } = useCurrentUser();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser();
+
   const userId =
-    isAuthenticated && authUserId ? String(authUserId) : searchParams.get('userId') || 'guest';
+    isAuthenticated && currentUser?.id
+      ? String(currentUser.id)
+      : searchParams.get('userId') || 'guest';
   const token = searchParams.get('token');
 
   // Filter state (client state) – có thể sync qua socket
@@ -108,6 +112,10 @@ export default function InterviewRoom() {
       localStorage.removeItem('whiteboard_shapes');
     };
   }, []);
+
+  if (isAuthenticated && isCurrentUserLoading) {
+    return <InterviewLoading roomId={roomId} />;
+  }
 
   // ✅ Hiển thị loading khi đang fetch user (tránh gọi useVideoCall với userId chưa sẵn sàng)
   if (!client || !call) {

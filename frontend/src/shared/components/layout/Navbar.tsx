@@ -1,5 +1,15 @@
 import { useTranslation } from 'react-i18next';
-import { Moon, Sun, Globe, Search, Sparkles, UserIcon, LogOut } from 'lucide-react';
+import {
+  Moon,
+  Sun,
+  Globe,
+  Search,
+  Sparkles,
+  UserIcon,
+  LogOut,
+  Wallet,
+  CreditCard,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Input } from '../ui/input';
@@ -28,8 +38,7 @@ export function Navbar() {
   const queryClient = useQueryClient();
 
   // Auth state từ Zustand
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const clearAuth = useAuthStore((state) => state.clearAuth);
+  const { isAuthenticated, clearAuth } = useAuthStore();
 
   // User data từ React Query (server state)
   const { data: user, isLoading: isUserLoading } = useCurrentUser();
@@ -191,10 +200,34 @@ export function Navbar() {
                     </Button>
                   </DropdownMenuTrigger>
 
-                  <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuContent
+                    align="end"
+                    className="w-72 border bg-background backdrop-blur-none shadow-xl"
+                  >
                     <div className="flex flex-col space-y-1 p-2">
                       <p className="text-sm font-medium leading-none">{user.name || 'User'}</p>
                       <p className="text-xs leading-none text-muted-foreground">{user.email}</p>
+                    </div>
+                    <div className="px-2 pb-2">
+                      <div className="mt-3 rounded-xl bg-muted/60 p-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <Wallet className="h-4 w-4 text-indigo-500" />
+
+                            <span className="text-sm font-medium">Credits</span>
+                          </div>
+                          <span className="font-bold">{user.creditBalance ?? 0}</span>
+                        </div>
+
+                        <Button
+                          size="sm"
+                          className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700"
+                          onClick={() => navigate('/wallet')}
+                        >
+                          <CreditCard className="mr-2 h-4 w-4" />
+                          Nạp ví
+                        </Button>
+                      </div>
                     </div>
                     <DropdownMenuSeparator />
                     <DropdownMenuItem onClick={() => navigate('/profile')}>
