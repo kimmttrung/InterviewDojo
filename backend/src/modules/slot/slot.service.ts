@@ -8,6 +8,12 @@ import { CreateSlotDto, UpdateSlotDto, QuerySlotDto } from './dto/slot.dto';
 import { SlotResponse } from './interfaces/slot.interfaces';
 import { Messages } from '../../common/constants/messages.constant';
 import { BookingStatus } from '@prisma/client';
+import {
+  toUTC,
+  toLocal,
+  formatLocalDate,
+  DEFAULT_TIMEZONE,
+} from '../../common/utils/timezone';
 
 @Injectable()
 export class SlotService {
@@ -155,8 +161,9 @@ export class SlotService {
       throw new BadRequestException('Plan không hợp lệ');
 
     const [year, monthNum] = month.split('-').map(Number);
-    const firstDay = new Date(year, monthNum - 1, 1);
-    const lastDay = new Date(year, monthNum, 0, 23, 59, 59);
+    const firstDay = toUTC(new Date(year, monthNum - 1, 1, 0, 0, 0));
+
+    const lastDay = toUTC(new Date(year, monthNum, 0, 23, 59, 59));
 
     // 1 query duy nhất cho tất cả dữ liệu trong tháng
     const [windows, bookings, blockedEvents] = await Promise.all([
@@ -201,38 +208,55 @@ export class SlotService {
 
     const availableDays: string[] = [];
 
-    for (let d = new Date(firstDay); d <= lastDay; d.setDate(d.getDate() + 1)) {
-      const dayStart = new Date(d);
-      dayStart.setHours(0, 0, 0, 0);
-      const dayEnd = new Date(d);
-      dayEnd.setHours(23, 59, 59, 999);
+    let currentTime = firstDay.getTime();
+
+    while (currentTime <= lastDay.getTime()) {
+      const current = new Date(currentTime);
+
+      const zoned = toLocal(current);
+
+      const y = zoned.getFullYear();
+      const m = zoned.getMonth();
+      const d = zoned.getDate();
+
+      const dayStart = toUTC(new Date(y, m, d, 0, 0, 0));
+
+      const dayEnd = toUTC(new Date(y, m, d, 23, 59, 59));
 
       const dayWindows = windows.filter(
         (w) => w.startTime < dayEnd && w.endTime > dayStart,
       );
 
       let hasSlot = false;
+
       for (const window of dayWindows) {
-        let current = window.startTime.getTime();
+        let currentSlot = window.startTime.getTime();
         const end = window.endTime.getTime();
-        while (current + durationMs <= end) {
-          const sStart = new Date(current);
-          const sEnd = new Date(current + durationMs);
+
+        while (currentSlot + durationMs <= end) {
+          const sStart = new Date(currentSlot);
+          const sEnd = new Date(currentSlot + durationMs);
+
           const overlap = occupied.some(
             (o) => sStart < o.endTime && sEnd > o.startTime,
           );
+
           if (!overlap) {
             hasSlot = true;
             break;
           }
-          current += stepMs;
+
+          currentSlot += stepMs;
         }
+
         if (hasSlot) break;
       }
 
       if (hasSlot) {
-        availableDays.push(d.toISOString().split('T')[0]);
+        availableDays.push(formatLocalDate(dayStart));
       }
+
+      currentTime += 24 * 60 * 60 * 1000;
     }
 
     return availableDays;
@@ -248,8 +272,11 @@ export class SlotService {
     if (!plan || !plan.isActive)
       throw new BadRequestException('Plan không hợp lệ');
 
-    const dayStart = new Date(date + 'T00:00:00');
-    const dayEnd = new Date(date + 'T23:59:59');
+    const [y, m, d] = date.split('-').map(Number);
+
+    const dayStart = toUTC(new Date(y, m - 1, d, 0, 0, 0));
+
+    const dayEnd = toUTC(new Date(y, m - 1, d, 23, 59, 59));
 
     const [windows, bookings, blockedEvents] = await Promise.all([
       this.prisma.slot.findMany({

@@ -14,7 +14,7 @@ import type {
   CoachingPlanFormItem,
 } from '../types/mentorProfile.form';
 
-import { formatDateForInput } from '../utils/date';
+import { formatDateForInput } from '@/shared/utils/date';
 
 function mapExperience(exp: ExperienceResponse): ExperienceFormItem {
   return {
