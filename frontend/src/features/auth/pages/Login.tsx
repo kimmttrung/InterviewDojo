@@ -52,7 +52,7 @@ export default function Login() {
       } else if (user.role === 'MENTOR') {
         navigate('/mentor/dashboard');
       } else {
-        navigate('/');
+        navigate('/home');
       }
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Something went wrong';
