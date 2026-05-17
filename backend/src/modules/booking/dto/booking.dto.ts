@@ -8,6 +8,7 @@ import {
   ValidateNested,
   IsDateString,
   Min,
+  IsIn,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { BookingStatus } from '@prisma/client';
@@ -45,9 +46,10 @@ export class CreateBookingAnswerDto {
 }
 
 export class CreateBookingDto {
+  @IsOptional()
   @IsInt()
   @Min(1)
-  slotId!: number;
+  slotId?: number;
 
   @IsInt()
   @Min(1)
@@ -72,6 +74,6 @@ export class UpdateBookingStatusDto {
 }
 
 export class PaymentDto {
-  @IsEnum(['INTERNAL_WALLET', 'VNPAY', 'MOMO'])
+  @IsIn(['INTERNAL_WALLET', 'VNPAY', 'MOMO'])
   method!: string;
 }

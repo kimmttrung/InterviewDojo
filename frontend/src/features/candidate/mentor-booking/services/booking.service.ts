@@ -1,4 +1,5 @@
 // features/candidate/mentor-booking/services/booking.service.ts
+
 import { api } from '@/shared/lib/api';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
@@ -6,11 +7,7 @@ export const bookingService = {
   getMentorDetail: (id: number) =>
     api.get(API_ENDPOINT.MENTORS.GET_ONE(id)).then((r) => r.data.data),
 
-  getMentorPlans: (userId: number) =>
-    api.get(`/plans/users/${userId}`).then((r) => {
-      console.log('Plans response:', r.data);
-      return r.data.data; // hoặc r.data nếu response không bọc
-    }),
+  getMentorPlans: (userId: number) => api.get(`/plans/users/${userId}`).then((r) => r.data.data),
 
   getAvailableDays: (mentorId: number, planId: number, month: string) =>
     api
@@ -30,9 +27,17 @@ export const bookingService = {
     coachingPlanId: number;
     startTime: string;
     endTime: string;
-    answers?: { questionId: number; answerText?: string; fileUrl?: string }[];
+    answers?: {
+      questionId: number;
+      answerText?: string;
+      fileUrl?: string;
+    }[];
   }) => api.post('/bookings', data).then((r) => r.data.data),
 
   payBooking: (bookingId: number) =>
-    api.post(`/bookings/${bookingId}/pay`).then((r) => r.data.data),
+    api
+      .post(`/bookings/${bookingId}/pay`, {
+        method: 'INTERNAL_WALLET',
+      })
+      .then((r) => r.data.data),
 };

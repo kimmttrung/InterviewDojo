@@ -38,9 +38,8 @@ export default function Login() {
       const { accessToken, refreshToken, user, redirect } = res.data.data;
 
       // Cập nhật Zustand store (tự động persist)
-      setAuth({ accessToken, refreshToken, user });
-      queryClient.setQueryData(['current-user'], user);
-      // queryClient.invalidateQueries({ queryKey: ['current-user'] });
+      setAuth({ accessToken, refreshToken });
+      queryClient.invalidateQueries({ queryKey: ['current-user'] });
 
       showToast.success(t('Login successful'));
 
@@ -52,7 +51,7 @@ export default function Login() {
       } else if (user.role === 'MENTOR') {
         navigate('/mentor/dashboard');
       } else {
-        navigate('/');
+        navigate('/home');
       }
     } catch (error: any) {
       const message = error?.response?.data?.message || 'Something went wrong';

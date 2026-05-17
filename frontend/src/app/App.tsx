@@ -34,9 +34,9 @@ import QuestionsPage from '../features/admin/question-management/pages/Questions
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
-import { useAuthStore } from '@/stores/useAuthStore';
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
-
+import RootRedirect from '@/shared/components/routing/RootRedirect';
+import WalletPage from '@/features/wallet/pages/WalletPage';
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -78,6 +78,23 @@ export function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <WalletPage />
+                </ProtectedRoute>
+              }
+            />
+
             {/* Target Role Setup */}
             <Route path="/candidate/setup" element={<SelectRoleGuard />} />
             <Route
@@ -103,19 +120,12 @@ export function App() {
             <Route
               path="/dashboard"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={['CANDIDATE']}>
                   <Dashboard />
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <Home />
-                </ProtectedRoute>
-              }
-            />
+            <Route path="/" element={<RootRedirect />} />
 
             {/* Practice – chỉ candidate */}
             <Route
@@ -146,7 +156,7 @@ export function App() {
             <Route
               path="/mentors"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={['CANDIDATE']}>
                   <MentorListPage />
                 </ProtectedRoute>
               }
@@ -174,7 +184,7 @@ export function App() {
             <Route
               path="/profile"
               element={
-                <ProtectedRoute>
+                <ProtectedRoute roles={['CANDIDATE']}>
                   <Profile />
                 </ProtectedRoute>
               }

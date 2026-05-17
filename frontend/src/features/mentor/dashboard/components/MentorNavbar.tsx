@@ -74,7 +74,7 @@ export function MentorNavbar() {
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-50 bg-background border shadow-md">
               <DropdownMenuItem onClick={() => navigate('/mentor/profile')}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile

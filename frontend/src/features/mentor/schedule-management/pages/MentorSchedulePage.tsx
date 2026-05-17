@@ -6,14 +6,14 @@ import SlotEditModal from '../components/SlotEditModal';
 import { Slot } from '../types';
 import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
 import { ApprovalStatus } from '@/shared/types/enum';
-import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '@/features/auth';
 import { useMentorProfile } from '../../profile-management/hooks/useMentorProfile';
-// 🔥 1. Import hook useSchedule bạn vừa tạo
 import { useSchedule } from '../hooks/useSchedule';
 
 export default function MentorSchedulePage() {
-  const { user } = useAuthStore();
-  const mentorId = user?.id;
+  const { data: currentUser } = useCurrentUser();
+
+  const mentorId = currentUser?.id;
 
   const { data: mentorProfile } = useMentorProfile();
   const mentorStatus = mentorProfile?.approvalStatus || ApprovalStatus.PENDING;
