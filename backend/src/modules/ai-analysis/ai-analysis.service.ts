@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FeedbackStatus } from '@prisma/client';
 
 @Injectable()
 export class AiAnalysisService {
@@ -62,6 +63,9 @@ export class AiAnalysisService {
           weaknesses: weaknesses,
           suggestions: suggestions,
           comment: 'AI Generated Feedback',
+          deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000), // +3 ngày
+          status: FeedbackStatus.SUBMITTED, // hoặc 'SUBMITTED' nếu không import enum
+          quickTags: [],
         },
       });
 

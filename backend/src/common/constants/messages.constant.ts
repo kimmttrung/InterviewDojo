@@ -157,4 +157,17 @@ export const Messages = {
     FETCHED: 'Lấy số dư ví thành công',
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
   },
+  FEEDBACK: {
+    SUBMITTED: 'Đánh giá đã được gửi thành công',
+    FETCHED_MY: 'Lấy đánh giá của bạn thành công',
+    FETCHED_PARTNER: 'Lấy đánh giá từ đối tác thành công',
+    FETCHED_PENDING: 'Lấy danh sách đánh giá chờ xử lý thành công',
+    ALREADY_SUBMITTED: 'Bạn đã đánh giá cho session này rồi',
+    SESSION_NOT_FOUND: 'Session không tồn tại',
+    NOT_PARTICIPANT: 'Bạn không phải người tham gia session này',
+    DEADLINE_PASSED:
+      'Đã quá hạn đánh giá, bạn chỉ có thể xem nhưng không gửi được nữa',
+    MISSING_REQUIRED_FIELDS:
+      'Vui lòng nhập ít nhất một nhận xét (điểm mạnh/yếu/lời khuyên) hoặc bình luận',
+  },
 } as const;

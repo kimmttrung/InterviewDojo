@@ -154,6 +154,13 @@ enum SessionMode {
   SOLO
 }
 
+enum FeedbackStatus {
+  PENDING   // Chưa feedback
+  SUBMITTED // Đã feedback đúng hạn
+  LATE      // Đã feedback nhưng trễ hạn
+  SKIPPED   // Không feedback (bị cảnh báo)
+}
+
 // ==================== USER & PROFILE ====================
 
 model User {
@@ -707,12 +714,20 @@ model Feedback {
   suggestions  Json?
   overallScore Float    @map("overall_score")
   comment      String?
+  quickTags    String[] @default([]) @map("quick_tags") // Cho candidate đánh giá mentor
+
+  // Quản lý thời gian & trạng thái
+  submittedAt  DateTime?      @map("submitted_at")
+  deadline     DateTime       @map("deadline")      // Bắt buộc, VD: session.endedAt + 3 ngày
+  status       FeedbackStatus @default(PENDING)
+
   createdAt    DateTime @default(now()) @map("created_at")
 
   session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   reviewer User?       @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
   reviewee User?       @relation("RevieweeFeedbacks", fields: [revieweeId], references: [id])
 
+  @@unique([sessionId, reviewerId, revieweeId])
   @@map("feedbacks")
 }
 
