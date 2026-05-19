@@ -8,7 +8,7 @@ import i18n from '../shared/i18n';
 import NotFound from '../shared/components/layout/NotFound';
 import Unauthorized from '../shared/components/layout/Unauthorized';
 
-import Dashboard from '../features/candidate/dashboard/pages/Dashboard';
+import CandidateDashboardPage from '../features/candidate/dashboard/pages/CandidateDashboardPage';
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
@@ -121,7 +121,7 @@ export function App() {
               path="/dashboard"
               element={
                 <ProtectedRoute roles={['CANDIDATE']}>
-                  <Dashboard />
+                  <CandidateDashboardPage />
                 </ProtectedRoute>
               }
             />

@@ -105,4 +105,10 @@ export const API_ENDPOINT = {
     REJECT: (id: number | string) => `/bookings/${id}/reject`,
     UPDATE_STATUS: (id: number | string) => `/bookings/${id}/status`,
   },
+  CANDIDATE_DASHBOARD: {
+    GET_AI_SUMMARY: '/candidate/dashboard/ai-summary',
+    GET_ANALYTICS: '/candidate/dashboard/analytics',
+    GET_UPCOMING_SESSIONS: '/candidate/dashboard/upcoming-sessions',
+    GET_INTERESTED_CATEGORIES: '/candidate/dashboard/interested-categories',
+  },
 };

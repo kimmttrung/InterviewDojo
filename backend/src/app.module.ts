@@ -29,6 +29,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
 import { SkillModule } from './modules/skill/skill.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { CandidateDashboardModule } from './modules/candidate-dashboard/candidate-dashboard.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
     CoachingCategoryModule,
     SkillModule,
     WalletModule,
+    CandidateDashboardModule,
   ],
   controllers: [AppController],
   providers: [

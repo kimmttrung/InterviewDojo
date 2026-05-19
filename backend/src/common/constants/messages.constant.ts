@@ -157,4 +157,12 @@ export const Messages = {
     FETCHED: 'Lấy số dư ví thành công',
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
   },
+
+  CANDIDATE_DASHBOARD: {
+    GET_ANALYTICS_SUCCESS: 'Tải dữ liệu phân tích thành công',
+    GET_AI_SUMMARY_SUCCESS: 'Tải bản tóm tắt thành công',
+    GET_UPCOMING_SESSIONS_SUCCESS: 'Tải danh sách phiên học sắp tới thành công',
+    GET_INTERESTED_CATEGORIES_SUCCESS:
+      'Tải danh sách danh mục quan tâm thành công',
+  },
 } as const;
