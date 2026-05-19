@@ -1,17 +1,20 @@
 // src/features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage.tsx
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Loader2, Users, ShieldCheck, Zap, ArrowLeft } from 'lucide-react';
+import { Loader2, Users, ShieldCheck, Zap, ArrowLeft, MessageSquareHeart } from 'lucide-react';
 import { matchingService } from '../services/matching.service';
 import { useSocketStore } from '@/stores/useSocketStore';
 import { Layout } from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
 import { useCurrentUser } from '@/features/auth'; // ✅ lấy user từ server state
+import { ReceivedFeedbackModal } from '@/features/shared-domain/feedback/components/ReceivedFeedbackModal';
 
 export default function PeerMatchingPage() {
   const navigate = useNavigate();
   const { connect, socket } = useSocketStore();
   const { data: user, isLoading: isUserLoading } = useCurrentUser();
+
+  const [showReceivedFeedback, setShowReceivedFeedback] = useState(false);
 
   const [isSearching, setIsSearching] = useState(false);
   const [timer, setTimer] = useState(0);
@@ -125,6 +128,15 @@ export default function PeerMatchingPage() {
           <ArrowLeft className="mr-2 h-4 w-4" /> Go Back
         </button>
 
+        {/* Nút xem feedback nhận được (phải) */}
+        <button
+          onClick={() => setShowReceivedFeedback(true)}
+          className="absolute top-24 right-8 flex items-center gap-2 px-4 py-2 bg-white rounded-lg shadow-sm border hover:bg-gray-50 transition-colors text-sm font-medium"
+        >
+          <MessageSquareHeart size={18} />
+          <span>Feedback từ đối tác</span>
+        </button>
+
         <div className="max-w-2xl w-full text-center space-y-8">
           <div className="space-y-4">
             <h1 className="text-4xl font-extrabold tracking-tight">Peer-to-Peer Matching</h1>
@@ -192,6 +204,12 @@ export default function PeerMatchingPage() {
             )}
           </div>
         </div>
+
+        {/* Modal hiển thị feedback */}
+        <ReceivedFeedbackModal
+          open={showReceivedFeedback}
+          onClose={() => setShowReceivedFeedback(false)}
+        />
       </div>
     </Layout>
   );

@@ -11,6 +11,7 @@ export const useSubmitFeedback = (sessionId: number) => {
       // Invalidate cả hai query để refresh
       queryClient.invalidateQueries({ queryKey: ['myFeedback', sessionId] });
       queryClient.invalidateQueries({ queryKey: ['partnerFeedback', sessionId] });
+      queryClient.invalidateQueries({ queryKey: ['myReceivedFeedbacks'] });
     },
   });
 };
@@ -37,5 +38,12 @@ export const usePendingFeedbacks = (page = 1, limit = 10) => {
   return useQuery({
     queryKey: ['pendingFeedbacks', page, limit],
     queryFn: () => feedbackApi.getPendingList(page, limit).then((res) => res.data.data),
+  });
+};
+
+export const useMyReceivedFeedbacks = () => {
+  return useQuery({
+    queryKey: ['myReceivedFeedbacks'],
+    queryFn: () => feedbackApi.getMyReceivedFeedbacks().then((res) => res.data.data),
   });
 };

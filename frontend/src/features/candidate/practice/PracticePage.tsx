@@ -19,7 +19,6 @@ import { Button } from '../../../shared/components/ui/button';
 import { Layout } from '../../../shared/components/layout/Layout';
 import { Card } from '../../../shared/components/ui/card';
 import { Footer } from '../../../shared/components/layout/Footer';
-import { useCurrentUser } from '@/features/auth';
 
 export default function PracticePage() {
   const navigate = useNavigate();

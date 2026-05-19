@@ -51,4 +51,10 @@ export class FeedbackController {
   ) {
     return this.feedbackService.getPartnerFeedback(+sessionId, user.sub);
   }
+
+  @Get('my-received')
+  @ResponseMessage(Messages.FEEDBACK.FETCHED_RECEIVED)
+  async getMyReceivedFeedbacks(@CurrentUser() user: any) {
+    return this.feedbackService.getMyReceivedFeedbacks(user.sub);
+  }
 }

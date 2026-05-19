@@ -169,5 +169,6 @@ export const Messages = {
       'Đã quá hạn đánh giá, bạn chỉ có thể xem nhưng không gửi được nữa',
     MISSING_REQUIRED_FIELDS:
       'Vui lòng nhập ít nhất một nhận xét (điểm mạnh/yếu/lời khuyên) hoặc bình luận',
+    FETCHED_RECEIVED: 'Lấy danh sách feedback thành công',
   },
 } as const;

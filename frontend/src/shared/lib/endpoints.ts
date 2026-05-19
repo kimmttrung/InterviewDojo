@@ -110,5 +110,6 @@ export const API_ENDPOINT = {
     MY_FEEDBACK: (sessionId: number) => `/feedback/session/${sessionId}/my`,
     PARTNER_FEEDBACK: (sessionId: number) => `/feedback/session/${sessionId}/partner`,
     PENDING_LIST: '/feedback/pending',
+    MY_RECEIVED: '/feedback/my-received',
   },
 };

@@ -175,4 +175,51 @@ export class FeedbackService {
       createdAt: feedback.createdAt,
     };
   }
+
+  async getMyReceivedFeedbacks(userId: number) {
+    const feedbacks = await this.prisma.feedback.findMany({
+      where: {
+        revieweeId: userId,
+        status: { not: FeedbackStatus.PENDING }, // chỉ lấy đã gửi
+      },
+      include: {
+        session: {
+          select: {
+            id: true,
+            scheduledAt: true,
+            source: true,
+            match: {
+              select: {
+                candidateA: { select: { name: true, avatarUrl: true } },
+                candidateB: { select: { name: true, avatarUrl: true } },
+              },
+            },
+            booking: {
+              select: {
+                mentor: { select: { name: true, avatarUrl: true } },
+                candidate: { select: { name: true, avatarUrl: true } },
+              },
+            },
+          },
+        },
+        reviewer: { select: { name: true, avatarUrl: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    return feedbacks.map((fb) => ({
+      id: fb.id,
+      sessionId: fb.sessionId,
+      sessionType: fb.session.source,
+      reviewerName: fb.reviewer?.name || 'Unknown',
+      reviewerAvatar: fb.reviewer?.avatarUrl,
+      overallScore: fb.overallScore,
+      comment: fb.comment,
+      quickTags: fb.quickTags,
+      strengths: fb.strengths,
+      weaknesses: fb.weaknesses,
+      suggestions: fb.suggestions,
+      createdAt: fb.createdAt,
+    }));
+  }
 }

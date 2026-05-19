@@ -23,4 +23,6 @@ export const feedbackApi = {
     api.get<{ data: { items: any[]; meta: any } }>(API_ENDPOINT.FEEDBACK.PENDING_LIST, {
       params: { page, limit },
     }),
+
+  getMyReceivedFeedbacks: () => api.get<{ data: any[] }>(API_ENDPOINT.FEEDBACK.MY_RECEIVED),
 };
