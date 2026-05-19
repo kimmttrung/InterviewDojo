@@ -26,10 +26,10 @@ export default function HomePage() {
       link: '/question-bank',
     },
     {
-      title: 'Senior+ behavioral prep',
+      title: 'List mentor booking',
       icon: Users,
       color: 'from-green-500 to-emerald-500',
-      link: '/share-interview',
+      link: '/mentors',
     },
     {
       title: 'Prep for AI companies',
@@ -44,10 +44,10 @@ export default function HomePage() {
       link: '/share-interview',
     },
     {
-      title: 'Practice with an AI interviewer',
+      title: 'Add Credit for canidate',
       icon: Target,
       color: 'from-red-500 to-pink-500',
-      link: '/share-interview',
+      link: '/wallet',
     },
   ];
 

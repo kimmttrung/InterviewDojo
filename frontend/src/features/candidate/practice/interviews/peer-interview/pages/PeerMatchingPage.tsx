@@ -40,10 +40,10 @@ export default function PeerMatchingPage() {
   useEffect(() => {
     if (!socket) return;
 
-    const handleMatchFound = (data: { roomId: string; token: string }) => {
+    const handleMatchFound = (data: { roomId: string; sessionId: number; token: string }) => {
       console.log('🎯 MATCH FOUND:', data);
       setIsSearching(false);
-      navigate(`/interview/${data.roomId}?token=${data.token}`);
+      navigate(`/interview/${data.roomId}?token=${data.token}&sessionId=${data.sessionId}`);
     };
 
     socket.on('match_found', handleMatchFound);

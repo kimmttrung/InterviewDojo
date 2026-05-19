@@ -1,7 +1,7 @@
 // features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useCallback, useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 
 import { InterviewHeader } from '../components/InterviewHeader';
@@ -18,10 +18,52 @@ import { QuestionType } from '../../../../../shared-domain/question-bank/types/q
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useCurrentUser } from '@/features/auth';
 import { useRandomQuestion } from '@/features/shared-domain/question-bank/hooks/useQuestions';
+import { useSessionEnded } from '../hooks/useSessionEnded';
+import {
+  useMyFeedback,
+  usePartnerFeedback,
+} from '@/features/shared-domain/feedback/hooks/useFeedback';
+import { FeedbackModal } from '@/features/shared-domain/feedback/components/FeedbackModal';
+import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
 
 export default function InterviewRoom() {
+  const navigate = useNavigate();
   const { roomId } = useParams();
   const [searchParams] = useSearchParams();
+  const sessionId = Number(searchParams.get('sessionId'));
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false); // đánh dấu đã rời phòng
+
+  // Hook lắng nghe call ended (phòng tự kết thúc do đối phương rời)
+  const isSessionEnded = useSessionEnded();
+
+  // Lấy feedback của mình (để biết đã gửi chưa)
+  const { data: myFeedback, isLoading: feedbackLoading } = useMyFeedback(sessionId);
+  // const { data: partnerFeedback, isLoading } = usePartnerFeedback(sessionId);
+
+  // 🔥 Xử lý khi người dùng chủ động bấm nút rời phòng
+  const handleLeaveRoom = () => {
+    setIsLeaving(true);
+    setShowFeedback(true); // hiện modal feedback ngay lập tức
+  };
+
+  // Khi session kết thúc (tự động), cũng hiện feedback
+  useEffect(() => {
+    if (isSessionEnded && !feedbackLoading && !myFeedback && !isLeaving) {
+      setShowFeedback(true);
+    }
+  }, [isSessionEnded, feedbackLoading, myFeedback, isLeaving]);
+  // Xử lý sau khi gửi feedback thành công
+  const handleFeedbackSuccess = () => {
+    setShowFeedback(false);
+    navigate('/practice/matching'); // điều hướng về trang danh sách
+  };
+
+  // Xử lý khi bỏ qua feedback (bấm "Để sau")
+  const handleFeedbackSkip = () => {
+    setShowFeedback(false);
+    navigate('/practice/matching');
+  };
 
   // Lấy userId từ auth store (ưu tiên) hoặc từ query param
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
@@ -123,35 +165,46 @@ export default function InterviewRoom() {
   }
 
   return (
-    <StreamVideo client={client}>
-      <StreamCall call={call}>
-        <div className="h-screen flex flex-col bg-white overflow-hidden">
-          <InterviewHeader roomId={roomId!} />
-          <main className="flex-1 flex overflow-hidden">
-            <QuestionPanel
-              question={displayedQuestion}
-              onRandom={handleRandom}
-              isLoading={isFetching}
-              selectedType={selectedType}
-              selectedDifficulty={selectedDifficulty}
-              onTypeChange={handleTypeChange}
-              onDifficultyChange={handleDifficultyChange}
-            />
-            <WorkspaceTabs
-              workMode={workMode}
-              setWorkMode={setWorkMode}
-              currentQuestion={displayedQuestion}
-              roomId={roomId!}
-              userId={userId}
-            />
-            <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-              <VideoCallSection />
-              <ChatAndNotes />
-            </aside>
-          </main>
-        </div>
-      </StreamCall>
-    </StreamVideo>
+    <>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <div className="h-screen flex flex-col bg-white overflow-hidden">
+            <InterviewHeader roomId={roomId!} />
+            <main className="flex-1 flex overflow-hidden">
+              <QuestionPanel
+                question={displayedQuestion}
+                onRandom={handleRandom}
+                isLoading={isFetching}
+                selectedType={selectedType}
+                selectedDifficulty={selectedDifficulty}
+                onTypeChange={handleTypeChange}
+                onDifficultyChange={handleDifficultyChange}
+              />
+              <WorkspaceTabs
+                workMode={workMode}
+                setWorkMode={setWorkMode}
+                currentQuestion={displayedQuestion}
+                roomId={roomId!}
+                userId={userId}
+              />
+              <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
+                <VideoCallSection onLeave={handleLeaveRoom} />
+                <ChatAndNotes />
+              </aside>
+            </main>
+          </div>
+        </StreamCall>
+      </StreamVideo>
+
+      <FeedbackModal open={showFeedback} onClose={handleFeedbackSkip}>
+        <FeedbackForm
+          mode="P2P"
+          sessionId={sessionId}
+          onSuccess={handleFeedbackSuccess}
+          onCancel={handleFeedbackSkip}
+        />
+      </FeedbackModal>
+    </>
   );
 }
 

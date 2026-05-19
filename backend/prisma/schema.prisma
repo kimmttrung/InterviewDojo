@@ -632,7 +632,6 @@ model Match {
 
   mockSessions MockSession[]
 
-  @@unique([candidateAId, candidateBId])
   @@index([candidateAId, candidateBId])
   @@map("matches")
 }

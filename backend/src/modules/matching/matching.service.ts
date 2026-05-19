@@ -7,6 +7,7 @@ import Redis from 'ioredis';
 import { SocketService } from '../socket/socket.service';
 import { StreamService } from '../stream/stream.service';
 import { v4 as uuidv4 } from 'uuid';
+import { PrismaService } from '@/prisma/prisma.service';
 
 @Injectable()
 export class MatchingService {
@@ -14,6 +15,7 @@ export class MatchingService {
     @Inject('REDIS_CLIENT') private readonly redis: Redis,
     private readonly socketService: SocketService,
     private readonly streamService: StreamService,
+    private readonly prisma: PrismaService,
   ) {}
 
   async handleJoinQueue(userId: number, level: string) {
@@ -53,10 +55,35 @@ export class MatchingService {
         const userToken = this.streamService.createToken(sUserId);
         const opponentToken = this.streamService.createToken(opponentId);
 
+        // Tạo Match record
+        const match = await this.prisma.match.create({
+          data: {
+            candidateAId: parseInt(sUserId),
+            candidateBId: parseInt(opponentId),
+            status: 'MATCHED',
+            strategy: 'RANDOM',
+            matchedAt: new Date(),
+          },
+        });
+
+        // 2. Chỉ tạo MockSession (không match)
+        const session = await this.prisma.mockSession.create({
+          data: {
+            matchId: match.id,
+            intervieweeId: parseInt(sUserId),
+            scheduledAt: new Date(),
+            durationMinutes: 60,
+            status: 'SCHEDULED',
+            source: 'P2P_MATCH',
+            mode: 'MEET',
+          },
+        });
+
         // Bắn Socket cho cả hai
         this.socketService.emitToUser(sUserId, 'match_found', {
           roomId,
           token: userToken,
+          sessionId: session.id,
           opponentId: parseInt(opponentId),
           role: 'interviewee',
         });
@@ -64,11 +91,17 @@ export class MatchingService {
         this.socketService.emitToUser(opponentId, 'match_found', {
           roomId,
           token: opponentToken,
+          sessionId: session.id,
           opponentId: userId,
           role: 'interviewer',
         });
 
-        return { status: 'matched', roomId, token: userToken };
+        return {
+          status: 'matched',
+          roomId,
+          token: userToken,
+          sessionId: session.id,
+        };
       } catch (error) {
         // HOÀN TÁC: Nếu lỗi Stream, đẩy đối thủ vào lại hàng chờ (score = 0 để họ vẫn được ưu tiên)
         await this.redis.zadd(queueKey, 0, opponentId);
