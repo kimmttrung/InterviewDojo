@@ -154,6 +154,15 @@ enum SessionMode {
   SOLO
 }
 
+enum NotificationType {
+  COMMENT_REPLY
+  INTERVIEW_UPCOMING
+  INTERVIEW_STARTED
+  TRANSACTION_SUCCESS
+  BOOKING_CREATED
+  MENTOR_BALANCE_UPDATED
+}
+
 enum FeedbackStatus {
   PENDING   // Chưa feedback
   SUBMITTED // Đã feedback đúng hạn
@@ -197,6 +206,7 @@ model User {
   matchedAsCandidateB Match[]             @relation("CandidateB")
   mentorApprovalLogs  MentorApprovalLog[]
   bookingActionLogs   BookingActionLog[]
+  notifications       Notification[]
 
   @@map("users")
 }
@@ -215,6 +225,25 @@ model MentorProfile {
   approvalLogs         MentorApprovalLog[]
 
   @@map("mentor_profiles")
+}
+
+model Notification {
+  id        Int              @id @default(autoincrement())
+  userId    Int
+  type      NotificationType
+  title     String
+  message   String
+  targetUrl String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+
+  @@map("notifications")
 }
 
 model MentorApprovalLog {

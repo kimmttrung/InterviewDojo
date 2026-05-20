@@ -29,6 +29,7 @@ import { useTheme } from '../../../contexts/ThemeContext';
 import { useAuthStore } from '../../../stores/useAuthStore';
 import { useCurrentUser } from '../../../features/auth/hooks/useCurrentUser';
 import { useQueryClient } from '@tanstack/react-query';
+import NotificationDropdown from '../../../features/notifications/components/NotificationDropdown';
 
 export function Navbar() {
   const { t, i18n } = useTranslation();
@@ -177,6 +178,9 @@ export function Navbar() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Notification */}
+          {isAuthenticated && <NotificationDropdown />}
 
           {/* Avatar / Auth buttons */}
           <div className="flex items-center gap-3 border-l pl-3 ml-2">
