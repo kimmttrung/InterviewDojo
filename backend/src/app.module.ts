@@ -30,6 +30,7 @@ import { CoachingCategoryModule } from './modules/coaching-category/coaching-cat
 import { SkillModule } from './modules/skill/skill.module';
 import { WalletModule } from './modules/wallet/wallet.module';
 import { CandidateDashboardModule } from './modules/candidate-dashboard/candidate-dashboard.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
@@ -75,6 +76,7 @@ import { CandidateDashboardModule } from './modules/candidate-dashboard/candidat
     SkillModule,
     WalletModule,
     CandidateDashboardModule,
+    NotificationsModule,
   ],
   controllers: [AppController],
   providers: [

@@ -110,5 +110,10 @@ export const API_ENDPOINT = {
     GET_ANALYTICS: '/candidate/dashboard/analytics',
     GET_UPCOMING_SESSIONS: '/candidate/dashboard/upcoming-sessions',
     GET_INTERESTED_CATEGORIES: '/candidate/dashboard/interested-categories',
+
+  NOTIFICATIONS: {
+    GET_MY: '/notifications',
+    MARK_READ: (id: number) => `/notifications/${id}/read`,
+    MARK_ALL_READ: '/notifications/read-all',
   },
 };

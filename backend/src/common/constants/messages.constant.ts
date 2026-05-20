@@ -164,5 +164,9 @@ export const Messages = {
     GET_UPCOMING_SESSIONS_SUCCESS: 'Tải danh sách phiên học sắp tới thành công',
     GET_INTERESTED_CATEGORIES_SUCCESS:
       'Tải danh sách danh mục quan tâm thành công',
+  NOTIFICATIONS: {
+    FETCHED: 'Lấy danh sách thông báo thành công',
+    MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',
+    MARKED_ALL_AS_READ: 'Đã đánh dấu tất cả thông báo là đã đọc',
   },
 } as const;
