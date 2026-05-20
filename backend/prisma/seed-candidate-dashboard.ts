@@ -194,6 +194,8 @@ async function main() {
         overallScore: 6 + Math.random() * 4,
 
         comment: 'Good candidate overall',
+
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
       },
     });
   }
@@ -234,6 +236,8 @@ async function main() {
         overallScore: 5 + Math.random() * 4,
 
         comment: 'AI evaluated session',
+
+        deadline: new Date(),
       },
     });
   }

@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
+import { FeedbackStatus } from '@prisma/client';
 import {
   Prisma,
   SessionMode,
@@ -131,6 +132,9 @@ export class SoloRecordingDatabaseService {
         suggestions,
 
         comment: comment ?? null,
+        deadline: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000),
+        status: FeedbackStatus.SUBMITTED,
+        quickTags: [],
 
         /**
          * reviewerId null = AI feedback

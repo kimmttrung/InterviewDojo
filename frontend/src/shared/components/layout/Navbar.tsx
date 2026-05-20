@@ -48,8 +48,8 @@ export function Navbar() {
     { label: t('sidebar.dashboard'), href: '/dashboard' },
     { label: t('sidebar.practice'), href: '/practice' },
     { label: t('sidebar.questionBank'), href: '/question-bank' },
-    { label: t('sidebar.feedback'), href: '/feedback' },
-    { label: t('sidebar.analytics'), href: '/analytics' },
+    { label: t('sidebar.mentor'), href: '/mentors' },
+    { label: t('sidebar.booking'), href: '/bookings' },
   ];
 
   const handleLogout = () => {
@@ -126,6 +126,7 @@ export function Navbar() {
           <Button
             size="sm"
             className="hidden md:flex bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:opacity-90"
+            onClick={() => navigate('/wallet')}
           >
             <Sparkles className="h-4 w-4 mr-1" />
             Upgrade

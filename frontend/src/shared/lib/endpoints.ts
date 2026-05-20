@@ -105,6 +105,13 @@ export const API_ENDPOINT = {
     REJECT: (id: number | string) => `/bookings/${id}/reject`,
     UPDATE_STATUS: (id: number | string) => `/bookings/${id}/status`,
   },
+  FEEDBACK: {
+    SUBMIT: (sessionId: number) => `/feedback/session/${sessionId}`,
+    MY_FEEDBACK: (sessionId: number) => `/feedback/session/${sessionId}/my`,
+    PARTNER_FEEDBACK: (sessionId: number) => `/feedback/session/${sessionId}/partner`,
+    PENDING_LIST: '/feedback/pending',
+    MY_RECEIVED: '/feedback/my-received',
+  },
   CANDIDATE_DASHBOARD: {
     GET_AI_SUMMARY: '/candidate/dashboard/ai-summary',
     GET_ANALYTICS: '/candidate/dashboard/analytics',

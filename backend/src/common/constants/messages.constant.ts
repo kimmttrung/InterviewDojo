@@ -157,13 +157,27 @@ export const Messages = {
     FETCHED: 'Lấy số dư ví thành công',
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
   },
-
+  FEEDBACK: {
+    SUBMITTED: 'Đánh giá đã được gửi thành công',
+    FETCHED_MY: 'Lấy đánh giá của bạn thành công',
+    FETCHED_PARTNER: 'Lấy đánh giá từ đối tác thành công',
+    FETCHED_PENDING: 'Lấy danh sách đánh giá chờ xử lý thành công',
+    ALREADY_SUBMITTED: 'Bạn đã đánh giá cho session này rồi',
+    SESSION_NOT_FOUND: 'Session không tồn tại',
+    NOT_PARTICIPANT: 'Bạn không phải người tham gia session này',
+    DEADLINE_PASSED:
+      'Đã quá hạn đánh giá, bạn chỉ có thể xem nhưng không gửi được nữa',
+    MISSING_REQUIRED_FIELDS:
+      'Vui lòng nhập ít nhất một nhận xét (điểm mạnh/yếu/lời khuyên) hoặc bình luận',
+    FETCHED_RECEIVED: 'Lấy danh sách feedback thành công',
+  },
   CANDIDATE_DASHBOARD: {
     GET_ANALYTICS_SUCCESS: 'Tải dữ liệu phân tích thành công',
     GET_AI_SUMMARY_SUCCESS: 'Tải bản tóm tắt thành công',
     GET_UPCOMING_SESSIONS_SUCCESS: 'Tải danh sách phiên học sắp tới thành công',
     GET_INTERESTED_CATEGORIES_SUCCESS:
       'Tải danh sách danh mục quan tâm thành công',
+  },
   NOTIFICATIONS: {
     FETCHED: 'Lấy danh sách thông báo thành công',
     MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',

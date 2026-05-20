@@ -4,7 +4,6 @@ import {
   useCallStateHooks,
   StreamVideoParticipant,
 } from '@stream-io/video-react-sdk';
-import { useNavigate } from 'react-router-dom';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp } from 'lucide-react';
 
 // 1. Tạo Component hiển thị khi tắt Cam (Avatar placeholder)
@@ -19,14 +18,25 @@ const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParti
   </div>
 );
 
-export function VideoCallSection() {
-  const navigate = useNavigate();
+interface VideoCallSectionProps {
+  onLeave?: () => void; // callback khi người dùng xác nhận rời phòng
+}
+
+export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
   const call = useCall();
   const { useCameraState, useMicrophoneState, useLocalParticipant } = useCallStateHooks();
 
   const localParticipant = useLocalParticipant();
   const { camera } = useCameraState();
   const { microphone } = useMicrophoneState();
+
+  const handleLeave = async () => {
+    const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
+    if (confirmed && call) {
+      await call.leave(); // rời khỏi cuộc gọi Stream
+      onLeave?.(); // 🔥 báo cho parent biết để hiện feedback
+    }
+  };
 
   if (!call) return <div className="p-10 text-center text-white">Initializing...</div>;
 
@@ -60,13 +70,7 @@ export function VideoCallSection() {
         </button>
 
         <button
-          onClick={async () => {
-            const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
-            if (confirmed) {
-              await call.leave();
-              navigate('/practice/matching');
-            }
-          }}
+          onClick={handleLeave} // thay thế onClick cũ
           className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white"
         >
           <PhoneOff size={18} />
