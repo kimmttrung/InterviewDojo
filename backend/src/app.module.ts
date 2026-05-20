@@ -29,6 +29,7 @@ import { PaymentModule } from './modules/payment/payment.module';
 import { CoachingCategoryModule } from './modules/coaching-category/coaching-category.module';
 import { SkillModule } from './modules/skill/skill.module';
 import { WalletModule } from './modules/wallet/wallet.module';
+import { CandidateDashboardModule } from './modules/candidate-dashboard/candidate-dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
@@ -74,6 +75,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     CoachingCategoryModule,
     SkillModule,
     WalletModule,
+    CandidateDashboardModule,
     NotificationsModule,
   ],
   controllers: [AppController],
