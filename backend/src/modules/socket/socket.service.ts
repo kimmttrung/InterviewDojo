@@ -31,7 +31,10 @@ export class SocketService {
     if (!this.socketServer) return false;
 
     const roomName = `user_${userId}`;
+    console.log(roomName, '--- Checking online status ---');
+
     const room = this.socketServer.sockets.adapter.rooms.get(roomName);
+    console.log('Check online:', roomName, room);
 
     // Nếu room tồn tại và có ít nhất 1 socket id trong đó thì là online
     return !!(room && room.size > 0);

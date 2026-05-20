@@ -39,7 +39,7 @@ export class CategoriesController {
   @Get()
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy danh sách category' })
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN) // Tất cả các role đều có thể xem
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN) // Tất cả các role đều có thể xem
   async findAll() {
     const data = await this.categoriesService.findAll();
     return {
@@ -52,7 +52,7 @@ export class CategoriesController {
   @Get(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy chi tiết category' })
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.STAFF, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
   async findOne(@Param('id', ParseIntPipe) id: number) {
     const data = await this.categoriesService.findOne(id);
     return {
@@ -65,7 +65,7 @@ export class CategoriesController {
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiOperation({ summary: 'Tạo category mới' })
-  @Roles(Role.STAFF, Role.ADMIN) // Chỉ Staff và Admin mới được tạo
+  @Roles(Role.ADMIN) // Chỉ Staff và Admin mới được tạo
   async create(@Body() createCategoryDto: CreateCategoryDto) {
     const data = await this.categoriesService.create(createCategoryDto);
     return {
@@ -78,7 +78,7 @@ export class CategoriesController {
   @Put(':id') // Dùng Put giống cấu trúc Questions của bạn
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Cập nhật category' })
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   async update(
     @Param('id', ParseIntPipe) id: number,
     @Body() updateCategoryDto: UpdateCategoryDto,
@@ -94,7 +94,7 @@ export class CategoriesController {
   @Delete(':id')
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Xóa category' })
-  @Roles(Role.STAFF, Role.ADMIN)
+  @Roles(Role.ADMIN)
   async remove(@Param('id', ParseIntPipe) id: number) {
     await this.categoriesService.remove(id);
     return {

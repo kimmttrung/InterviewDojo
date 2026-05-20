@@ -1,21 +1,22 @@
-import { useEffect, useState, useRef } from 'react';
+// useVideoCall.ts
+import { useEffect, useRef, useState } from 'react';
 import { StreamVideoClient, User, Call } from '@stream-io/video-react-sdk';
 
 export function useVideoCall(
   roomId: string | undefined,
   token: string | null,
-  userId: string,
+  userId: string | number | undefined,
   currentUser: any,
 ) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isInitializing, setIsInitializing] = useState(false);
-  const initializing = useRef(false);
+  const initRef = useRef(false);
 
   useEffect(() => {
-    // Ngăn chặn chạy 2 lần trong Strict Mode và check điều kiện
-    if (!roomId || !token || !userId || initializing.current) return;
+    // Không init nếu thiếu dữ liệu
+    if (!roomId || !token || !userId || initRef.current) return;
 
     const apiKey = import.meta.env.VITE_STREAM_API_KEY;
     if (!apiKey) {
@@ -24,36 +25,47 @@ export function useVideoCall(
     }
 
     const initVideo = async () => {
-      initializing.current = true;
+      initRef.current = true;
       setIsInitializing(true);
 
       try {
-        const _client = new StreamVideoClient({ apiKey });
+        const userIdStr = String(userId);
+        // Debug token
+        try {
+          const payload = JSON.parse(atob(token.split('.')[1]));
+          console.log('🔍 Video token payload:', payload);
+          console.log('📌 user_id in token:', payload.user_id);
+          if (payload.user_id !== userIdStr) {
+            console.error('❌ Mismatch: token user_id=', payload.user_id, ' vs userId=', userIdStr);
+            throw new Error(
+              `Token user_id mismatch: expected ${userIdStr}, got ${payload.user_id}`,
+            );
+          }
+        } catch (e) {
+          console.log('error', e);
+        }
+
+        const client = new StreamVideoClient({ apiKey });
         const user: User = {
-          id: userId,
-          name: currentUser?.name || userId,
+          id: userIdStr,
+          name: currentUser?.name || userIdStr,
           image: currentUser?.avatar || undefined,
         };
 
-        await _client.connectUser(user, token);
-        const _call = _client.call('default', roomId);
+        await client.connectUser(user, token);
+        const call = client.call('default', roomId);
+        await call.join({ create: true });
 
-        // QUAN TRỌNG: Join với các thiết bị ở trạng thái TẮT mặc định
-        // Điều này giúp tránh lỗi kẹt luồng nếu người dùng chưa cấp quyền
-        await _call.join({ create: true });
+        await call.camera.disable();
+        await call.microphone.disable();
 
-        // Sau khi join thành công, chủ động tắt thiết bị nếu không muốn bật ngay
-        // Việc này không gây lỗi 400 như cách trước
-        await _call.camera.disable();
-        await _call.microphone.disable();
-
-        setClient(_client);
-        setCall(_call);
+        setClient(client);
+        setCall(call);
         setError(null);
       } catch (err) {
         console.error('❌ Video connection error:', err);
         setError(err instanceof Error ? err.message : 'Connection failed');
-        initializing.current = false;
+        initRef.current = false;
       } finally {
         setIsInitializing(false);
       }
@@ -62,17 +74,15 @@ export function useVideoCall(
     initVideo();
 
     return () => {
-      // Cleanup đúng cách
-      if (initializing.current) {
-        const cleanup = async () => {
+      if (initRef.current) {
+        (async () => {
           if (call) await call.leave();
           if (client) await client.disconnectUser();
-          initializing.current = false;
-        };
-        cleanup();
+          initRef.current = false;
+        })();
       }
     };
-  }, [roomId, token, userId]); // Giảm dependency để tránh re-init thừa
+  }, [roomId, token, userId, currentUser]);
 
   return { client, call, error, isInitializing };
 }

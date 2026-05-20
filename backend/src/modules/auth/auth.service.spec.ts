@@ -5,7 +5,8 @@ import { JwtService } from '@nestjs/jwt';
 import { createMock } from '@golevelup/ts-jest';
 import { UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { RegisterDto, UserRole } from './dto/register.dto';
+import { RegisterDto } from './dto/register.dto';
+import { Role } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { validate } from 'class-validator';
 
@@ -53,7 +54,6 @@ describe('AuthService - login', () => {
 
   it('should login successfully', async () => {
     prisma.user.findUnique = jest.fn().mockResolvedValue(mockUser);
-
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
     (service as any).generateTokens = jest.fn().mockResolvedValue({
@@ -68,13 +68,19 @@ describe('AuthService - login', () => {
 
     const result = await service.login(validDto);
 
-    expect(result.message).toBe('Login successful');
-    expect(result.data.accessToken).toBeDefined();
+    expect(result.accessToken).toBeDefined();
+    expect(result.refreshToken).toBeDefined();
+    expect(result.user).toEqual({
+      id: mockUser.id,
+      email: mockUser.email,
+      role: mockUser.role,
+    });
+    // Vì mockUser có targetRoleId (1), người dùng đã setup nên redirect = null
+    expect(result.redirect).toBeNull();
   });
 
   it('should include correct payload in token', async () => {
     prisma.user.findUnique = jest.fn().mockResolvedValue(mockUser);
-
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
     const tokenSpy = jest
@@ -100,7 +106,6 @@ describe('AuthService - login', () => {
 
   it('should login with uppercase email (case insensitive)', async () => {
     prisma.user.findUnique = jest.fn().mockResolvedValue(mockUser);
-
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
 
     const result = await service.login({
@@ -121,7 +126,6 @@ describe('AuthService - login', () => {
 
   it('should throw if password is incorrect', async () => {
     prisma.user.findUnique = jest.fn().mockResolvedValue(mockUser);
-
     (bcrypt.compare as jest.Mock).mockResolvedValue(false);
 
     await expect(service.login(validDto)).rejects.toThrow(
@@ -162,15 +166,13 @@ describe('RegisterDto Validation', () => {
   const validData: RegisterDto = {
     email: 'test@mail.com',
     password: '123456',
-    role: UserRole.CANDIDATE,
+    role: Role.CANDIDATE,
     name: 'Test',
   };
 
   it('should pass with valid data', async () => {
     const dto = Object.assign(new RegisterDto(), validData);
-
     const errors = await validate(dto);
-
     expect(errors.length).toBe(0);
   });
 
@@ -179,9 +181,7 @@ describe('RegisterDto Validation', () => {
       ...validData,
       email: 'invalid-email',
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBeGreaterThan(0);
   });
 
@@ -190,9 +190,7 @@ describe('RegisterDto Validation', () => {
       ...validData,
       password: '123',
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBeGreaterThan(0);
   });
 
@@ -201,31 +199,25 @@ describe('RegisterDto Validation', () => {
       password: '123456',
       role: 'CANDIDATE',
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBeGreaterThan(0);
   });
 
   it('should fail if missing password', async () => {
     const dto = Object.assign(new RegisterDto(), {
       email: 'test@mail.com',
-      role: UserRole.CANDIDATE,
+      role: Role.CANDIDATE,
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBeGreaterThan(0);
   });
 
   it('should fail if role is invalid', async () => {
     const dto = Object.assign(new RegisterDto(), {
       ...validData,
-      role: 'INVALID_ROLE' as UserRole,
+      role: 'INVALID_ROLE' as Role,
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBeGreaterThan(0);
   });
 
@@ -233,11 +225,9 @@ describe('RegisterDto Validation', () => {
     const dto = Object.assign(new RegisterDto(), {
       email: 'test@mail.com',
       password: '123456',
-      role: UserRole.CANDIDATE,
+      role: Role.CANDIDATE,
     });
-
     const errors = await validate(dto);
-
     expect(errors.length).toBe(0);
   });
 });

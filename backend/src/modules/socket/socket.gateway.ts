@@ -35,6 +35,7 @@ export class SocketGateway
 
   // Xử lý khi có người kết nối
   handleConnection(client: Socket) {
+    console.log(`📡 hshfsdhf Socket đang kết nối: ${client.id}`);
     // Lấy dữ liệu thô
     const queryUserId = client.handshake.query.userId;
 
@@ -43,10 +44,12 @@ export class SocketGateway
 
     if (userId && userId !== 'undefined') {
       client.join(`user_${userId}`);
+      console.log(`✅ User ${userId} connected with Socket ID: ${client.id}`);
     } else {
       console.log(`⚠️ Anonymous connection attempt (SocketID: ${client.id})`);
       client.disconnect();
     }
+    console.log(`🏠 Đã tạo room cho user: ${userId}`);
   }
 
   // Xử lý khi ngắt kết nối
@@ -128,5 +131,22 @@ export class SocketGateway
   ) {
     client.to(payload.roomId).emit('receive_submit_result', payload.result);
     console.log(`📤 Submit result shared in room ${payload.roomId}`);
+  }
+
+  @SubscribeMessage('update_filters')
+  handleUpdateFilters(
+    client: Socket,
+    payload: { roomId: string; type?: string; difficulty?: string },
+  ) {
+    // Phát lại (broadcast) cho tất cả mọi người trong phòng (trừ người gửi)
+    // Sự kiện 'sync_filters' phải khớp với tên sự kiện Frontend đang lắng nghe
+    client.to(payload.roomId).emit('sync_filters', {
+      type: payload.type,
+      difficulty: payload.difficulty,
+    });
+
+    console.log(
+      `🔄 Filters updated in room ${payload.roomId}: Type=${payload.type}, Diff=${payload.difficulty}`,
+    );
   }
 }

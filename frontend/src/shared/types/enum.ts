@@ -1,0 +1,15 @@
+export enum ApprovalStatus {
+  INCOMPLETE = 'INCOMPLETE',
+  ACTIVE = 'ACTIVE',
+  PENDING = 'PENDING',
+  REJECTED = 'REJECTED',
+  SUSPENDED = 'SUSPENDED',
+}
+
+export enum WalletTransactionType {
+  DEPOSIT = 'DEPOSIT',
+  PAYMENT = 'PAYMENT',
+  REFUND = 'REFUND',
+  PAYOUT = 'PAYOUT',
+  PLATFORM_FEE = 'PLATFORM_FEE',
+}

@@ -1,8 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import { SubmissionStatus } from '@prisma/client';
+import { SubmissionStatus, QuestionType, Difficulty } from '@prisma/client';
 import { CreateCodingQuestionDto } from './dto/create-coding-question.dto';
 import { CreateTestCaseDto } from './dto/create-test-case.dto';
 
@@ -20,8 +24,12 @@ export class CodingService {
     sourceCode: string,
   ) {
     const question = await this.prisma.codingQuestion.findUnique({
-      where: { id: codingQuestionId },
-      include: { testCases: true },
+      where: { questionId: codingQuestionId },
+      include: {
+        testCases: {
+          orderBy: { order: 'asc' }, // Sắp xếp testcase theo order để worker chấm điểm chuẩn xác
+        },
+      },
     });
 
     if (!question) throw new BadRequestException('Không tìm thấy câu hỏi');
@@ -45,10 +53,13 @@ export class CodingService {
       submissionId: submission.id,
       languageId: Number(languageId),
       sourceCode,
+      // Gửi thêm thông tin testcase cho worker (ví dụ: worker có thể dùng points để tính tổng điểm)
       testCases: question.testCases.map((tc) => ({
         id: tc.id,
         input: tc.input,
         expectedOutput: tc.expectedOutput,
+        isHidden: tc.isHidden,
+        points: tc.points,
       })),
     });
 
@@ -58,26 +69,44 @@ export class CodingService {
   async getSubmissionById(id: number) {
     return this.prisma.codeSubmission.findUnique({
       where: { id },
-      include: { codingQuestion: { select: { title: true, slug: true } } },
+      include: {
+        codingQuestion: {
+          include: {
+            question: {
+              select: { title: true, slug: true },
+            },
+          },
+        },
+      },
     });
   }
 
   async getCodingQuestionBySlug(slug: string, userId?: number) {
-    return this.prisma.codingQuestion.findUnique({
-      where: { slug },
+    const question = await this.prisma.question.findUnique({
+      where: { slug, type: QuestionType.CODING },
       include: {
-        testCases: {
-          orderBy: { order: 'asc' },
+        codingQuestion: {
+          include: {
+            testCases: {
+              orderBy: { order: 'asc' }, // Sắp xếp theo order đã được khôi phục
+            },
+            submissions: userId
+              ? {
+                  where: { userId },
+                  orderBy: { submittedAt: 'desc' },
+                  take: 5,
+                }
+              : false,
+          },
         },
-        submissions: userId
-          ? {
-              where: { userId },
-              orderBy: { submittedAt: 'desc' },
-              take: 5,
-            }
-          : false, // không lấy submissions nếu không có userId
       },
     });
+
+    if (!question || !question.codingQuestion) {
+      throw new NotFoundException('Không tìm thấy câu hỏi coding với slug này');
+    }
+
+    return question;
   }
 
   private getLanguageName(id: string): string {
@@ -86,22 +115,28 @@ export class CodingService {
       '54': 'cpp',
       '63': 'javascript',
     };
-    return map[id] || 'unknown';
+    return map[id] || id;
   }
 
   async createCodingQuestion(dto: CreateCodingQuestionDto) {
-    return this.prisma.codingQuestion.create({
+    return this.prisma.question.create({
       data: {
         title: dto.title,
         slug: dto.slug,
-        description: dto.description,
-        difficulty: dto.difficulty,
-        tags: dto.tags || [],
-        constraints: dto.constraints,
-        hints: dto.hints || [],
-        timeLimit: dto.timeLimit || 2000,
-        memoryLimit: dto.memoryLimit || 256000,
+        difficulty: dto.difficulty || Difficulty.MEDIUM,
+        type: QuestionType.CODING,
         isPublished: true,
+        codingQuestion: {
+          create: {
+            description: dto.description,
+            constraints: dto.constraints,
+            timeLimit: dto.timeLimit || 2000,
+            memoryLimit: dto.memoryLimit || 256000,
+          },
+        },
+      },
+      include: {
+        codingQuestion: true,
       },
     });
   }
@@ -122,14 +157,21 @@ export class CodingService {
   }
 
   async getAllQuestions() {
-    return this.prisma.codingQuestion.findMany({
-      where: { isPublished: true }, // Chỉ lấy các câu hỏi đã public
+    return this.prisma.question.findMany({
+      where: {
+        isPublished: true,
+        type: QuestionType.CODING,
+      },
       include: {
-        testCases: {
-          orderBy: { order: 'asc' },
+        codingQuestion: {
+          include: {
+            testCases: {
+              orderBy: { order: 'asc' }, // Sắp xếp theo order đã được khôi phục
+            },
+          },
         },
       },
-      orderBy: { createdAt: 'desc' }, // Sắp xếp mới nhất lên đầu
+      orderBy: { createdAt: 'desc' },
     });
   }
 }

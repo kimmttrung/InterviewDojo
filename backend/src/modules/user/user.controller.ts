@@ -1,6 +1,12 @@
 import {
+  UseInterceptors,
+  UploadedFile,
+  ParseFilePipe,
+  MaxFileSizeValidator,
+  FileTypeValidator,
   Controller,
   Get,
+  Post, // <-- thêm
   Put,
   Body,
   UseGuards,
@@ -13,12 +19,14 @@ import { Patch } from '@nestjs/common';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UpdateTargetRoleDto } from './dto/update-target-role.dto';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiTags, ApiConsumes } from '@nestjs/swagger';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Roles } from '../auth/decorators/roles.decorator';
-import { CreateMentorProfileDto } from './dto/create-mentor-profile.dto';
-import { Post } from '@nestjs/common';
 import { Role } from '@/common/enums/role.enum';
+import { ResponseMessage } from '@/common/decorators/response-message.decorator';
+import { Messages } from '@/common/constants/messages.constant';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadedFileType } from '../../common/types/uploaded-file.type';
 
 @ApiTags('Users')
 @Controller('users')
@@ -28,28 +36,27 @@ export class UserController {
 
   @ApiBearerAuth()
   @Get('me')
+  @ResponseMessage(Messages.USER.PROFILE_FETCHED)
   async getMe(@CurrentUser() user: JwtPayload) {
-    console.log('User ID nhận được:', user.sub);
     return this.userService.getMe(Number(user.sub));
   }
 
-  //Thieu bang history interview/answered question
   @ApiBearerAuth()
   @Get('stats')
+  @ResponseMessage(Messages.USER.PROFILE_FETCHED)
   async getStats(@CurrentUser() user: JwtPayload) {
     return this.userService.getStats(Number(user.sub));
   }
 
   @ApiBearerAuth()
-  @Put('me') // Đổi từ PATCH sang PUT
+  @Put('me')
+  @ResponseMessage(Messages.USER.PROFILE_UPDATED)
   async updateMe(
     @CurrentUser() user: JwtPayload,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
     updateUserDto: UpdateUserDto,
   ) {
-    // Log để debug dữ liệu nhận được
     console.log('Dữ liệu PUT nhận được:', updateUserDto);
-
     return this.userService.updateMe(Number(user.sub), updateUserDto);
   }
 
@@ -67,6 +74,7 @@ export class UserController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.CANDIDATE)
   @Patch('target-role')
+  @ResponseMessage(Messages.USER.TARGET_ROLE_UPDATED)
   async updateTargetRole(
     @CurrentUser() user: JwtPayload,
     @Body(new ValidationPipe({ whitelist: true, transform: true }))
@@ -75,15 +83,24 @@ export class UserController {
     return this.userService.updateTargetRole(Number(user.sub), dto);
   }
 
+  // ========== THÊM TỪ DEVELOP ==========
+  @Post('me/avatar')
   @ApiBearerAuth()
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.MENTOR)
-  @Post('mentor-profile')
-  async createMentorProfile(
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(FileInterceptor('file'))
+  @ResponseMessage(Messages.USER.AVATAR_UPLOADED)
+  async uploadAvatar(
     @CurrentUser() user: JwtPayload,
-    @Body(new ValidationPipe({ whitelist: true, transform: true }))
-    dto: CreateMentorProfileDto,
+    @UploadedFile(
+      new ParseFilePipe({
+        validators: [
+          new MaxFileSizeValidator({ maxSize: 5_000_000 }),
+          new FileTypeValidator({ fileType: /^(image\/(jpeg|png|webp))$/i }),
+        ],
+      }),
+    )
+    file: UploadedFileType,
   ) {
-    return this.userService.createMentorProfile(Number(user.sub), dto);
+    return this.userService.uploadAvatar(Number(user.sub), file);
   }
 }

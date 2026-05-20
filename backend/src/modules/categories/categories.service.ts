@@ -1,6 +1,5 @@
-// src/modules/categories/categories.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { PrismaService } from '@/prisma/prisma.service'; // Đường dẫn tới PrismaService của bạn
+import { PrismaService } from '@/prisma/prisma.service';
 import { CreateCategoryDto } from './dto/create-category.dto';
 import { UpdateCategoryDto } from './dto/update-category.dto';
 
@@ -21,9 +20,16 @@ export class CategoriesService {
 
   async findAll() {
     try {
-      return await this.prisma.category.findMany();
+      return await this.prisma.category.findMany({
+        // Tùy chọn: Bạn có thể include thêm số lượng câu hỏi thuộc category này nếu cần
+        // include: {
+        //   _count: {
+        //     select: { questions: true }
+        //   }
+        // }
+      });
     } catch (error) {
-      console.error('LỖI DB:', error); // Dòng này sẽ hiện lỗi thật sự ở Terminal
+      console.error('LỖI DB:', error);
       throw error;
     }
   }
@@ -31,14 +37,25 @@ export class CategoriesService {
   async findOne(id: number) {
     const category = await this.prisma.category.findUnique({
       where: { id },
+      // Tùy chọn: Include thêm các câu hỏi liên quan qua bảng trung gian QuestionCategory
+      // include: {
+      //   questions: {
+      //     include: {
+      //       question: true
+      //     }
+      //   }
+      // }
     });
-    if (!category)
+
+    if (!category) {
       throw new NotFoundException(`Category với ID ${id} không tồn tại`);
+    }
+
     return category;
   }
 
   async update(id: number, updateCategoryDto: UpdateCategoryDto) {
-    await this.findOne(id); // Kiểm tra tồn tại trước
+    await this.findOne(id); // Kiểm tra tồn tại trước khi update
     return this.prisma.category.update({
       where: { id },
       data: updateCategoryDto,
@@ -46,8 +63,10 @@ export class CategoriesService {
   }
 
   async remove(id: number) {
-    await this.findOne(id); // Kiểm tra tồn tại trước
-    // Do có onDelete: Cascade trong schema, lệnh này sẽ tự xóa dữ liệu ở bảng CategoryQuestion
+    await this.findOne(id); // Kiểm tra tồn tại trước khi xóa
+
+    // Do có onDelete: Cascade trong schema ở model QuestionCategory,
+    // lệnh này sẽ tự động xóa các bản ghi liên quan trong bảng question_categories
     return this.prisma.category.delete({
       where: { id },
     });
@@ -55,7 +74,7 @@ export class CategoriesService {
 
   async fixSequence() {
     try {
-      // Câu lệnh này sẽ lấy ID lớn nhất hiện tại và đặt giá trị tiếp theo cho Sequence là ID đó + 1
+      // Lệnh này đồng bộ lại sequence id cho bảng categories trong PostgreSQL
       const result = await this.prisma.$executeRawUnsafe(
         `SELECT setval(pg_get_serial_sequence('categories', 'id'), COALESCE(MAX(id), 0) + 1, false) FROM categories;`,
       );

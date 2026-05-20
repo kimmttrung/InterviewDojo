@@ -5,8 +5,8 @@ import { StreamService } from '../stream/stream.service';
 import { createMock, DeepMocked } from '@golevelup/ts-jest';
 import Redis from 'ioredis';
 import { InternalServerErrorException } from '@nestjs/common';
+import { PrismaService } from '@/prisma/prisma.service';
 
-// Mock module uuid để trả về 1 ID cố định khi test, giúp so sánh dễ dàng hơn
 jest.mock('uuid', () => ({
   v4: jest.fn(() => 'mock-room-id'),
 }));
@@ -16,6 +16,7 @@ describe('MatchingService', () => {
   let redis: DeepMocked<Redis>;
   let socketService: DeepMocked<SocketService>;
   let streamService: DeepMocked<StreamService>;
+  let prisma: DeepMocked<PrismaService>;
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -23,18 +24,10 @@ describe('MatchingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MatchingService,
-        {
-          provide: 'REDIS_CLIENT',
-          useValue: createMock<Redis>(),
-        },
-        {
-          provide: SocketService,
-          useValue: createMock<SocketService>(),
-        },
-        {
-          provide: StreamService,
-          useValue: createMock<StreamService>(),
-        },
+        { provide: 'REDIS_CLIENT', useValue: createMock<Redis>() },
+        { provide: SocketService, useValue: createMock<SocketService>() },
+        { provide: StreamService, useValue: createMock<StreamService>() },
+        { provide: PrismaService, useValue: createMock<PrismaService>() },
       ],
     }).compile();
 
@@ -42,6 +35,7 @@ describe('MatchingService', () => {
     redis = module.get('REDIS_CLIENT');
     socketService = module.get(SocketService);
     streamService = module.get(StreamService);
+    prisma = module.get(PrismaService);
   });
 
   it('should be defined', () => {
@@ -50,20 +44,18 @@ describe('MatchingService', () => {
 
   describe('handleJoinQueue', () => {
     const userId = 1;
-    const sUserId = '1';
     const level = 'senior';
     const queueKey = 'queue:SENIOR';
 
-    it('nên thêm user vào hàng chờ nếu không có đối thủ', async () => {
-      // Giả lập Redis zrange trả về mảng rỗng (không có ai đang đợi)
-      redis.zrange.mockResolvedValue([]);
+    it('should add user to queue when no opponent is available', async () => {
+      redis.zpopmin.mockResolvedValue([]);
 
       const result = await service.handleJoinQueue(userId, level);
 
       expect(redis.zadd).toHaveBeenCalledWith(
         queueKey,
         expect.any(Number),
-        sUserId,
+        '1',
       );
       expect(result).toEqual({
         status: 'in_queue',
@@ -71,70 +63,83 @@ describe('MatchingService', () => {
       });
     });
 
-    it('nên thực hiện matching nếu tìm thấy đối thủ hợp lệ', async () => {
+    it('should match with a valid opponent', async () => {
       const opponentId = '2';
-
-      // ✅ MOCK ĐÚNG FUNCTION
       redis.zpopmin.mockResolvedValue([opponentId, '123']);
-      // score '123' không quan trọng
-
       socketService.isUserOnline.mockReturnValue(true);
-
       streamService.createToken.mockReturnValue('mock-token');
-      streamService.createCall.mockResolvedValue(undefined as any);
+      streamService.createCall.mockResolvedValue({ id: 'mock-call-id' } as any);
+
+      prisma.match.create.mockResolvedValue({
+        id: 100,
+        candidateAId: userId,
+        candidateBId: parseInt(opponentId),
+        status: 'MATCHED',
+        strategy: 'RANDOM',
+        matchedAt: new Date(),
+        createdAt: new Date(),
+      } as any);
+
+      prisma.mockSession.create.mockResolvedValue({
+        id: 200,
+        matchId: 100,
+        intervieweeId: userId,
+        scheduledAt: new Date(),
+        durationMinutes: 60,
+        status: 'SCHEDULED',
+        source: 'P2P_MATCH',
+        mode: 'MEET',
+        createdAt: new Date(),
+      } as any);
 
       const result = await service.handleJoinQueue(userId, level);
 
       expect(streamService.createCall).toHaveBeenCalledWith(
         'mock-room-id',
-        sUserId,
+        '1',
       );
-
+      expect(prisma.match.create).toHaveBeenCalledWith({
+        data: {
+          candidateAId: 1,
+          candidateBId: 2,
+          status: 'MATCHED',
+          strategy: 'RANDOM',
+          matchedAt: expect.any(Date),
+        },
+      });
+      expect(prisma.mockSession.create).toHaveBeenCalledWith({
+        data: {
+          matchId: 100,
+          intervieweeId: 1,
+          scheduledAt: expect.any(Date),
+          durationMinutes: 60,
+          status: 'SCHEDULED',
+          source: 'P2P_MATCH',
+          mode: 'MEET',
+        },
+      });
       expect(result.status).toBe('matched');
     });
 
-    it('nên tự đưa mình vào hàng chờ nếu có đối thủ nhưng không "chiếm" được (Race Condition)', async () => {
+    it('should throw InternalServerErrorException when StreamService fails', async () => {
       const opponentId = '2';
-
-      // Tìm thấy đối thủ...
-      redis.zrange.mockResolvedValue([opponentId]);
-      // ...nhưng khi zrem lại ra 0 (đã có người khác chiếm mất trước 1 mili-giây)
-      redis.zrem.mockResolvedValue(0);
-
-      const result = await service.handleJoinQueue(userId, level);
-
-      // Sẽ quay về logic add vào hàng đợi
-      expect(redis.zadd).toHaveBeenCalledWith(
-        queueKey,
-        expect.any(Number),
-        sUserId,
-      );
-      expect(result.status).toBe('in_queue');
-    });
-
-    it('nên ném ra lỗi nếu StreamService gặp sự cố', async () => {
-      const opponentId = '2';
-
-      // ✅ BẮT BUỘC phải có opponent
       redis.zpopmin.mockResolvedValue([opponentId, '123']);
-
-      // ✅ opponent phải online
       socketService.isUserOnline.mockReturnValue(true);
-
-      // ❌ Stream fail
       streamService.createCall.mockRejectedValue(new Error('Stream down'));
 
       await expect(service.handleJoinQueue(userId, level)).rejects.toThrow(
         InternalServerErrorException,
       );
+
+      // Phải đẩy lại opponent vào queue với score 0
+      expect(redis.zadd).toHaveBeenCalledWith(queueKey, 0, opponentId);
     });
   });
 
   describe('handleLeaveQueue', () => {
-    it('nên xóa user khỏi hàng chờ Redis', async () => {
+    it('should remove user from Redis queue', async () => {
       const userId = 123;
       const level = 'junior';
-
       redis.zrem.mockResolvedValue(1);
 
       const result = await service.handleLeaveQueue(userId, level);
