@@ -105,4 +105,10 @@ export const API_ENDPOINT = {
     REJECT: (id: number | string) => `/bookings/${id}/reject`,
     UPDATE_STATUS: (id: number | string) => `/bookings/${id}/status`,
   },
+
+  NOTIFICATIONS: {
+    GET_MY: '/notifications',
+    MARK_READ: (id: number) => `/notifications/${id}/read`,
+    MARK_ALL_READ: '/notifications/read-all',
+  },
 };

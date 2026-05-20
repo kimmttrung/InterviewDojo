@@ -20,11 +20,12 @@ import {
   PaymentStatus,
   WalletTransactionType,
   Prisma,
+  NotificationType,
 } from '@prisma/client';
 
 @Injectable()
 export class BookingService {
-  constructor(private prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private mapToBookingResponse(booking: any): BookingResponse {
     return {
@@ -282,6 +283,25 @@ export class BookingService {
         include: { coachingPlan: true, candidate: true },
       });
 
+      await tx.notification.createMany({
+        data: [
+          {
+            userId: updatedBooking.mentorId,
+            type: NotificationType.BOOKING_CREATED,
+            title: 'Có lịch hẹn mới',
+            message: 'Một candidate vừa đặt lịch hẹn với bạn.',
+            targetUrl: '/mentor/bookings',
+          },
+          {
+            userId: updatedBooking.candidateId,
+            type: NotificationType.TRANSACTION_SUCCESS,
+            title: 'Thanh toán thành công',
+            message: 'Bạn đã thanh toán thành công cho lịch phỏng vấn.',
+            targetUrl: '/dashboard/transactions',
+          },
+        ],
+      });
+
       return this.mapToBookingResponse(updatedBooking);
     });
   }
@@ -327,6 +347,16 @@ export class BookingService {
           statusBefore: booking.status,
           statusAfter: BookingStatus.ACCEPTED,
           action: 'ACCEPT',
+        },
+      });
+
+      await tx.notification.create({
+        data: {
+          userId: updated.candidateId,
+          type: NotificationType.INTERVIEW_UPCOMING,
+          title: 'Lịch phỏng vấn đã được xác nhận',
+          message: 'Mentor đã xác nhận lịch phỏng vấn của bạn.',
+          targetUrl: '/dashboard',
         },
       });
 

@@ -157,4 +157,10 @@ export const Messages = {
     FETCHED: 'Lấy số dư ví thành công',
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
   },
+
+  NOTIFICATIONS: {
+    FETCHED: 'Lấy danh sách thông báo thành công',
+    MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',
+    MARKED_ALL_AS_READ: 'Đã đánh dấu tất cả thông báo là đã đọc',
+  },
 } as const;
