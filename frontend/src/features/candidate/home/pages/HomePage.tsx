@@ -146,15 +146,11 @@ export default function HomePage() {
             {/* Refer friends */}
 
             <Card className="p-6 space-y-3">
-              <h3 className="font-semibold">Refer your friends 🎁</h3>
+              <h3 className="font-semibold">Refer your friends </h3>
 
               <p className="text-sm text-muted-foreground">
                 Share your 10% discount with four friends and get free lifetime access to Exponent!
               </p>
-
-              <div className="text-sm bg-muted p-2 rounded">
-                https://www.tryexponent.com/refer/wyazba
-              </div>
 
               <Button variant="outline">More details</Button>
             </Card>

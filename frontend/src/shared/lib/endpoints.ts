@@ -123,4 +123,13 @@ export const API_ENDPOINT = {
     MARK_READ: (id: number) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
   },
+
+  SESSION: {
+    GET_ALL: '/sessions',
+    GET_ONE: (id: number | string) => `/sessions/${id}`,
+    UPDATE_MEETING_LINK: (id: number | string) => `/sessions/${id}/meeting-link`,
+    ACCEPT: (id: number | string) => `/sessions/${id}/accept`,
+    REJECT: (id: number | string) => `/sessions/${id}/reject`,
+    CANCEL: (id: number | string) => `/sessions/${id}/cancel`,
+  },
 };

@@ -10,6 +10,7 @@ export function MentorSidebar() {
     { label: 'Bookings', icon: ClipboardList, href: '/mentor/bookings' },
     { label: 'Schedule', icon: Calendar, href: '/mentor/schedule' },
     { label: 'Profile', icon: User, href: '/mentor/profile' },
+    { label: 'Sessions', icon: Calendar, href: '/mentor/sessions' },
   ];
 
   return (
