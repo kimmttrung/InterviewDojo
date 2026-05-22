@@ -32,6 +32,7 @@ import { WalletModule } from './modules/wallet/wallet.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { CandidateDashboardModule } from './modules/candidate-dashboard/candidate-dashboard.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { SessionModule } from './modules/session/session.module';
 
 @Module({
   imports: [
@@ -79,6 +80,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     FeedbackModule,
     CandidateDashboardModule,
     NotificationsModule,
+    SessionModule,
   ],
   controllers: [AppController],
   providers: [

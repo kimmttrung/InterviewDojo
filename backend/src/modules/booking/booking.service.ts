@@ -5,12 +5,13 @@ import {
   BadRequestException,
   ForbiddenException,
 } from '@nestjs/common';
+import { SocketService } from '../socket/socket.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import {
   CreateBookingDto,
   QueryBookingDto,
   UpdateBookingStatusDto,
-  PaymentDto,
+  // PaymentDto,
 } from './dto/booking.dto';
 import { BookingResponse } from './interfaces/booking.interface';
 import { Messages } from '../../common/constants/messages.constant';
@@ -25,7 +26,10 @@ import {
 
 @Injectable()
 export class BookingService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly socketService: SocketService,
+  ) {}
 
   private mapToBookingResponse(booking: any): BookingResponse {
     return {
@@ -359,6 +363,17 @@ export class BookingService {
           targetUrl: '/dashboard',
         },
       });
+      this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
+      this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
+        bookingId,
+      });
+      // Nếu muốn emit thêm event riêng SESSION_ACCEPTED (frontend cũng đang lắng nghe)
+      this.socketService.emitToUser(mentorId, 'SESSION_ACCEPTED', {
+        bookingId,
+      });
+      this.socketService.emitToUser(updated.candidateId, 'SESSION_ACCEPTED', {
+        bookingId,
+      });
 
       return this.mapToBookingResponse(updated);
     });
@@ -431,6 +446,19 @@ export class BookingService {
           action: 'REJECT',
           note: reason,
         },
+      });
+      this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
+      this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
+        bookingId,
+      });
+      // Có thể emit thêm SESSION_REJECTED nếu frontend cần
+      this.socketService.emitToUser(mentorId, 'SESSION_REJECTED', {
+        bookingId,
+        reason,
+      });
+      this.socketService.emitToUser(updated.candidateId, 'SESSION_REJECTED', {
+        bookingId,
+        reason,
       });
 
       return this.mapToBookingResponse(updated);

@@ -1,8 +1,8 @@
 import { Share2, Code2, Brain, Users, BookOpen, MessageCircle, Target } from 'lucide-react';
-import { Layout } from '../../../../shared/components/layout/Layout';
-import { Card } from '../../../../shared/components/ui/card';
-import { Badge } from '../../../../shared/components/ui/badge';
-import { Button } from '../../../../shared/components/ui/button';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Card } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
 import { Link } from 'react-router-dom';
 
 export default function HomePage() {
@@ -146,15 +146,11 @@ export default function HomePage() {
             {/* Refer friends */}
 
             <Card className="p-6 space-y-3">
-              <h3 className="font-semibold">Refer your friends 🎁</h3>
+              <h3 className="font-semibold">Refer your friends </h3>
 
               <p className="text-sm text-muted-foreground">
                 Share your 10% discount with four friends and get free lifetime access to Exponent!
               </p>
-
-              <div className="text-sm bg-muted p-2 rounded">
-                https://www.tryexponent.com/refer/wyazba
-              </div>
 
               <Button variant="outline">More details</Button>
             </Card>

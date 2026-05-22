@@ -183,4 +183,12 @@ export const Messages = {
     MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',
     MARKED_ALL_AS_READ: 'Đã đánh dấu tất cả thông báo là đã đọc',
   },
+
+  SESSION: {
+    SESSION_ACCEPTED: 'Session đã được chấp nhận',
+    SESSION_REJECTED: 'Session đã bị từ chối',
+    SESSION_FETCHED: 'Lấy danh sách phiên học thành công',
+    SESSION_CANCELLED: 'Session đã bị hủy',
+    MEETING_LINK_READY: 'Đã cập nhật link họp thành công',
+  },
 } as const;

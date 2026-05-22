@@ -25,11 +25,11 @@ import {
 } from '../ui/dropdown-menu';
 
 import { Avatar, AvatarImage, AvatarFallback } from '../ui/avatar';
-import { useTheme } from '../../../contexts/ThemeContext';
-import { useAuthStore } from '../../../stores/useAuthStore';
-import { useCurrentUser } from '../../../features/auth/hooks/useCurrentUser';
+import { useTheme } from '@/contexts/ThemeContext';
+import { useAuthStore } from '@/stores/useAuthStore';
+import { useCurrentUser } from '@/features/auth/hooks/useCurrentUser';
 import { useQueryClient } from '@tanstack/react-query';
-import NotificationDropdown from '../../../features/notifications/components/NotificationDropdown';
+import NotificationDropdown from '@/features/notifications/components/NotificationDropdown';
 
 export function Navbar() {
   const { t, i18n } = useTranslation();
@@ -49,7 +49,7 @@ export function Navbar() {
     { label: t('sidebar.practice'), href: '/practice' },
     { label: t('sidebar.questionBank'), href: '/question-bank' },
     { label: t('sidebar.mentor'), href: '/mentors' },
-    { label: t('sidebar.booking'), href: '/bookings' },
+    { label: t('sidebar.sessions'), href: '/sessions' },
   ];
 
   const handleLogout = () => {

@@ -8,6 +8,7 @@ export const API_ENDPOINT = {
   USER: {
     UPDATE_ME: '/users/me',
     GET_ME: '/users/me',
+    GET_BY_ID: '/users/:id',
     UPDATE_TARGET_ROLE: '/users/target-role',
     AVATAR: '/users/me/avatar',
   },
@@ -122,5 +123,14 @@ export const API_ENDPOINT = {
     GET_MY: '/notifications',
     MARK_READ: (id: number) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
+  },
+
+  SESSION: {
+    GET_ALL: '/sessions',
+    GET_ONE: (id: number | string) => `/sessions/${id}`,
+    UPDATE_MEETING_LINK: (id: number | string) => `/sessions/${id}/meeting-link`,
+    ACCEPT: (id: number | string) => `/sessions/${id}/accept`,
+    REJECT: (id: number | string) => `/sessions/${id}/reject`,
+    CANCEL: (id: number | string) => `/sessions/${id}/cancel`,
   },
 };

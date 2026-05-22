@@ -4,7 +4,6 @@ import { Slot } from '../types';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
 export const scheduleService = {
-  // 🔥 Đã xóa tham số mentorId và params
   getSlots: async () => {
     const response = await api.get(API_ENDPOINT.SLOTS.GET_ALL);
     return response.data?.data || response.data;

@@ -16,10 +16,9 @@ import CodeEditer from '../../../assets/img/CodeEditer.png';
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '../../../shared/components/ui/button';
-import { Layout } from '../../../shared/components/layout/Layout';
 import { Card } from '../../../shared/components/ui/card';
 import { Footer } from '../../../shared/components/layout/Footer';
-
+import { Layout } from '../../../shared/components/layout/Layout';
 export default function PracticePage() {
   const navigate = useNavigate();
   const [isSearching, setIsSearching] = useState(false);
