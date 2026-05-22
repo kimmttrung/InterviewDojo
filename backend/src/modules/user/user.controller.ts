@@ -6,11 +6,13 @@ import {
   FileTypeValidator,
   Controller,
   Get,
-  Post, // <-- thêm
+  Post,
   Put,
   Body,
   UseGuards,
   ValidationPipe,
+  Param,
+  ParseIntPipe,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -102,5 +104,16 @@ export class UserController {
     file: UploadedFileType,
   ) {
     return this.userService.uploadAvatar(Number(user.sub), file);
+  }
+
+  @Get(':id')
+  @ResponseMessage(Messages.USER.PROFILE_FETCHED)
+  async getUserById(@Param('id', ParseIntPipe) id: number) {
+    const user = await this.userService.findById(id);
+    return {
+      success: true,
+      data: user,
+      message: Messages.USER.PROFILE_FETCHED,
+    };
   }
 }

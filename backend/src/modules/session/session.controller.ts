@@ -1,7 +1,10 @@
 import {
   Controller,
   Get,
+  Post,
   Query,
+  Param,
+  Body,
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
@@ -22,15 +25,24 @@ export class SessionController {
   constructor(private readonly sessionService: SessionService) {}
 
   @Get()
-  @ResponseMessage(Messages.SESSION.SESSION_FETCHED) // Ví dụ: 'Lấy danh sách phiên học thành công'
+  @ResponseMessage(Messages.SESSION.SESSION_FETCHED)
   async getSessions(
     @CurrentUser() user: any,
     @Query(new ValidationPipe({ whitelist: true, transform: true }))
     query: GetSessionsDto,
   ): Promise<PaginatedResponse<SessionItem>> {
-    // Ép kiểu ID user sang number tùy thuộc vào payload JWT của bạn
     const userId = Number(user.sub || user.id);
-
     return this.sessionService.getSessions(userId, query);
+  }
+
+  @Post(':sessionId/cancel')
+  @ResponseMessage(Messages.SESSION.SESSION_CANCELLED)
+  async cancelSession(
+    @CurrentUser() user: any,
+    @Param('sessionId') sessionId: string,
+    @Body('reason') reason: string,
+  ) {
+    const userId = Number(user.sub || user.id);
+    return this.sessionService.cancelSession(userId, +sessionId, reason);
   }
 }

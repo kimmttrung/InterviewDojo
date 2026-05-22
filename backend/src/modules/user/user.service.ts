@@ -44,6 +44,18 @@ export class UserService {
     return this.mapUserResponse(user);
   }
 
+  async findById(id: number) {
+    const user = await this.prisma.user.findUnique({
+      where: { id },
+      include: {
+        targetRole: true,
+        skills: { include: { skill: true } },
+      },
+    });
+    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+    return this.mapUserResponse(user);
+  }
+
   async updateMe(userId: number, dto: UpdateUserDto) {
     if (!dto) {
       throw new BadRequestException('Dữ liệu không được để trống');

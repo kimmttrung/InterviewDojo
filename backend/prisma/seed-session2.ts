@@ -1,380 +1,517 @@
-// import 'dotenv/config';
+import 'dotenv/config';
+import {
+  PrismaClient,
+  Role,
+  BookingStatus,
+  SessionStatus,
+  SessionSource,
+  SessionMode,
+  MatchStatus,
+  MatchStrategy,
+  CoachingQuestionType,
+} from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { Pool } from 'pg';
 
-// import {
-//   BookingStatus,
-//   PrismaClient,
-//   Role,
-//   SessionMode,
-//   SessionSource,
-//   SessionStatus,
-// } from '@prisma/client';
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL!,
+});
+const prisma = new PrismaClient({
+  adapter: new PrismaPg(pool),
+});
 
-// import { PrismaPg } from '@prisma/adapter-pg';
-// import { Pool } from 'pg';
+async function main() {
+  console.log(
+    '🌱 Bắt đầu seed dữ liệu cho trang Quản lý Phiên học (Session Management)...',
+  );
 
-// const pool = new Pool({
-//   connectionString: process.env.DATABASE_URL!,
-// });
+  const passwordHash = await bcrypt.hash('123456', 10);
 
-// const prisma = new PrismaClient({
-//   adapter: new PrismaPg(pool),
-// });
+  // =====================================================================
+  // 1. TẠO USERS
+  // =====================================================================
 
-// async function main() {
-//   console.log('🌱 Seeding session page data...');
+  // Candidate chính
+  const mainCandidate = await prisma.user.upsert({
+    where: { email: 'main.candidate@test.com' },
+    update: {},
+    create: {
+      email: 'main.candidate@test.com',
+      password: passwordHash,
+      name: 'Nguyễn Văn Candidate',
+      role: Role.CANDIDATE,
+      avatarUrl: 'https://i.pravatar.cc/150?u=main',
+    },
+  });
 
-//   // =====================================================
-//   // USERS
-//   // =====================================================
+  // Mentor
+  const mentorUser = await prisma.user.upsert({
+    where: { email: 'mentor.expert@test.com' },
+    update: {},
+    create: {
+      email: 'mentor.expert@test.com',
+      password: passwordHash,
+      name: 'Trần Mentor (Expert)',
+      role: Role.MENTOR,
+      avatarUrl: 'https://i.pravatar.cc/150?u=mentor',
+      mentorProfile: {
+        create: {
+          headline: 'Senior Software Engineer tại TechCorp',
+          approvalStatus: 'ACTIVE',
+        },
+      },
+    },
+  });
 
-//   let candidate = await prisma.user.findFirst({
-//     where: {
-//       role: Role.CANDIDATE,
-//     },
-//   });
+  const mentorProfile = await prisma.mentorProfile.findUnique({
+    where: { userId: mentorUser.id },
+  });
+  if (!mentorProfile) throw new Error('Không tìm thấy hồ sơ Mentor');
 
-//   if (!candidate) {
-//     candidate = await prisma.user.create({
-//       data: {
-//         email: 'candidate.session@test.com',
-//         password: '123456',
-//         name: 'Nguyen Candidate',
-//         role: Role.CANDIDATE,
-//         avatarUrl: 'https://i.pravatar.cc/300?img=20',
-//         bio: 'Backend developer preparing for senior interviews',
-//       },
-//     });
-//   }
+  // Peer candidate cho P2P
+  const peerCandidate = await prisma.user.upsert({
+    where: { email: 'peer.candidate@test.com' },
+    update: {},
+    create: {
+      email: 'peer.candidate@test.com',
+      password: passwordHash,
+      name: 'Lê Peer Candidate',
+      role: Role.CANDIDATE,
+      avatarUrl: 'https://i.pravatar.cc/150?u=peer',
+    },
+  });
 
-//   const mentors = await prisma.user.findMany({
-//     where: {
-//       role: Role.MENTOR,
-//     },
-//     include: {
-//       mentorProfile: true,
-//     },
-//     take: 5,
-//   });
+  // Second peer cho thêm P2P
+  const peerCandidate2 = await prisma.user.upsert({
+    where: { email: 'peer2.candidate@test.com' },
+    update: {},
+    create: {
+      email: 'peer2.candidate@test.com',
+      password: passwordHash,
+      name: 'Phạm Peer Candidate 2',
+      role: Role.CANDIDATE,
+      avatarUrl: 'https://i.pravatar.cc/150?u=peer2',
+    },
+  });
 
-//   if (mentors.length === 0) {
-//     throw new Error('No mentor found. Please run seed-mentor.ts first.');
-//   }
+  // =====================================================================
+  // 2. TẠO CATEGORY & COACHING PLAN
+  // =====================================================================
+  await prisma.category.upsert({
+    where: { name: 'System Design Interview' },
+    update: {},
+    create: { name: 'System Design Interview' },
+  });
 
-//   const coachingPlans = await prisma.coachingPlan.findMany({
-//     take: 5,
-//   });
+  const coachingCategory = await prisma.coachingCategory.upsert({
+    where: { slug: 'system-design' },
+    update: {},
+    create: { slug: 'system-design', name: 'System Design', isActive: true },
+  });
 
-//   if (coachingPlans.length === 0) {
-//     throw new Error('No coaching plan found. Please run seed-mentor.ts first.');
-//   }
+  const coachingPlan = await prisma.coachingPlan.create({
+    data: {
+      mentorId: mentorProfile.id,
+      categoryId: coachingCategory.id,
+      title: 'Mock Interview: System Design (1-on-1)',
+      description: 'Đánh giá năng lực thiết kế hệ thống của bạn.',
+      duration: 60,
+      price: 500000,
+      questions: {
+        create: [
+          {
+            question: 'Bạn muốn tập trung vào dạng hệ thống nào?',
+            type: CoachingQuestionType.TEXT,
+            isRequired: true,
+          },
+        ],
+      },
+    },
+    include: { questions: true },
+  });
+  const questionId = coachingPlan.questions[0]?.id;
 
-//   // =====================================================
-//   // CLEAN OLD SESSION TEST DATA
-//   // =====================================================
+  // =====================================================================
+  // 3. THỜI GIAN DỰA TRÊN THỜI GIAN HIỆN TẠI
+  // =====================================================================
+  const now = new Date();
 
-//   await prisma.feedback.deleteMany({
-//     where: {
-//       comment: {
-//         contains: '[SESSION_PAGE_TEST]',
-//       },
-//     },
-//   });
+  // --- UPCOMING (sắp diễn ra) ---
+  const in15Mins = new Date(now.getTime() + 15 * 60000); // 15 phút nữa
+  const in30Mins = new Date(now.getTime() + 30 * 60000); // 30 phút nữa
+  const in1Hour = new Date(now.getTime() + 60 * 60000); // 1 giờ nữa
+  const in2Hours = new Date(now.getTime() + 120 * 60000); // 2 giờ nữa
+  const in1Day = new Date(now.getTime() + 24 * 60 * 60000); // 1 ngày nữa
+  const in2Days = new Date(now.getTime() + 48 * 60 * 60000); // 2 ngày nữa
 
-//   const oldSessions = await prisma.mockSession.findMany({
-//     where: {
-//       OR: [
-//         {
-//           meetingUrl: {
-//             contains: 'session-page-test',
-//           },
-//         },
-//         {
-//           recordingUrl: {
-//             contains: 'session-page-test',
-//           },
-//         },
-//       ],
-//     },
-//     select: {
-//       id: true,
-//     },
-//   });
+  // --- PENDING (chờ xác nhận, trong tương lai) ---
+  const pendingTime = new Date(now.getTime() + 3 * 60 * 60000); // 3 giờ nữa
 
-//   await prisma.mockSession.deleteMany({
-//     where: {
-//       id: {
-//         in: oldSessions.map((s) => s.id),
-//       },
-//     },
-//   });
+  // --- FINISHED (đã kết thúc trong quá khứ) ---
+  const yesterday = new Date(now.getTime() - 24 * 60 * 60000);
+  const twoDaysAgo = new Date(now.getTime() - 48 * 60 * 60000);
+  const threeDaysAgo = new Date(now.getTime() - 72 * 60 * 60000);
 
-//   // =====================================================
-//   // HELPERS
-//   // =====================================================
+  // --- REJECTED (quá khứ) ---
+  const rejectedTime = new Date(now.getTime() - 2 * 24 * 60 * 60000);
 
-//   const now = new Date();
+  // =====================================================================
+  // 4. SEED CÁC KỊCH BẢN
+  // =====================================================================
 
-//   const createBooking = async ({
-//     mentorId,
-//     coachingPlanId,
-//     startTime,
-//     status,
-//     title,
-//   }: {
-//     mentorId: number;
-//     coachingPlanId: number;
-//     startTime: Date;
-//     status: BookingStatus;
-//     title: string;
-//   }) => {
-//     return prisma.booking.create({
-//       data: {
-//         mentorId,
-//         candidateId: candidate.id,
-//         coachingPlanId,
-//         startTime,
-//         endTime: new Date(startTime.getTime() + 60 * 60 * 1000),
-//         snapshotPlanTitle: title,
-//         status,
-//       },
-//     });
-//   };
+  // ---------- MENTOR UPCOMING (trong 15 phút, có meeting link) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: in15Mins,
+      endTime: new Date(in15Mins.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.ACCEPTED,
+      answers: {
+        create: [
+          { questionId, answerText: 'Thiết kế hệ thống chat real-time' },
+        ],
+      },
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: in15Mins,
+            durationMinutes: 60,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            meetingLink: 'https://meet.google.com/test-upcoming-15m',
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   // =====================================================
-//   // UPCOMING SESSIONS
-//   // =====================================================
+  // ---------- MENTOR UPCOMING (trong 30 phút) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: in30Mins,
+      endTime: new Date(in30Mins.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.ACCEPTED,
+      answers: {
+        create: [{ questionId, answerText: 'Thiết kế hệ thống e-commerce' }],
+      },
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: in30Mins,
+            durationMinutes: 60,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            meetingLink: 'https://meet.google.com/test-upcoming-30m',
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   // 1. Join button enabled (< 30 mins)
-//   const upcomingSoonBooking = await createBooking({
-//     mentorId: mentors[0].id,
-//     coachingPlanId: coachingPlans[0].id,
-//     startTime: new Date(now.getTime() + 20 * 60 * 1000),
-//     status: BookingStatus.ACCEPTED,
-//     title: 'Senior Backend Mock Interview',
-//   });
+  // ---------- MENTOR UPCOMING (trong 1 giờ, chưa có meeting link) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: in1Hour,
+      endTime: new Date(in1Hour.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.ACCEPTED,
+      answers: {
+        create: [{ questionId, answerText: 'Thiết kế hệ thống thanh toán' }],
+      },
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: in1Hour,
+            durationMinutes: 60,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            meetingLink: null, // chưa có link
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: upcomingSoonBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: upcomingSoonBooking.startTime,
-//       durationMinutes: 60,
-//       status: SessionStatus.SCHEDULED,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//       meetingUrl: 'https://meet.google.com/session-page-test-upcoming-1',
-//       meetingCode: 'UPCOMING-001',
-//     },
-//   });
+  // ---------- MENTOR PENDING (chờ mentor xác nhận) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: pendingTime,
+      endTime: new Date(pendingTime.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.PENDING_ACCEPTANCE,
+      answers: {
+        create: [{ questionId, answerText: 'Tôi muốn luyện system design' }],
+      },
+    },
+  });
 
-//   // 2. Upcoming mentor session
-//   const upcomingMentorBooking = await createBooking({
-//     mentorId: mentors[1].id,
-//     coachingPlanId: coachingPlans[1].id,
-//     startTime: new Date(now.getTime() + 2 * 60 * 60 * 1000),
-//     status: BookingStatus.ACCEPTED,
-//     title: 'System Design Coaching',
-//   });
+  // ---------- MENTOR REJECTED (có lý do) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: rejectedTime,
+      endTime: new Date(rejectedTime.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.REJECTED,
+      answers: {
+        create: [
+          { questionId, answerText: 'Tôi muốn học thiết kế microservices' },
+        ],
+      },
+      logs: {
+        create: [
+          {
+            actorId: mentorUser.id,
+            action: 'REJECT_BOOKING',
+            note: 'Rất tiếc, tôi bận đột xuất. Bạn vui lòng đặt lịch khác nhé!',
+          },
+        ],
+      },
+    },
+  });
 
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: upcomingMentorBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: upcomingMentorBooking.startTime,
-//       durationMinutes: 90,
-//       status: SessionStatus.SCHEDULED,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//       meetingUrl: 'https://meet.google.com/session-page-test-upcoming-2',
-//       meetingCode: 'UPCOMING-002',
-//     },
-//   });
+  // ---------- MENTOR FINISHED (có feedback và recording) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: yesterday,
+      endTime: new Date(yesterday.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.COMPLETED,
+      answers: {
+        create: [{ questionId, answerText: 'Tôi đã thiết kế hệ thống chat' }],
+      },
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: yesterday,
+            startedAt: yesterday,
+            endedAt: new Date(yesterday.getTime() + 60 * 60000),
+            durationMinutes: 60,
+            status: SessionStatus.COMPLETED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            recordingUrl: 'https://zoom.us/rec/play/mentor-finished-session',
+            meetSession: { create: {} },
+            feedbacks: {
+              create: [
+                {
+                  reviewerId: mentorUser.id,
+                  revieweeId: mainCandidate.id,
+                  strengths: ['Tư duy logic tốt', 'Nắm vững kiến thức cơ bản'],
+                  weaknesses: [
+                    'Chưa tối ưu database',
+                    'Thiếu kinh nghiệm scale',
+                  ],
+                  suggestions: ['Đọc thêm về sharding', 'Luyện thêm bài tập'],
+                  overallScore: 4.2,
+                  comment: 'Khá tốt, cố gắng thêm nhé!',
+                  status: 'SUBMITTED',
+                  deadline: now,
+                  submittedAt: new Date(yesterday.getTime() + 2 * 60 * 60000),
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
 
-//   // 3. Upcoming P2P session
-//   const p2pBooking = await createBooking({
-//     mentorId: mentors[2].id,
-//     coachingPlanId: coachingPlans[2].id,
-//     startTime: new Date(now.getTime() + 24 * 60 * 60 * 1000),
-//     status: BookingStatus.ACCEPTED,
-//     title: 'Peer Mock Interview',
-//   });
+  // ---------- P2P UPCOMING (2 ngày nữa) ----------
+  await prisma.match.create({
+    data: {
+      candidateAId: mainCandidate.id,
+      candidateBId: peerCandidate.id,
+      status: MatchStatus.MATCHED,
+      strategy: MatchStrategy.RANDOM,
+      matchedAt: now,
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: in2Days,
+            durationMinutes: 45,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.P2P_MATCH,
+            mode: SessionMode.MEET,
+            meetingLink: 'https://meet.google.com/p2p-upcoming',
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: p2pBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: p2pBooking.startTime,
-//       durationMinutes: 45,
-//       status: SessionStatus.SCHEDULED,
-//       source: SessionSource.PEER,
-//       mode: SessionMode.MEET,
-//       meetingUrl: 'https://meet.google.com/session-page-test-p2p',
-//       meetingCode: 'P2P-001',
-//     },
-//   });
+  // ---------- P2P UPCOMING (1 ngày nữa) ----------
+  await prisma.match.create({
+    data: {
+      candidateAId: mainCandidate.id,
+      candidateBId: peerCandidate2.id,
+      status: MatchStatus.MATCHED,
+      strategy: MatchStrategy.RANDOM,
+      matchedAt: now,
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: in1Day,
+            durationMinutes: 45,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.P2P_MATCH,
+            mode: SessionMode.MEET,
+            meetingLink: 'https://meet.google.com/p2p-upcoming-2',
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   // =====================================================
-//   // PENDING SESSIONS
-//   // =====================================================
+  // ---------- P2P FINISHED (có feedback) ----------
+  await prisma.match.create({
+    data: {
+      candidateAId: mainCandidate.id,
+      candidateBId: peerCandidate.id,
+      status: MatchStatus.COMPLETED,
+      strategy: MatchStrategy.RANDOM,
+      matchedAt: twoDaysAgo,
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: twoDaysAgo,
+            startedAt: twoDaysAgo,
+            endedAt: new Date(twoDaysAgo.getTime() + 45 * 60000),
+            durationMinutes: 45,
+            status: SessionStatus.COMPLETED,
+            source: SessionSource.P2P_MATCH,
+            mode: SessionMode.MEET,
+            recordingUrl: 'https://zoom.us/rec/p2p-finished',
+            meetSession: { create: {} },
+            feedbacks: {
+              create: [
+                {
+                  reviewerId: peerCandidate.id,
+                  revieweeId: mainCandidate.id,
+                  strengths: ['Giao tiếp tốt', 'Hiểu vấn đề'],
+                  weaknesses: ['Trả lời hơi dài dòng'],
+                  suggestions: ['Tập trung vào ý chính'],
+                  overallScore: 3.8,
+                  comment: 'Cần cải thiện thêm',
+                  status: 'SUBMITTED',
+                  deadline: now,
+                  submittedAt: new Date(twoDaysAgo.getTime() + 1 * 60 * 60000),
+                },
+              ],
+            },
+          },
+        ],
+      },
+    },
+  });
 
-//   const pendingBooking = await createBooking({
-//     mentorId: mentors[3].id,
-//     coachingPlanId: coachingPlans[3].id,
-//     startTime: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
-//     status: BookingStatus.PENDING,
-//     title: 'Frontend Architecture Review',
-//   });
+  // ---------- SOLO UPCOMING (trong 2 giờ) ----------
+  await prisma.mockSession.create({
+    data: {
+      intervieweeId: mainCandidate.id,
+      scheduledAt: in2Hours,
+      durationMinutes: 30,
+      status: SessionStatus.SCHEDULED,
+      source: SessionSource.SOLO,
+      mode: SessionMode.SOLO,
+      soloSession: {
+        create: { script: { text: 'Luyện tập câu hỏi System Design' } },
+      },
+    },
+  });
 
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: pendingBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: pendingBooking.startTime,
-//       durationMinutes: 60,
-//       status: SessionStatus.PENDING,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//     },
-//   });
+  // ---------- SOLO FINISHED (quá khứ) ----------
+  await prisma.mockSession.create({
+    data: {
+      intervieweeId: mainCandidate.id,
+      scheduledAt: threeDaysAgo,
+      startedAt: threeDaysAgo,
+      endedAt: new Date(threeDaysAgo.getTime() + 30 * 60000),
+      durationMinutes: 30,
+      status: SessionStatus.COMPLETED,
+      source: SessionSource.SOLO,
+      mode: SessionMode.SOLO,
+      soloSession: { create: { script: { text: 'Đã luyện xong' } } },
+    },
+  });
 
-//   // =====================================================
-//   // REJECTED SESSIONS
-//   // =====================================================
+  // ---------- THÊM MENTOR FINISHED THỨ 2 (không có feedback) ----------
+  await prisma.booking.create({
+    data: {
+      mentorId: mentorUser.id,
+      candidateId: mainCandidate.id,
+      coachingPlanId: coachingPlan.id,
+      startTime: threeDaysAgo,
+      endTime: new Date(threeDaysAgo.getTime() + 60 * 60000),
+      snapshotPlanTitle: coachingPlan.title,
+      status: BookingStatus.COMPLETED,
+      mockSessions: {
+        create: [
+          {
+            intervieweeId: mainCandidate.id,
+            scheduledAt: threeDaysAgo,
+            startedAt: threeDaysAgo,
+            endedAt: new Date(threeDaysAgo.getTime() + 60 * 60000),
+            durationMinutes: 60,
+            status: SessionStatus.COMPLETED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            recordingUrl: null, // không có recording
+            meetSession: { create: {} },
+          },
+        ],
+      },
+    },
+  });
 
-//   const rejectedBooking = await createBooking({
-//     mentorId: mentors[4].id,
-//     coachingPlanId: coachingPlans[4].id,
-//     startTime: new Date(now.getTime() - 24 * 60 * 60 * 1000),
-//     status: BookingStatus.REJECTED,
-//     title: 'Leadership Coaching Session',
-//   });
+  console.log('✅ Seed dữ liệu Quản lý Phiên học thành công!');
+  console.log('--------------------------------------------------');
+  console.log('👤 Candidate: main.candidate@test.com / 123456');
+  console.log('👤 Mentor: mentor.expert@test.com / 123456');
+  console.log('👤 Peer1: peer.candidate@test.com / 123456');
+  console.log('👤 Peer2: peer2.candidate@test.com / 123456');
+}
 
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: rejectedBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: rejectedBooking.startTime,
-//       durationMinutes: 60,
-//       status: SessionStatus.CANCELLED,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//       cancellationReason:
-//         'Mentor is unavailable due to schedule conflict. Please rebook another slot.',
-//     },
-//   });
-
-//   // =====================================================
-//   // FINISHED SESSIONS
-//   // =====================================================
-
-//   const finishedBooking1 = await createBooking({
-//     mentorId: mentors[0].id,
-//     coachingPlanId: coachingPlans[0].id,
-//     startTime: new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000),
-//     status: BookingStatus.COMPLETED,
-//     title: 'Backend System Design Interview',
-//   });
-
-//   const finishedSession1 = await prisma.mockSession.create({
-//     data: {
-//       bookingId: finishedBooking1.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: finishedBooking1.startTime,
-//       durationMinutes: 60,
-//       status: SessionStatus.COMPLETED,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//       meetingUrl: 'https://meet.google.com/session-page-test-finished-1',
-//       recordingUrl:
-//         'https://recording.example.com/session-page-test-recording-1',
-//     },
-//   });
-
-//   await prisma.feedback.create({
-//     data: {
-//       sessionId: finishedSession1.id,
-//       reviewerId: mentors[0].id,
-//       revieweeId: candidate.id,
-//       strengths: [
-//         'Strong API design knowledge',
-//         'Good database optimization skills',
-//       ],
-//       weaknesses: ['Need more confidence in communication'],
-//       suggestions: ['Practice explaining trade-offs more clearly'],
-//       overallScore: 8.5,
-//       comment:
-//         '[SESSION_PAGE_TEST] Candidate performed well in backend and scaling discussion.',
-//       deadline: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-//     },
-//   });
-
-//   // Solo session
-//   const soloSession = await prisma.mockSession.create({
-//     data: {
-//       intervieweeId: candidate.id,
-//       scheduledAt: new Date(now.getTime() - 5 * 24 * 60 * 60 * 1000),
-//       durationMinutes: 45,
-//       status: SessionStatus.COMPLETED,
-//       source: SessionSource.SOLO,
-//       mode: SessionMode.SOLO,
-//       recordingUrl: 'https://recording.example.com/session-page-test-solo',
-//     },
-//   });
-
-//   await prisma.feedback.create({
-//     data: {
-//       sessionId: soloSession.id,
-//       revieweeId: candidate.id,
-//       strengths: ['Logical thinking', 'Good coding speed'],
-//       weaknesses: ['Edge case handling'],
-//       suggestions: ['Practice more graph problems'],
-//       overallScore: 7.8,
-//       comment: '[SESSION_PAGE_TEST] AI evaluation for solo mock interview.',
-//       deadline: new Date(),
-//     },
-//   });
-
-//   // In-progress session
-//   const inProgressBooking = await createBooking({
-//     mentorId: mentors[1].id,
-//     coachingPlanId: coachingPlans[1].id,
-//     startTime: new Date(now.getTime() - 10 * 60 * 1000),
-//     status: BookingStatus.ACCEPTED,
-//     title: 'Live Mock Interview In Progress',
-//   });
-
-//   await prisma.mockSession.create({
-//     data: {
-//       bookingId: inProgressBooking.id,
-//       intervieweeId: candidate.id,
-//       scheduledAt: inProgressBooking.startTime,
-//       durationMinutes: 60,
-//       status: SessionStatus.IN_PROGRESS,
-//       source: SessionSource.MENTOR_BOOKING,
-//       mode: SessionMode.MEET,
-//       meetingUrl: 'https://meet.google.com/session-page-test-live',
-//       meetingCode: 'LIVE-001',
-//     },
-//   });
-
-//   console.log('✅ Session page seed completed!');
-//   console.log('');
-//   console.log('Seed data includes:');
-//   console.log('- Upcoming sessions');
-//   console.log('- Pending sessions');
-//   console.log('- Rejected sessions');
-//   console.log('- Finished sessions');
-//   console.log('- Solo sessions');
-//   console.log('- P2P sessions');
-//   console.log('- In-progress session');
-//   console.log('- Feedback + recording links');
-//   console.log('- Join enabled (<30 mins)');
-// }
-
-// main()
-//   .catch((e) => {
-//     console.error(e);
-//   })
-//   .finally(async () => {
-//     await prisma.$disconnect();
-//   });
+main()
+  .catch((e) => {
+    console.error(e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
+    await pool.end();
+  });

@@ -32,4 +32,8 @@ export const queryKeys = {
 
     skills: ['mentor-skills'] as const,
   },
+  session: {
+    list: (filters: Record<string, any>) => ['sessions', filters] as const,
+    detail: (id: string | number) => ['sessions', id] as const,
+  },
 } as const;

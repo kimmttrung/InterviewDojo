@@ -1,10 +1,10 @@
+// SessionCard.tsx (loại bỏ handleViewRejectReason)
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
-import relativeTime from 'dayjs/plugin/relativeTime'; // Import plugin relativeTime
+import relativeTime from 'dayjs/plugin/relativeTime';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
 
-// Cài đặt plugin cho dayjs
 dayjs.extend(relativeTime);
 
 interface Props {
@@ -12,11 +12,10 @@ interface Props {
 }
 
 export const SessionCard = ({ session }: Props) => {
-  const { openCancelModal, openProfileModal } = useSessionStore();
+  const { openCancelModal, openProfileModal, openRejectModal } = useSessionStore();
   const [timeLeft, setTimeLeft] = useState('');
   const [isJoinable, setIsJoinable] = useState(false);
 
-  // Logic đếm ngược & bật nút Join
   useEffect(() => {
     if (session.status !== SessionTab.UPCOMING) return;
 
@@ -25,7 +24,8 @@ export const SessionCard = ({ session }: Props) => {
       const start = dayjs(session.scheduledAt);
       const diffMinutes = start.diff(now, 'minute');
 
-      setIsJoinable(diffMinutes <= 30 && diffMinutes >= -120);
+      const canJoin = diffMinutes <= 30 && diffMinutes >= -120;
+      setIsJoinable(canJoin && !!session.meetingLink);
 
       if (diffMinutes > 0) {
         setTimeLeft(start.fromNow());
@@ -35,71 +35,81 @@ export const SessionCard = ({ session }: Props) => {
     };
 
     checkTime();
-    const interval = setInterval(checkTime, 60000); // 1 phút check 1 lần
+    const interval = setInterval(checkTime, 60000);
     return () => clearInterval(interval);
-  }, [session.scheduledAt, session.status]);
+  }, [session.scheduledAt, session.status, session.meetingLink]);
+
+  const getStatusColor = () => {
+    switch (session.status) {
+      case 'UPCOMING':
+        return 'text-green-600 bg-green-100';
+      case 'PENDING':
+        return 'text-yellow-600 bg-yellow-100';
+      case 'REJECTED':
+        return 'text-red-600 bg-red-100';
+      case 'FINISHED':
+        return 'text-gray-600 bg-gray-100';
+      default:
+        return 'text-gray-500 bg-gray-100';
+    }
+  };
 
   return (
     <div className="border rounded-lg p-4 shadow-sm flex flex-col gap-3 bg-white">
-      {/* Header Card */}
       <div className="flex justify-between items-center">
         <div
           className="flex items-center gap-3 cursor-pointer"
-          onClick={() => openProfileModal(session.opponent.id)}
+          onClick={() => session.opponentId && openProfileModal(session.opponentId)}
         >
           <img
-            src={session.opponent.avatarUrl || '/default-avatar.png'}
+            src={session.opponentAvatar || '/default-avatar.png'}
             alt="avatar"
             className="w-10 h-10 rounded-full"
           />
           <div>
-            <h3 className="font-bold hover:text-primary">{session.opponent.name}</h3>
+            <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
               {session.type}
             </span>
           </div>
         </div>
         <div className="text-right">
-          {/* Badge trạng thái */}
-          <span
-            className={`text-sm font-semibold ${session.status === 'UPCOMING' ? 'text-green-600' : 'text-gray-500'}`}
-          >
+          <span className={`text-sm font-semibold px-2 py-1 rounded-full ${getStatusColor()}`}>
             {session.status}
           </span>
-          <p className="text-sm text-gray-500">
-            {dayjs(session.scheduledAt).format('HH:mm DD/MM/YYYY')}
+          <p className="text-sm text-gray-500 mt-1">
+            {session.scheduledAt
+              ? dayjs(session.scheduledAt).format('HH:mm DD/MM/YYYY')
+              : 'Chưa có lịch'}
           </p>
         </div>
       </div>
 
-      {/* Body Card */}
       <div className="bg-gray-50 p-3 rounded-md">
-        <p className="font-medium">Plan: {session.coachingPlanName || 'N/A'}</p>
+        <p className="font-medium">Plan: {session.coachingPlan || 'N/A'}</p>
         {session.candidateAnswers && (
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-            Lưu ý: {session.candidateAnswers}
+            Câu trả lời: {session.candidateAnswers}
           </p>
         )}
       </div>
 
-      {/* Footer / Actions */}
       <div className="flex justify-between items-center mt-2">
         <div className="text-sm font-medium text-orange-600">
           {session.status === 'UPCOMING' && `Bắt đầu: ${timeLeft}`}
           {session.status === 'PENDING' && 'Đang chờ mentor xác nhận'}
         </div>
-
         <div className="flex gap-2">
           {session.status === 'UPCOMING' && (
             <>
               <button
                 onClick={() => openCancelModal(session.id.toString())}
-                className="px-4 py-2 border text-red-600 border-red-600 rounded-md hover:bg-red-50"
+                className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
               >
                 Hủy lịch
               </button>
               <a
-                href={isJoinable ? (session.meetingLink ?? undefined) : '#'} // Fix: Chuyển null thành undefined
+                href={isJoinable ? (session.meetingLink ?? undefined) : '#'}
                 target={isJoinable ? '_blank' : '_self'}
                 className={`px-4 py-2 rounded-md font-semibold ${
                   isJoinable
@@ -113,17 +123,32 @@ export const SessionCard = ({ session }: Props) => {
           )}
 
           {session.status === 'REJECTED' && (
-            <button className="text-primary underline">Xem lý do từ chối</button>
+            <button
+              onClick={() => openRejectModal(session.rejectedReason)}
+              className="px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10"
+            >
+              Xem lý do từ chối
+            </button>
           )}
 
           {session.status === 'FINISHED' && (
             <>
-              {/* Fix lỗi thuộc tính bị thiếu bằng ép kiểu an toàn hoặc bạn hãy cập nhật type SessionItem */}
-              {(session as SessionItem & { recordingUrl?: string }).recordingUrl && (
-                <button className="text-blue-600 underline">Xem Record</button>
+              {session.recordingUrl && (
+                <a
+                  href={session.recordingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
+                >
+                  Xem Record
+                </a>
               )}
-              <button className="px-4 py-2 bg-green-600 text-white rounded-md">Feedback</button>
-              <button className="text-red-600 text-sm underline">Report</button>
+              <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+                Feedback
+              </button>
+              <button className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50">
+                Report
+              </button>
             </>
           )}
         </div>

@@ -2,6 +2,7 @@ export interface SessionItem {
   id: string | number; // ID của session (có thể là bookingId, matchId hoặc sessionId tùy loại)
   type: string; // 'MENTOR', 'P2P', 'SOLO'
   status: string; // 'PENDING', 'UPCOMING', 'REJECTED', 'FINISHED'
+  opponentId: number | null;
   opponentName: string | null;
   opponentAvatar: string | null;
   coachingPlan: string | null;

@@ -1,11 +1,13 @@
 import { useSessions } from '../hooks/useSessions';
 import { useSessionStore } from '../stores/useSessionStore';
 import { SessionCard } from './SessionCard';
-import { SessionItem } from '../types/session.types'; // Bổ sung import type
+import { SessionItem } from '../types/session.types';
+import Skeleton from 'react-loading-skeleton';
+import 'react-loading-skeleton/dist/skeleton.css';
 
 export const SessionList = () => {
   const { data, isLoading, isError } = useSessions();
-  const { setFilters } = useSessionStore(); // Đã xóa 'filters' chưa sử dụng
+  const { setFilters } = useSessionStore();
 
   if (isError) {
     return <div className="text-center text-red-500 py-10">Đã xảy ra lỗi khi tải danh sách.</div>;
@@ -16,18 +18,22 @@ export const SessionList = () => {
     return (
       <div className="flex flex-col gap-4">
         {[1, 2, 3].map((i) => (
-          <div key={i} className="animate-pulse bg-white p-4 rounded-lg border flex flex-col gap-3">
+          <div key={i} className="bg-white p-4 rounded-lg border">
             <div className="flex justify-between">
               <div className="flex gap-3">
-                <div className="w-10 h-10 bg-gray-200 rounded-full"></div>
-                <div className="space-y-2">
-                  <div className="w-32 h-4 bg-gray-200 rounded"></div>
-                  <div className="w-20 h-3 bg-gray-200 rounded"></div>
+                <Skeleton circle width={40} height={40} />
+                <div>
+                  <Skeleton width={120} height={20} />
+                  <Skeleton width={80} height={16} style={{ marginTop: 4 }} />
                 </div>
               </div>
-              <div className="w-24 h-4 bg-gray-200 rounded"></div>
+              <Skeleton width={100} height={20} />
             </div>
-            <div className="w-full h-12 bg-gray-100 rounded-md mt-2"></div>
+            <Skeleton height={60} style={{ marginTop: 12 }} />
+            <div className="flex justify-end gap-2 mt-3">
+              <Skeleton width={80} height={36} />
+              <Skeleton width={80} height={36} />
+            </div>
           </div>
         ))}
       </div>
@@ -53,16 +59,11 @@ export const SessionList = () => {
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Render danh sách */}
-      {sessions.map(
-        (
-          session: SessionItem, // Đã thêm type cho session
-        ) => (
-          <SessionCard key={session.id} session={session} />
-        ),
-      )}
+      {sessions.map((session: SessionItem) => (
+        <SessionCard key={session.id} session={session} />
+      ))}
 
-      {/* Pagination (Phân trang) */}
+      {/* Pagination */}
       {meta && meta.totalPages > 1 && (
         <div className="flex justify-center items-center gap-4 mt-6">
           <button

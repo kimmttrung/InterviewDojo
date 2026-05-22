@@ -1,8 +1,8 @@
 import { Share2, Code2, Brain, Users, BookOpen, MessageCircle, Target } from 'lucide-react';
-import { Layout } from '../../../../shared/components/layout/Layout';
-import { Card } from '../../../../shared/components/ui/card';
-import { Badge } from '../../../../shared/components/ui/badge';
-import { Button } from '../../../../shared/components/ui/button';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Card } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
 import { Link } from 'react-router-dom';
 
 export default function HomePage() {

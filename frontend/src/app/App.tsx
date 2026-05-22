@@ -40,6 +40,7 @@ import WalletPage from '@/features/wallet/pages/WalletPage';
 import SessionPage from '@/features/session/components/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
+
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -65,11 +66,22 @@ const SelectRoleGuard = () => {
   return <Navigate to="/" replace />;
 };
 
-const CandidateLayout = () => {
+// Layout bọc DUY NHẤT cho Session để thêm Navbar
+const SessionLayout = () => {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      {/* Outlet chính là nơi render ra các trang con bên trong (như Practice, Session, Home...) */}
+      <main>
+        <Outlet />
+      </main>
+    </div>
+  );
+};
+
+// Layout cho Candidate (Không chứa Navbar để các trang Home, Practice tự render layout của nó)
+const CandidateLayout = () => {
+  return (
+    <div className="min-h-screen bg-background">
       <main>
         <Outlet />
       </main>
@@ -93,6 +105,9 @@ export function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
+            {/* ========================================== */}
+            {/* NHÓM 1: CÁC TRANG TỰ QUẢN LÝ LAYOUT/NAVBAR */}
+            {/* ========================================== */}
             <Route element={<CandidateLayout />}>
               <Route
                 path="/home"
@@ -143,16 +158,6 @@ export function App() {
               />
               <Route path="/" element={<RootRedirect />} />
 
-              {/* NHÚNG TRANG QUẢN LÝ PHIÊN HỌC CHO CANDIDATE VÀO ĐÂY */}
-              <Route
-                path="/sessions"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <SessionPage />
-                  </ProtectedRoute>
-                }
-              />
-
               {/* Practice – chỉ candidate */}
               <Route
                 path="/practice"
@@ -180,6 +185,23 @@ export function App() {
               />
             </Route>
 
+            {/* ========================================== */}
+            {/* NHÓM 2: CHỈ THÊM NAVBAR KHI VÀO SESSIONS   */}
+            {/* ========================================== */}
+            <Route element={<SessionLayout />}>
+              <Route
+                path="/sessions"
+                element={
+                  <ProtectedRoute roles={['CANDIDATE']}>
+                    <SessionPage />
+                  </ProtectedRoute>
+                }
+              />
+            </Route>
+
+            {/* ========================================== */}
+            {/* NHÓM 3: COMPONENT CHUNG (KHÔNG BỌC NAVBAR) */}
+            {/* ========================================== */}
             <Route
               path="/mentors"
               element={
@@ -188,8 +210,14 @@ export function App() {
                 </ProtectedRoute>
               }
             />
-
-            {/* Question Bank (ai cũng xem được nếu đã login) */}
+            <Route
+              path="/mentors/:id"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <MentorDetailPage />
+                </ProtectedRoute>
+              }
+            />
             <Route
               path="/question-bank"
               element={
@@ -207,21 +235,15 @@ export function App() {
               }
             />
 
+            {/* ========================================== */}
+            {/* CÁC ROUTE CÒN LẠI CỦA HỆ THỐNG             */}
+            {/* ========================================== */}
             {/* Profile */}
             <Route
               path="/profile"
               element={
                 <ProtectedRoute roles={['CANDIDATE']}>
                   <Profile />
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
-              path="/mentors/:id"
-              element={
-                <ProtectedRoute roles={['CANDIDATE']}>
-                  <MentorDetailPage />
                 </ProtectedRoute>
               }
             />
@@ -244,7 +266,6 @@ export function App() {
               }
             />
 
-            {/* NHÚNG TRANG QUẢN LÝ PHIÊN HỌC CHO MENTOR VÀO ĐÂY */}
             <Route
               path="/mentor/sessions"
               element={

@@ -30,7 +30,9 @@ export const useSessionStore = create<SessionState>((set) => ({
 
   // 1. Khởi tạo Filters
   filters: {
-    tab: SessionTab.ALL,
+    // SỬA Ở ĐÂY: Chuyển tab mặc định thành UPCOMING để khi vừa vào trang
+    // sẽ load ngay lịch sắp diễn ra thay vì tab ALL
+    tab: SessionTab.UPCOMING,
     search: '',
     startDate: null,
     endDate: null,
@@ -51,7 +53,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   openProfileModal: (userId) => set({ profileModalUserId: userId }),
   closeProfileModal: () => set({ profileModalUserId: null }),
 
-  // 4. Khởi tạo Reject Modal (Fix lỗi cho RejectReasonModal.tsx)
+  // 4. Khởi tạo Reject Modal
   rejectModalData: { isOpen: false, reason: null },
   openRejectModal: (reason) => set({ rejectModalData: { isOpen: true, reason } }),
   closeRejectModal: () => set({ rejectModalData: { isOpen: false, reason: null } }),

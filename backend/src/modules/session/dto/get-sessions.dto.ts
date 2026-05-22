@@ -33,5 +33,9 @@ export class GetSessionsDto {
 
   @IsOptional()
   @IsString()
-  date?: string; // Format: YYYY-MM-DD
+  startDate?: string; // Format: YYYY-MM-DD
+
+  @IsOptional()
+  @IsString()
+  endDate?: string; // Format: YYYY-MM-DD
 }
