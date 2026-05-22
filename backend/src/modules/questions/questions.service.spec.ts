@@ -1,3 +1,4 @@
+// questions.service.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { QuestionsService } from './questions.service';
 import { PrismaService } from '@/prisma/prisma.service';
@@ -90,6 +91,7 @@ describe('QuestionsService', () => {
         categories: ['Algorithm'],
         companies: ['Google'],
         jobRoles: ['Backend Developer'],
+        isBookmarked: false,
       });
       expect(result.meta.total).toBe(1);
       expect(result.meta.page).toBe(1);
@@ -191,6 +193,7 @@ describe('QuestionsService', () => {
       expect(result.categories).toEqual(['Algorithm']);
       expect(result.companies).toEqual(['Google']);
       expect(result.jobRoles).toEqual(['Backend Developer']);
+      // isBookmarked không được truyền userId nên sẽ là undefined hoặc false? Trong service gán mặc định false, test không kiểm tra
     });
 
     it('should throw NotFoundException if question not found', async () => {

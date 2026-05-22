@@ -10,5 +10,5 @@ export interface QuestionItem {
   categories: string[];
   companies: string[];
   jobRoles: string[];
-  isBookmarked: boolean;
+  isBookmarked?: boolean;
 }

@@ -30,4 +30,5 @@ export interface QuestionDetail {
   isCodingQuestion: boolean;
   hints?: string[];
   tags?: string[];
+  isBookmarked?: boolean;
 }
