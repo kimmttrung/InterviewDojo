@@ -41,6 +41,7 @@ export interface Question {
   companies: string[];
   jobRoles: string[];
   answersCount?: number; // optional, có thể tính sau
+  isBookmarked?: boolean; // optional, để đánh dấu đã bookmark hay chưa
 }
 
 export interface PaginationMeta {

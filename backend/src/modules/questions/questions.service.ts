@@ -30,6 +30,7 @@ export class QuestionsService {
       categories: q.categories?.map((c: any) => c.category?.name || '') || [],
       companies: q.companies?.map((c: any) => c.company?.name || '') || [],
       jobRoles: q.jobRoles?.map((j: any) => j.jobRole?.name || '') || [],
+      isBookmarked: false,
     };
   }
 
@@ -94,6 +95,7 @@ export class QuestionsService {
 
   async findAll(
     query: GetQuestionsDto,
+    userId?: number,
   ): Promise<PaginatedResponse<QuestionItem>> {
     const {
       keyword,
@@ -161,7 +163,18 @@ export class QuestionsService {
     ]);
 
     const items = questions.map((q) => this.toQuestionItem(q));
-
+    let bookmarkedIds: number[] = [];
+    if (userId) {
+      const bookmarks = await this.prisma.userBookmark.findMany({
+        where: { userId },
+        select: { questionId: true },
+      });
+      bookmarkedIds = bookmarks.map((b) => b.questionId);
+      // Gán isBookmarked cho từng item
+      items.forEach((item) => {
+        item.isBookmarked = bookmarkedIds.includes(item.id);
+      });
+    }
     return {
       items,
       meta: {

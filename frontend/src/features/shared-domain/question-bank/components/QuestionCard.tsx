@@ -1,8 +1,9 @@
 import { useNavigate } from 'react-router-dom';
-import { Bookmark, MessageCircle, PlusCircle, ChevronDown } from 'lucide-react';
+import { MessageCircle, PlusCircle, ChevronDown } from 'lucide-react';
 import { Question } from '../types/question.types';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
+import { BookmarkButton } from '@/features/bookmark/components/BookmarkButton';
 
 interface QuestionCardProps {
   question: Question;
@@ -20,12 +21,16 @@ export function QuestionCard({ question }: QuestionCardProps) {
     answersCount,
     description,
     companies,
+    isBookmarked = false,
   } = question;
 
-  // Xử lý nội dung mô tả hiển thị tóm tắt (snippet)
   const renderSnippet = () => {
+    if (!description) return 'No description available';
     if (typeof description === 'string') return description;
-    if (description?.question) return description.question;
+    // Nếu description là object, kiểm tra có trường 'question'
+    if (typeof description === 'object' && 'question' in description) {
+      return (description as { question: string }).question;
+    }
     return 'No description available';
   };
 
@@ -70,9 +75,7 @@ export function QuestionCard({ question }: QuestionCardProps) {
           </div>
 
           <div className="flex items-center gap-6 pt-2 text-slate-400">
-            <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
-              <Bookmark className="w-4 h-4" /> Save
-            </button>
+            <BookmarkButton questionId={id} isBookmarked={isBookmarked} />
             <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
               <MessageCircle className="w-4 h-4" /> {answersCount || 0} answers
             </button>
@@ -83,7 +86,6 @@ export function QuestionCard({ question }: QuestionCardProps) {
         </div>
       </div>
 
-      {/* Answer Snippet Box (Giống giao diện mẫu bạn gửi) */}
       <div className="mt-6 p-4 bg-slate-50 border border-slate-100 rounded-xl flex items-center gap-4 hover:bg-slate-100 transition-colors">
         <p className="text-[13px] text-slate-500 font-mono line-clamp-1 italic flex-1 truncate">
           "{renderSnippet()}"
