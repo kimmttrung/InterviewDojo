@@ -6,6 +6,8 @@ import {
   IsString,
   Min,
   ValidateNested,
+  IsUrl,
+  ValidateIf,
 } from 'class-validator';
 
 import { Type } from 'class-transformer';
@@ -22,8 +24,9 @@ export class UpdateUserSkillDto {
   @IsEnum(SkillLevel)
   level: SkillLevel;
 
+  @ValidateIf((_, value) => value !== '')
   @IsOptional()
-  @IsString()
+  @IsUrl()
   proofUrl?: string;
 }
 
@@ -49,12 +52,14 @@ export class UpdateUserDto {
   @IsString()
   avatarUrl?: string;
 
+  @ValidateIf((_, value) => value !== '')
   @IsOptional()
-  @IsString()
+  @IsUrl()
   linkedInLink?: string;
 
+  @ValidateIf((_, value) => value !== '')
   @IsOptional()
-  @IsString()
+  @IsUrl()
   githubLink?: string;
 
   @IsOptional()
