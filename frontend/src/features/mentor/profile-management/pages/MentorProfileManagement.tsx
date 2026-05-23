@@ -1,3 +1,5 @@
+'use client';
+
 import { useEffect, useRef } from 'react';
 
 import { Loader2 } from 'lucide-react';
@@ -6,30 +8,49 @@ import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayou
 
 import { Button } from '@/shared/components/ui/button';
 
-import { useMentorProfileStore } from '@/stores/mentorProfile.store';
+import { SkillTable } from '@/features/shared-domain/skill/components/SkillTable';
+
+import { useMentorProfileStore } from '@/stores/userProfile.store';
 
 import { MentorProfileForm } from '../components/MentorProfileForm';
-
 import { ExperienceTable } from '../components/ExperienceForm';
-
-import { SkillTable } from '../components/SkillTable';
-
 import { CoachingPlanTable } from '../components/CoachingPlanForm';
-
 import { StatusBadge } from '../components/StatusBadge';
 
 import { useMentorProfile } from '../hooks/useMentorProfile';
-
 import { useUpdateMentorProfile } from '../hooks/useUpdateMentorProfile';
 
 import { mapMentorProfileToStore } from '../mappers/mentorProfile.mapper';
-
 import { mapStoreToPayload } from '../mappers/mentorProfileSubmit.mapper';
 
 export default function MentorProfileManagement() {
-  const { profile, experiences, skills, coachingPlans, setAllData } = useMentorProfileStore();
+  const {
+    profile,
 
-  const { data, isLoading, isFetching, refetch } = useMentorProfile();
+    experiences,
+
+    skills,
+
+    coachingPlans,
+
+    addSkill,
+
+    updateSkill,
+
+    removeSkill,
+
+    setAllData,
+  } = useMentorProfileStore();
+
+  const {
+    data,
+
+    isLoading,
+
+    isFetching,
+
+    refetch,
+  } = useMentorProfile();
 
   const updateProfileMutation = useUpdateMentorProfile();
 
@@ -48,8 +69,11 @@ export default function MentorProfileManagement() {
   const handleSubmitAll = () => {
     const payload = mapStoreToPayload({
       profile,
+
       experiences,
+
       skills,
+
       coachingPlans,
     });
 
@@ -59,8 +83,22 @@ export default function MentorProfileManagement() {
   if (isLoading) {
     return (
       <MentorLayout>
-        <div className="flex h-[70vh] items-center justify-center">
-          <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+        <div
+          className="
+          flex
+          h-[70vh]
+          items-center
+          justify-center
+        "
+        >
+          <Loader2
+            className="
+            h-10
+            w-10
+            animate-spin
+            text-slate-400
+          "
+          />
         </div>
       </MentorLayout>
     );
@@ -68,35 +106,102 @@ export default function MentorProfileManagement() {
 
   return (
     <MentorLayout>
-      <div className="p-6">
-        <div className="mx-auto max-w-7xl space-y-6">
-          {/* =====================================================
-           * Header
-           * =================================================== */}
+      <div
+        className="
+        p-6
+      "
+      >
+        <div
+          className="
+          mx-auto
+          max-w-7xl
+          space-y-6
+        "
+        >
+          {/* HEADER */}
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+          <div
+            className="
+            rounded-2xl
+            border
+            border-slate-200
+            bg-white
+            p-6
+            shadow-sm
+          "
+          >
+            <div
+              className="
+              flex
+              flex-col
+              gap-6
+
+              lg:flex-row
+              lg:items-center
+              lg:justify-between
+            "
+            >
               <div>
-                <div className="flex items-center gap-3">
-                  <h1 className="text-3xl font-bold tracking-tight text-slate-900">
-                    Mentor Profile Management
+                <div
+                  className="
+                  flex
+                  items-center
+                  gap-3
+                "
+                >
+                  <h1
+                    className="
+                    text-3xl
+                    font-bold
+                    tracking-tight
+                    text-slate-900
+                  "
+                  >
+                    Mentor Profile
                   </h1>
 
                   {data?.approvalStatus && <StatusBadge status={data.approvalStatus} />}
 
-                  {isFetching && <Loader2 className="h-5 w-5 animate-spin text-slate-400" />}
+                  {isFetching && (
+                    <Loader2
+                      className="
+                      h-5
+                      w-5
+                      animate-spin
+                      text-slate-400
+                    "
+                    />
+                  )}
                 </div>
 
-                <p className="mt-2 text-sm text-slate-500">
-                  Update your professional details, experiences, skills, and coaching services.
+                <p
+                  className="
+                  mt-2
+                  text-sm
+                  text-slate-500
+                "
+                >
+                  Keep your mentor profile updated to improve visibility and matching quality.
                 </p>
               </div>
 
-              <div className="flex items-center gap-3">
+              <div
+                className="
+                flex
+                gap-3
+              "
+              >
                 <Button variant="outline" onClick={() => refetch()} disabled={isFetching}>
                   {isFetching ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2
+                        className="
+                        mr-2
+                        h-4
+                        w-4
+                        animate-spin
+                      "
+                      />
                       Refreshing...
                     </>
                   ) : (
@@ -105,15 +210,24 @@ export default function MentorProfileManagement() {
                 </Button>
 
                 <Button
-                  size="lg"
                   onClick={handleSubmitAll}
+                  size="lg"
                   disabled={updateProfileMutation.isPending}
-                  className="min-w-[220px]"
+                  className="
+                  min-w-[220px]
+                "
                 >
                   {updateProfileMutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Updating Profile...
+                      <Loader2
+                        className="
+                        mr-2
+                        h-4
+                        w-4
+                        animate-spin
+                      "
+                      />
+                      Updating...
                     </>
                   ) : (
                     'Update Profile'
@@ -123,11 +237,13 @@ export default function MentorProfileManagement() {
             </div>
           </div>
 
-          {/* =====================================================
-           * Main Content
-           * =================================================== */}
+          {/* CONTENT */}
 
-          <div className="space-y-8">
+          <div
+            className="
+            space-y-8
+          "
+          >
             <section>
               <MentorProfileForm />
             </section>
@@ -137,7 +253,12 @@ export default function MentorProfileManagement() {
             </section>
 
             <section>
-              <SkillTable />
+              <SkillTable
+                skills={skills}
+                addSkill={addSkill}
+                updateSkill={updateSkill}
+                removeSkill={removeSkill}
+              />
             </section>
 
             <section>
