@@ -9,7 +9,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/components/ui/dialog';
 
 import { useCoachingCategories } from '../hooks/useCoachingCategories';
-import { useMentorProfileStore } from '@/stores/mentorProfile.store';
+import { useMentorProfileStore } from '@/stores/userProfile.store';
 
 const durationOptions = [
   { label: '30 Minutes', value: 30 },

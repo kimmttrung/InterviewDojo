@@ -14,7 +14,7 @@ import { useUploadAvatar } from '@/hooks/mutations/useUploadAvatar';
 
 import { mentorProfileService } from '../services/mentorProfile.service';
 
-import { useMentorProfileStore } from '@/stores/mentorProfile.store';
+import { useMentorProfileStore } from '@/stores/userProfile.store';
 
 export const MentorProfileForm = () => {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
