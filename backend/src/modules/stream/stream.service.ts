@@ -1,7 +1,7 @@
 // src/modules/stream/stream.service.ts
 import { StreamClient } from '@stream-io/node-sdk';
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
-
+import { v4 as uuidv4 } from 'uuid';
 @Injectable()
 export class StreamService {
   private client: StreamClient;
@@ -54,5 +54,24 @@ export class StreamService {
       console.error('Lỗi tạo phòng trên Stream:', error);
       throw new InternalServerErrorException('Không thể tạo phòng video');
     }
+  }
+
+  // Tạo phòng họp, trả về { roomId, meetingLink }
+  async createMeetingRoom(
+    bookingId: number,
+    mentorId: number,
+    candidateId: number,
+  ) {
+    const roomId = uuidv4(); // ID phòng duy nhất
+    const call = this.client.video.call('default', roomId);
+    await call.getOrCreate({
+      data: {
+        created_by_id: mentorId.toString(),
+        // Có thể thêm custom data
+        custom: { bookingId, mentorId, candidateId },
+      },
+    });
+    const meetingLink = `/meeting/${roomId}`;
+    return { roomId, meetingLink };
   }
 }

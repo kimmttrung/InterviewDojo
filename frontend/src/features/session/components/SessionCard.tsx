@@ -24,7 +24,8 @@ export const SessionCard = ({ session }: Props) => {
       const start = dayjs(session.scheduledAt);
       const diffMinutes = start.diff(now, 'minute');
 
-      const canJoin = diffMinutes <= 30 && diffMinutes >= -120;
+      const canJoin = diffMinutes <= 15 && diffMinutes >= -120;
+      // diffMinutes <= 30 && diffMinutes >= -120;
       setIsJoinable(canJoin && !!session.meetingLink);
 
       if (diffMinutes > 0) {

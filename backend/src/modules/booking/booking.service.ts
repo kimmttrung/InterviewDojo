@@ -23,12 +23,14 @@ import {
   Prisma,
   NotificationType,
 } from '@prisma/client';
+import { StreamService } from '../stream/stream.service';
 
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketService: SocketService,
+    private readonly streamService: StreamService,
   ) {}
 
   private mapToBookingResponse(
@@ -362,6 +364,35 @@ export class BookingService {
         include: { coachingPlan: true, candidate: true },
       });
 
+      // 4. Tạo phòng họp trên Stream (ngoài transaction? tốt nhất nên trong transaction, nhưng Stream không hỗ trợ rollback.
+      //    Nếu lỗi, ta throw exception, transaction sẽ rollback, không lưu booking thành ACCEPTED.
+      //    Tuy nhiên có thể tạo trước, nếu lỗi thì reject luôn.
+      const { roomId, meetingLink } =
+        await this.streamService.createMeetingRoom(
+          bookingId,
+          mentorId,
+          booking.candidateId,
+        );
+
+      console.log('✅ Created meeting:', { roomId, meetingLink });
+      // 5. Tạo MockSession record
+      const session = await tx.mockSession.create({
+        data: {
+          bookingId: booking.id,
+          intervieweeId: booking.candidateId, // candidate là người được phỏng vấn
+          scheduledAt: booking.startTime,
+          durationMinutes:
+            (booking.endTime.getTime() - booking.startTime.getTime()) / 60000,
+          status: 'SCHEDULED',
+          source: 'MENTOR_BOOKING',
+          mode: 'MEET',
+          meetingLink: meetingLink,
+          // Có thể thêm trường roomId nếu muốn lưu riêng (cần thêm vào schema)
+        },
+      });
+
+      console.log('✅ MockSession created:', session.id, session.meetingLink);
+
       await tx.bookingActionLog.create({
         data: {
           bookingId,
@@ -377,8 +408,8 @@ export class BookingService {
           userId: updated.candidateId,
           type: NotificationType.INTERVIEW_UPCOMING,
           title: 'Lịch phỏng vấn đã được xác nhận',
-          message: 'Mentor đã xác nhận lịch phỏng vấn của bạn.',
-          targetUrl: '/dashboard',
+          message: `Mentor đã xác nhận. Link meeting: ${meetingLink}`,
+          targetUrl: meetingLink,
         },
       });
       this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
@@ -388,12 +419,20 @@ export class BookingService {
       // Nếu muốn emit thêm event riêng SESSION_ACCEPTED (frontend cũng đang lắng nghe)
       this.socketService.emitToUser(mentorId, 'SESSION_ACCEPTED', {
         bookingId,
+        meetingLink,
+        sessionId: session.id,
+        startTime: booking.startTime,
       });
-      this.socketService.emitToUser(updated.candidateId, 'SESSION_ACCEPTED', {
+      this.socketService.emitToUser(booking.candidateId, 'SESSION_ACCEPTED', {
         bookingId,
+        meetingLink,
+        sessionId: session.id,
+        startTime: booking.startTime,
       });
 
-      return this.mapToBookingResponse(updated);
+      const response = this.mapToBookingResponse(updated);
+      (response as any).meetingLink = meetingLink;
+      return response;
     });
   }
 

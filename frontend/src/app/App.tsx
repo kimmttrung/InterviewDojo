@@ -41,6 +41,7 @@ import WalletPage from '@/features/wallet/pages/WalletPage';
 import SessionPage from '@/features/session/components/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
+import MeetingRoom from '@/features/candidate/practice/interviews/mentor-interview/pages/MeetingRoom';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -242,6 +243,15 @@ export function App() {
               element={
                 <ProtectedRoute>
                   <QuestionDetailContainer />
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/meeting/:roomId"
+              element={
+                <ProtectedRoute>
+                  <MeetingRoom />
                 </ProtectedRoute>
               }
             />
