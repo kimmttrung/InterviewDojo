@@ -200,3 +200,5 @@ export const useMentorProfileStore = create<MentorProfileState>((set) => ({
       ...data,
     })),
 }));
+
+export const useCandidateProfileStore = useMentorProfileStore;

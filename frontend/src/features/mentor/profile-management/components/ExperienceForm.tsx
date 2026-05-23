@@ -8,7 +8,7 @@ import { Textarea } from '@/shared/components/ui/textarea';
 
 import { useCompanies } from '../hooks/useCompanies';
 import { useJobRoles } from '../hooks/useJobRoles';
-import { useMentorProfileStore } from '@/stores/mentorProfile.store';
+import { useMentorProfileStore } from '@/stores/userProfile.store';
 
 // ==========================================
 // COMPONENT CON: Xử lý hiển thị từng Experience

@@ -1,12 +1,31 @@
 import {
-  IsString,
-  IsNumber,
-  IsOptional,
-  IsUrl,
   IsArray,
+  IsEnum,
   IsInt,
+  IsOptional,
+  IsString,
   Min,
+  ValidateNested,
 } from 'class-validator';
+
+import { Type } from 'class-transformer';
+import { SkillLevel } from '@prisma/client';
+
+export class UpdateUserSkillDto {
+  @IsInt()
+  skillId: number;
+
+  @IsInt()
+  @Min(0)
+  experienceMonths: number;
+
+  @IsEnum(SkillLevel)
+  level: SkillLevel;
+
+  @IsOptional()
+  @IsString()
+  proofUrl?: string;
+}
 
 export class UpdateUserDto {
   @IsOptional()
@@ -19,19 +38,30 @@ export class UpdateUserDto {
 
   @IsOptional()
   @IsInt()
-  target_role_id?: number;
+  targetRoleId?: number | null;
 
   @IsOptional()
-  @IsNumber()
+  @IsInt()
   @Min(0)
-  experience_years?: number;
+  experienceYears?: number;
 
   @IsOptional()
-  @IsUrl()
-  avatar_url?: string;
+  @IsString()
+  avatarUrl?: string;
+
+  @IsOptional()
+  @IsString()
+  linkedInLink?: string;
+
+  @IsOptional()
+  @IsString()
+  githubLink?: string;
 
   @IsOptional()
   @IsArray()
-  @IsInt({ each: true })
-  skill_ids?: number[];
+  @ValidateNested({
+    each: true,
+  })
+  @Type(() => UpdateUserSkillDto)
+  skills?: UpdateUserSkillDto[];
 }

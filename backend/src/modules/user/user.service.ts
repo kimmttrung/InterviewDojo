@@ -6,13 +6,13 @@ import {
 import { PrismaService } from '../../prisma/prisma.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
-import { Role, SkillLevel, SessionMode, Prisma } from '@prisma/client';
+import { Role, SessionMode, Prisma } from '@prisma/client';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UploadedFileType } from '../../common/types/uploaded-file.type';
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
-    targetRole: true;
+    // targetRole: true;
     skills: {
       include: {
         skill: true;
@@ -32,14 +32,22 @@ export class UserService {
 
   async getMe(userId: number) {
     const user = await this.prisma.user.findUnique({
-      where: { id: userId },
+      where: {
+        id: userId,
+      },
+
       include: {
-        targetRole: true,
-        skills: { include: { skill: true } },
+        skills: {
+          include: {
+            skill: true,
+          },
+        },
       },
     });
 
-    if (!user) throw new NotFoundException('Người dùng không tồn tại');
+    if (!user) {
+      throw new NotFoundException('Người dùng không tồn tại');
+    }
 
     return this.mapUserResponse(user);
   }
@@ -58,39 +66,100 @@ export class UserService {
 
   async updateMe(userId: number, dto: UpdateUserDto) {
     if (!dto) {
-      throw new BadRequestException('Dữ liệu không được để trống');
+      throw new BadRequestException('Update payload is required');
     }
 
-    const skillsUpdateData = dto.skill_ids
-      ? {
-          deleteMany: {},
-          create: dto.skill_ids.map((skillId) => ({
-            skill: { connect: { id: skillId } },
-            experienceMonths: 0,
-            level: SkillLevel.LEARNING,
-          })),
+    return this.prisma.$transaction(async (prisma) => {
+      if (dto.skills?.length) {
+        const skillIds = dto.skills.map((skill) => skill.skillId);
+
+        const existingSkills = await prisma.skill.findMany({
+          where: {
+            id: {
+              in: skillIds,
+            },
+          },
+
+          select: {
+            id: true,
+          },
+        });
+
+        const existingSkillSet = new Set(
+          existingSkills.map((skill) => skill.id),
+        );
+
+        const invalidSkill = skillIds.find((id) => !existingSkillSet.has(id));
+
+        if (invalidSkill) {
+          throw new BadRequestException(`Skill ${invalidSkill} not found`);
         }
-      : undefined;
+      }
 
-    const updatedUser = await this.prisma.user.update({
-      where: { id: userId },
-      data: {
-        name: dto.name,
-        bio: dto.bio,
-        // ❌ avatarUrl đã bị loại bỏ – không cho phép cập nhật avatar ở đây
-        experienceYears: dto.experience_years,
-        ...(dto.target_role_id && {
-          targetRole: { connect: { id: dto.target_role_id } },
-        }),
-        ...(skillsUpdateData && { skills: skillsUpdateData }),
-      },
-      include: {
-        targetRole: true,
-        skills: { include: { skill: true } },
-      },
+      const updatedUser = await prisma.user.update({
+        where: {
+          id: userId,
+        },
+
+        data: {
+          name: dto.name,
+
+          bio: dto.bio,
+
+          avatarUrl: dto.avatarUrl,
+
+          linkedInLink: dto.linkedInLink,
+
+          githubLink: dto.githubLink,
+
+          experienceYears: dto.experienceYears,
+
+          ...(dto.targetRoleId !== undefined && {
+            targetRole: dto.targetRoleId
+              ? {
+                  connect: {
+                    id: dto.targetRoleId,
+                  },
+                }
+              : {
+                  disconnect: true,
+                },
+          }),
+
+          ...(dto.skills && {
+            skills: {
+              deleteMany: {},
+
+              create: dto.skills.map((skill) => ({
+                skill: {
+                  connect: {
+                    id: skill.skillId,
+                  },
+                },
+
+                experienceMonths: skill.experienceMonths,
+
+                level: skill.level,
+
+                proofUrl: skill.proofUrl,
+              })),
+            },
+          }),
+        },
+
+        include: {
+          targetRole: true,
+
+          skills: {
+            include: {
+              skill: true,
+            },
+          },
+        },
+      });
+
+      return this.mapUserResponse(updatedUser);
     });
-
-    return this.mapUserResponse(updatedUser);
   }
 
   // ========== STATS ==========
@@ -238,22 +307,43 @@ export class UserService {
   private mapUserResponse(user: UserWithRelations) {
     return {
       id: user.id,
+
       email: user.email,
+
       name: user.name,
+
       bio: user.bio,
-      targetRole: user.targetRole?.name || null,
-      experienceYears: user.experienceYears,
-      currentLevel: this.calculateLevel(user.experienceYears),
+
       avatarUrl: user.avatarUrl,
+
+      linkedInLink: user.linkedInLink,
+
+      githubLink: user.githubLink,
+
+      experienceYears: user.experienceYears,
+
+      currentLevel: this.calculateLevel(user.experienceYears),
+
       creditBalance: user.creditBalance,
+
       role: user.role,
+
       status: user.status,
-      skills: user.skills.map((us) => ({
-        id: us.skill.id,
-        name: us.skill.name,
-        type: us.skill.type,
-        level: us.level,
-        experienceMonths: us.experienceMonths,
+
+      targetRoleId: user?.targetRoleId ?? null,
+
+      skills: user.skills.map((userSkill) => ({
+        skillId: userSkill.skill.id,
+
+        name: userSkill.skill.name,
+
+        type: userSkill.skill.type,
+
+        level: userSkill.level,
+
+        experienceMonths: userSkill.experienceMonths,
+
+        proofUrl: userSkill.proofUrl,
       })),
     };
   }
