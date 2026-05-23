@@ -1,5 +1,5 @@
 export interface SessionItem {
-  id: string | number; // ID của session (có thể là bookingId, matchId hoặc sessionId tùy loại)
+  id: string | number;
   type: string; // 'MENTOR', 'P2P', 'SOLO'
   status: string; // 'PENDING', 'UPCOMING', 'REJECTED', 'FINISHED'
   opponentId: number | null;

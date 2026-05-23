@@ -6,7 +6,6 @@ export const CancelSessionModal = () => {
   const { cancelModalData, closeCancelModal } = useSessionStore();
   const [reason, setReason] = useState('');
 
-  // Lấy hàm mutate và trạng thái đang xử lý
   const { mutate: cancelSession, isPending } = useCancelSession();
 
   if (!cancelModalData.isOpen) return null;

@@ -1,6 +1,6 @@
 // shared-domain/feedback/hooks/useFeedback.ts
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { FeedbackRequest } from '../types/feedback.types';
+import { useMutation, useQuery, useQueryClient, UseQueryOptions } from '@tanstack/react-query';
+import { FeedbackRequest, PartnerFeedbackResponse } from '../types/feedback.types';
 import { feedbackApi } from '../services/feedback.service';
 
 export const useSubmitFeedback = (sessionId: number) => {
@@ -25,12 +25,17 @@ export const useMyFeedback = (sessionId: number) => {
   });
 };
 
-export const usePartnerFeedback = (sessionId: number) => {
+// dung chung cho p2p, mentor-to-candidate
+export const usePartnerFeedback = (
+  sessionId: number,
+  options?: Omit<UseQueryOptions<PartnerFeedbackResponse | null>, 'queryKey' | 'queryFn'>,
+) => {
   return useQuery({
     queryKey: ['partnerFeedback', sessionId],
     queryFn: () => feedbackApi.getPartnerFeedback(sessionId).then((res) => res.data.data),
     enabled: !!sessionId,
     staleTime: 5 * 60 * 1000,
+    ...options,
   });
 };
 
