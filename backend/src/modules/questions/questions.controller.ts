@@ -44,8 +44,10 @@ export class QuestionsController {
   @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
   async findAll(
     @Query() query: GetQuestionsDto,
+    @CurrentUser() user: JwtPayload,
   ): Promise<PaginatedResponse<QuestionItem>> {
-    return this.questionsService.findAll(query);
+    const userId = user ? Number(user.sub) : undefined;
+    return this.questionsService.findAll(query, userId);
   }
 
   @Get('random')

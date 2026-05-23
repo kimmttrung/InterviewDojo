@@ -31,6 +31,7 @@ import SoloRecording from '../features/candidate/practice/interviews/solo-ai/pag
 import PeerMatchingPage from '../features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage';
 import QuestionBank from '../features/shared-domain/question-bank/pages/QuestionBank';
 import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
+import { BookmarkedQuestionsPage } from '../features/bookmark/components/BookmarkedQuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
@@ -226,6 +227,16 @@ export function App() {
                 </ProtectedRoute>
               }
             />
+
+            <Route
+              path="/bookmarks"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <BookmarkedQuestionsPage />
+                </ProtectedRoute>
+              }
+            />
+
             <Route
               path="/questions/:id/:slug"
               element={

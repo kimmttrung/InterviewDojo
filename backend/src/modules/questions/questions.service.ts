@@ -1,3 +1,4 @@
+// questions.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { GetQuestionsDto } from './dto/get-questions.dto';
@@ -30,6 +31,7 @@ export class QuestionsService {
       categories: q.categories?.map((c: any) => c.category?.name || '') || [],
       companies: q.companies?.map((c: any) => c.company?.name || '') || [],
       jobRoles: q.jobRoles?.map((j: any) => j.jobRole?.name || '') || [],
+      isBookmarked: false, // mặc định false, sẽ ghi đè nếu có userId trong findAll
     };
   }
 
@@ -49,7 +51,6 @@ export class QuestionsService {
           isSample: tc.isSample,
         }));
       } else {
-        // User thường: chỉ lấy test case mẫu (isSample = true) và không ẩn
         testCasesToReturn = allTestCases
           .filter((tc) => tc.isSample === true && tc.isHidden === false)
           .map((tc) => ({
@@ -57,7 +58,7 @@ export class QuestionsService {
             input: tc.input,
             output: tc.expectedOutput,
             order: tc.order,
-            isHidden: false, // hoặc không cần field này
+            isHidden: false,
             isSample: true,
           }));
       }
@@ -71,14 +72,12 @@ export class QuestionsService {
       type: rawQ.type,
       isPublished: rawQ.isPublished,
       createdAt: rawQ.createdAt,
-      updatedAt: rawQ.updated_at, // lưu ý snake_case nếu trong model là updated_at
+      updatedAt: rawQ.updated_at,
       categories: rawQ.categories.map((c: any) => c.category?.name || ''),
       companies: rawQ.companies.map((c: any) => c.company?.name || ''),
       jobRoles: rawQ.jobRoles.map((j: any) => j.jobRole?.name || ''),
       isCodingQuestion: isCoding,
-      // Theory
       data: !isCoding ? rawQ.theoryQuestion?.data : undefined,
-      // Coding
       description: isCoding ? rawQ.codingQuestion?.description : undefined,
       constraints: isCoding ? rawQ.codingQuestion?.constraints : undefined,
       timeLimit: isCoding ? rawQ.codingQuestion?.timeLimit : undefined,
@@ -89,29 +88,29 @@ export class QuestionsService {
       testCases: testCasesToReturn,
       hints: isCoding ? rawQ.codingQuestion?.hints : undefined,
       tags: isCoding ? rawQ.codingQuestion?.tags : undefined,
+      isBookmarked: false, // mặc định false, sẽ ghi đè nếu có userId trong findOne
     };
   }
 
   async findAll(
     query: GetQuestionsDto,
+    userId?: number,
   ): Promise<PaginatedResponse<QuestionItem>> {
     const {
       keyword,
       page = 1,
       limit = 10,
       difficulty,
-      type, // lọc theo loại câu hỏi (CODING, TECHNICAL, ...)
-      category, // tên category
-      jobRole, // tên job role
+      type,
+      category,
+      jobRole,
     } = query;
 
     const skip = (page - 1) * limit;
 
-    // Xây dựng where condition
     const where: Prisma.QuestionWhereInput = { isPublished: true };
 
     if (keyword) {
-      // full-text search (cần index GIN)
       where.OR = [
         { title: { contains: keyword, mode: 'insensitive' } },
         { title: { search: keyword.split(/\s+/).join(' & ') } },
@@ -119,8 +118,6 @@ export class QuestionsService {
     }
     if (difficulty) where.difficulty = difficulty;
     if (type) where.type = type;
-
-    // Filter theo category (thông qua bảng junction)
     if (category) {
       where.categories = {
         some: {
@@ -130,8 +127,6 @@ export class QuestionsService {
         },
       };
     }
-
-    // Filter theo job role
     if (jobRole) {
       where.jobRoles = {
         some: {
@@ -142,13 +137,12 @@ export class QuestionsService {
       };
     }
 
-    // Lấy dữ liệu và total
     const [questions, total] = await Promise.all([
       this.prisma.question.findMany({
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' }, // có thể custom sort sau nếu cần
+        orderBy: { createdAt: 'desc' },
         include: {
           categories: { include: { category: true } },
           companies: { include: { company: true } },
@@ -160,7 +154,22 @@ export class QuestionsService {
       this.prisma.question.count({ where }),
     ]);
 
-    const items = questions.map((q) => this.toQuestionItem(q));
+    let bookmarkedIds: number[] = [];
+    if (userId) {
+      const bookmarks = await this.prisma.userBookmark.findMany({
+        where: { userId },
+        select: { questionId: true },
+      });
+      bookmarkedIds = bookmarks.map((b) => b.questionId);
+    }
+
+    const items = questions.map((q) => {
+      const item = this.toQuestionItem(q);
+      if (userId) {
+        item.isBookmarked = bookmarkedIds.includes(item.id);
+      }
+      return item;
+    });
 
     return {
       items,
@@ -173,7 +182,11 @@ export class QuestionsService {
     };
   }
 
-  async findOne(id: number, userRole?: string): Promise<QuestionDetail> {
+  async findOne(
+    id: number,
+    userRole?: string,
+    userId?: number,
+  ): Promise<QuestionDetail> {
     const rawQ = await this.prisma.question.findFirst({
       where: { id, isPublished: true },
       include: {
@@ -187,7 +200,15 @@ export class QuestionsService {
       },
     });
     if (!rawQ) throw new NotFoundException('Question not found');
-    return this.mapToQuestionDetail(rawQ, userRole);
+
+    const detail = this.mapToQuestionDetail(rawQ, userRole);
+    if (userId) {
+      const bookmark = await this.prisma.userBookmark.findUnique({
+        where: { userId_questionId: { userId, questionId: id } },
+      });
+      detail.isBookmarked = !!bookmark;
+    }
+    return detail;
   }
 
   async create(createDto: CreateQuestionDto) {

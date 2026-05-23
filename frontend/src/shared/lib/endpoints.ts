@@ -133,4 +133,10 @@ export const API_ENDPOINT = {
     REJECT: (id: number | string) => `/sessions/${id}/reject`,
     CANCEL: (id: number | string) => `/sessions/${id}/cancel`,
   },
+
+  BOOKMARK: {
+    GET_ALL: '/users/me/bookmarks',
+    BOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
+    UNBOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
+  },
 };

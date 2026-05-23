@@ -7,12 +7,11 @@ import { DetailSidebar } from '../components/QuestionDetail/DetailSidebar';
 import { AnswerSection } from '../components/QuestionDetail/AnswerSection';
 import { useQuestionDetail } from '../hooks/useQuestions';
 import { QuestionType } from '../types/question.types';
+import { BookmarkButton } from '@/features/bookmark/components/BookmarkButton';
 
 export default function QuestionDetailContainer() {
   const { id } = useParams<{ id: string }>();
   const { data: question, isLoading, error } = useQuestionDetail(id!);
-
-  console.log('checck question', question);
 
   if (isLoading) {
     return (
@@ -28,7 +27,8 @@ export default function QuestionDetailContainer() {
     );
   }
 
-  if (question.type === QuestionType.CODING) {
+  // Sửa: dùng question.questionType thay vì question.type
+  if (question.questionType === QuestionType.CODING) {
     return <CodingView question={question} />;
   }
 
@@ -37,7 +37,7 @@ export default function QuestionDetailContainer() {
   return (
     <Layout>
       <div className="max-w-7xl mx-auto px-6 py-8">
-        <div className="mb-6">
+        <div className="mb-6 flex justify-between items-center">
           <Link
             to="/question-bank"
             className="inline-flex items-center text-sm font-medium text-slate-500 hover:text-indigo-600 transition-colors"
@@ -45,6 +45,8 @@ export default function QuestionDetailContainer() {
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back to Question Bank
           </Link>
+          {/* Thêm fallback false cho isBookmarked */}
+          <BookmarkButton questionId={question.id} isBookmarked={question.isBookmarked || false} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
