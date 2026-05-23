@@ -5,7 +5,7 @@ import { SessionList } from './SessionList';
 import { SessionTab } from '../types/session.types';
 import { CancelSessionModal } from './modals/CancelSessionModal';
 import { RejectReasonModal } from './modals/RejectReasonModal';
-import { UserProfileModal } from './modals/UserProfileModal';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 
 export default function SessionPage() {
   // Lắng nghe socket để auto-reload data (theo AC)

@@ -4,6 +4,7 @@ import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
+import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
 
 dayjs.extend(relativeTime);
 
@@ -57,17 +58,15 @@ export const SessionCard = ({ session }: Props) => {
   return (
     <div className="border rounded-lg p-4 shadow-sm flex flex-col gap-3 bg-white">
       <div className="flex justify-between items-center">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => session.opponentId && openProfileModal(session.opponentId)}
-        >
-          <img
-            src={session.opponentAvatar || '/default-avatar.png'}
-            alt="avatar"
-            className="w-10 h-10 rounded-full"
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            userId={session.opponentId}
+            avatarUrl={session.opponentAvatar}
+            name={session.opponentName}
+            className="h-10 w-10"
           />
           <div>
-            <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
+            <h3 className="font-bold">{session.opponentName}</h3>
             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
               {session.type}
             </span>

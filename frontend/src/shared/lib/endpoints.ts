@@ -139,4 +139,9 @@ export const API_ENDPOINT = {
     BOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
     UNBOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
   },
+  REPORT: {
+    CREATE_USER: '/reports/user', // POST
+    GET_LIST: '/reports', // GET (admin)
+    GET_ONE: (id: number) => `/reports/${id}`,
+  },
 };

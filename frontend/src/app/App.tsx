@@ -41,6 +41,7 @@ import WalletPage from '@/features/wallet/pages/WalletPage';
 import SessionPage from '@/features/session/components/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -349,6 +350,7 @@ export function App() {
               }
             />
           </Routes>
+          <UserProfileModal />
         </TooltipProvider>
       </ThemeProvider>
     </I18nextProvider>
