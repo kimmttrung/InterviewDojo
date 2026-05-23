@@ -1,8 +1,9 @@
-import { Plus, Trash2, Info } from 'lucide-react';
+import { Info, Plus, Trash2 } from 'lucide-react';
+
+import { useSkills } from '@/features/shared-domain/skill/hooks/useSkill';
 
 import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
-
 import {
   Table,
   TableBody,
@@ -11,8 +12,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-
-import { useSkills } from '@/features/shared-domain/skill/hooks/useSkill';
 
 import { UserSkillPayload } from '../types/skill';
 
@@ -30,67 +29,169 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
   const { data: skillsOptions = [] } = useSkills();
 
   return (
-    <div className="rounded-2xl border bg-white p-6 shadow-sm">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-xl font-semibold">Skills</h2>
+    <div
+      className="
+      rounded-3xl
+      border
+      bg-white
+      p-7
+      shadow-sm
+    "
+    >
+      {/* Header */}
 
-          <p className="text-sm text-muted-foreground">Add hard skills and soft skills</p>
+      <div
+        className="
+        mb-7
+        flex
+        flex-col
+        gap-4
+        lg:flex-row
+        lg:items-center
+        lg:justify-between
+      "
+      >
+        <div>
+          <div className="flex items-center gap-3">
+            <h2
+              className="
+              text-2xl
+              font-bold
+              text-slate-900
+            "
+            >
+              Skills
+            </h2>
+
+            <span
+              className="
+              rounded-full
+              bg-blue-100
+              px-3
+              py-1
+              text-xs
+              font-semibold
+              text-blue-700
+            "
+            >
+              {skills.length} skills
+            </span>
+          </div>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Add your technical and soft skills. Strong evidence helps mentors and matching systems
+            understand your strengths better.
+          </p>
         </div>
 
-        <Button type="button" onClick={addSkill}>
+        <Button onClick={addSkill} type="button" className="h-11">
           <Plus className="mr-2 h-4 w-4" />
           Add Skill
         </Button>
       </div>
 
+      {/* Guide */}
+
       <div
         className="
-        mb-6
-        flex
-        gap-3
-        rounded-xl
+        mb-7
+        rounded-2xl
         border
-        bg-emerald-50/50
-        p-4
-        text-sm
-        text-emerald-700
+        bg-gradient-to-br
+        from-slate-50
+        to-blue-50
+        p-5
       "
       >
-        <Info
-          className="
-          mt-0.5
-          h-4
-          w-4
-          shrink-0
-        "
-        />
-
-        <div>
-          <p className="font-medium">Showcase your proficiency</p>
-
-          <ul
+        <div className="mb-4 flex gap-3">
+          <Info
             className="
-            list-inside
-            list-disc
-            opacity-90
+            mt-1
+            h-5
+            w-5
+            text-blue-600
           "
-          >
-            <li>GitHub repositories</li>
+          />
 
-            <li>Certifications</li>
+          <div>
+            <h3
+              className="
+              font-semibold
+              text-slate-900
+            "
+            >
+              Skill Level Guide
+            </h3>
 
-            <li>Portfolio links</li>
+            <p className="text-sm text-slate-500">
+              Choose levels honestly. Better data improves mentor recommendations.
+            </p>
+          </div>
+        </div>
 
-            <li>Learning platform badges</li>
-          </ul>
+        <div
+          className="
+          grid
+          gap-4
+          lg:grid-cols-2
+        "
+        >
+          <div className="space-y-2 text-sm">
+            <div>
+              <b>LEARNING</b>
+
+              <p className="text-slate-600">Learning fundamentals.</p>
+            </div>
+
+            <div>
+              <b>PRACTICED</b>
+
+              <p className="text-slate-600">Used in exercises or coursework.</p>
+            </div>
+
+            <div>
+              <b>PERSONAL PROJECT</b>
+
+              <p className="text-slate-600">Built side projects using it.</p>
+            </div>
+          </div>
+
+          <div className="space-y-2 text-sm">
+            <div>
+              <b>PRODUCTION READY</b>
+
+              <p className="text-slate-600">Applied in deployable products.</p>
+            </div>
+
+            <div>
+              <b>EXPERT</b>
+
+              <p className="text-slate-600">Deep knowledge and leadership.</p>
+            </div>
+
+            <div>
+              <b>Evidence Examples</b>
+
+              <p className="text-slate-600">
+                GitHub • Portfolio • AWS Cert • LeetCode • Blog • Open Source • Demo Video
+              </p>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="rounded-md border">
+      {/* Table */}
+
+      <div
+        className="
+        overflow-hidden
+        rounded-2xl
+        border
+      "
+      >
         <Table>
           <TableHeader>
-            <TableRow>
+            <TableRow className="bg-slate-100">
               <TableHead>Skill</TableHead>
 
               <TableHead>Type</TableHead>
@@ -99,7 +200,7 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
 
               <TableHead>Level</TableHead>
 
-              <TableHead>Evidence URL</TableHead>
+              <TableHead>Evidence</TableHead>
 
               <TableHead />
             </TableRow>
@@ -113,17 +214,16 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
                 <TableRow key={index}>
                   <TableCell>
                     <select
-                      className="
-                        w-full
-                        rounded-md
-                        border
-                        bg-background
-                        p-2
-                      "
                       value={skill.skillId || ''}
-                      onChange={(event) =>
+                      className="
+                      w-full
+                      rounded-lg
+                      border
+                      p-2
+                    "
+                      onChange={(e) =>
                         updateSkill(index, {
-                          skillId: Number(event.target.value),
+                          skillId: Number(e.target.value),
                         })
                       }
                     >
@@ -141,14 +241,14 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
                     <select
                       value={skill.type}
                       className="
-                        w-full
-                        rounded-md
-                        border
-                        p-2
-                      "
-                      onChange={(event) =>
+                      w-full
+                      rounded-lg
+                      border
+                      p-2
+                    "
+                      onChange={(e) =>
                         updateSkill(index, {
-                          type: event.target.value as any,
+                          type: e.target.value as any,
 
                           skillId: 0,
                         })
@@ -165,13 +265,10 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
                       type="number"
                       min={0}
                       value={skill.experienceMonths}
-                      onChange={(event) =>
+                      placeholder="24"
+                      onChange={(e) =>
                         updateSkill(index, {
-                          experienceMonths: Math.max(
-                            0,
-
-                            Number(event.target.value),
-                          ),
+                          experienceMonths: Math.max(0, Number(e.target.value)),
                         })
                       }
                     />
@@ -179,16 +276,16 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
 
                   <TableCell>
                     <select
-                      className="
-                        w-full
-                        rounded-md
-                        border
-                        p-2
-                      "
                       value={skill.level}
-                      onChange={(event) =>
+                      className="
+                      w-full
+                      rounded-lg
+                      border
+                      p-2
+                    "
+                      onChange={(e) =>
                         updateSkill(index, {
-                          level: event.target.value as any,
+                          level: e.target.value as any,
                         })
                       }
                     >
@@ -198,7 +295,7 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
 
                       <option value="PERSONAL_PROJECT">Personal Project</option>
 
-                      <option value="PRODUCTION_READY">Production</option>
+                      <option value="PRODUCTION_READY">Production Ready</option>
 
                       <option value="EXPERT">Expert</option>
                     </select>
@@ -207,10 +304,10 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
                   <TableCell>
                     <Input
                       value={skill.proofUrl || ''}
-                      placeholder="https://..."
-                      onChange={(event) =>
+                      placeholder="GitHub / Portfolio / Certificate"
+                      onChange={(e) =>
                         updateSkill(index, {
-                          proofUrl: event.target.value,
+                          proofUrl: e.target.value,
                         })
                       }
                     />
@@ -218,12 +315,18 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
 
                   <TableCell>
                     <Button
-                      size="icon"
                       variant="ghost"
+                      size="icon"
                       type="button"
                       onClick={() => removeSkill(index)}
                     >
-                      <Trash2 className="h-4 w-4" />
+                      <Trash2
+                        className="
+                        h-4
+                        w-4
+                        text-red-500
+                      "
+                      />
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -235,11 +338,12 @@ export const SkillTable = ({ skills, addSkill, removeSkill, updateSkill }: Props
                 <TableCell
                   colSpan={6}
                   className="
-                  h-20
+                  h-28
                   text-center
+                  text-slate-500
                 "
                 >
-                  No skills added
+                  No skills added yet. Click "Add Skill" to begin.
                 </TableCell>
               </TableRow>
             )}
