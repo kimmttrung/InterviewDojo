@@ -47,7 +47,7 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
       useFactory: bullConfig,
     }),
 
-    // đăng ký queue sẽ dùng
+    // // đăng ký queue sẽ dùng
     BullModule.registerQueue(
       { name: 'code-execution' }, // cho submit code
       { name: 'ai-analysis' }, // cho AI phân tích

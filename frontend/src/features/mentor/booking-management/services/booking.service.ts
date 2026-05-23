@@ -2,6 +2,13 @@
 import { api } from '@/shared/lib/api';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
+export interface BookingAnswer {
+  questionId: number;
+  questionText: string;
+  answerText?: string;
+  fileUrl?: string;
+}
+
 export interface Booking {
   id: number;
   slotId: number;
@@ -40,6 +47,8 @@ export interface Booking {
     email: string;
     avatarUrl?: string;
   };
+  answers?: BookingAnswer[];
+  rejectionReason?: string;
 }
 
 export interface BookingsResponse {

@@ -31,8 +31,12 @@ export class BookingService {
     private readonly socketService: SocketService,
   ) {}
 
-  private mapToBookingResponse(booking: any): BookingResponse {
-    return {
+  private mapToBookingResponse(
+    booking: any,
+    includeAnswers = false,
+    rejectionReason?: string | null,
+  ): BookingResponse {
+    const base: BookingResponse = {
       id: booking.id,
       slotId: booking.slotId,
       mentorId: booking.mentorId,
@@ -69,6 +73,20 @@ export class BookingService {
           }
         : undefined,
     };
+
+    const extended: any = { ...base };
+    if (includeAnswers && booking.answers) {
+      extended.answers = booking.answers.map((ans: any) => ({
+        questionId: ans.questionId,
+        questionText: ans.question?.question || '',
+        answerText: ans.answerText,
+        fileUrl: ans.fileUrl,
+      }));
+    }
+    if (rejectionReason) {
+      extended.rejectionReason = rejectionReason;
+    }
+    return extended;
   }
 
   async create(
@@ -301,7 +319,7 @@ export class BookingService {
             type: NotificationType.TRANSACTION_SUCCESS,
             title: 'Thanh toán thành công',
             message: 'Bạn đã thanh toán thành công cho lịch phỏng vấn.',
-            targetUrl: '/dashboard/transactions',
+            targetUrl: '/wallet',
           },
         ],
       });
@@ -524,6 +542,17 @@ export class BookingService {
         mentor: {
           select: { id: true, name: true, email: true, avatarUrl: true },
         },
+        answers: {
+          include: {
+            question: true, // lấy nội dung câu hỏi
+          },
+        },
+        logs: {
+          // thêm include logs
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+          where: { action: 'REJECT' },
+        },
       },
     });
     if (!booking) throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
@@ -535,7 +564,8 @@ export class BookingService {
     if (!isOwner && !isAdmin)
       throw new ForbiddenException(Messages.BOOKING.NOT_FOUND);
 
-    return this.mapToBookingResponse(booking);
+    const rejectionReason = booking.logs?.[0]?.note;
+    return this.mapToBookingResponse(booking, true, rejectionReason);
   }
 
   // Giữ lại cho tương thích nếu cần
