@@ -130,79 +130,11 @@ export default function HomePage() {
                 Answer a practice question to stay on top of your interview preparation.
               </p>
             </Card>
-
-            {/* Career goals */}
-
-            <Card className="p-6">
-              <h3 className="font-semibold mb-2">My career goals</h3>
-
-              <p className="text-sm text-muted-foreground mb-4">
-                I'm applying for Software Engineer roles at Meta-facebook and 3 more.
-              </p>
-
-              <Button variant="outline">Edit goals</Button>
-            </Card>
-
-            {/* Refer friends */}
-
-            <Card className="p-6 space-y-3">
-              <h3 className="font-semibold">Refer your friends </h3>
-
-              <p className="text-sm text-muted-foreground">
-                Share your 10% discount with four friends and get free lifetime access to Exponent!
-              </p>
-
-              <Button variant="outline">More details</Button>
-            </Card>
           </div>
 
           {/* RIGHT SIDE */}
 
           <div className="lg:col-span-2 space-y-6">
-            {/* Courses */}
-
-            <Card className="p-6 space-y-6">
-              <div>
-                <h2 className="text-lg font-semibold">Start a new course</h2>
-
-                <p className="text-sm text-muted-foreground">
-                  Here are our recommended courses based on your career goals.
-                </p>
-              </div>
-
-              {/* Course item */}
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className="mb-2 bg-emerald-500 text-white">Recommended</Badge>
-
-                  <h3 className="font-medium">Software Engineering Interview Prep</h3>
-
-                  <p className="text-sm text-muted-foreground">4 courses</p>
-                </div>
-
-                <Button>Start course</Button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <Badge className="mb-2">Recommended</Badge>
-
-                  <h3 className="font-medium">
-                    Amazon Software Development Engineer (SDE) Interview Course
-                  </h3>
-
-                  <p className="text-sm text-muted-foreground">5 courses</p>
-                </div>
-
-                <Button>Start course</Button>
-              </div>
-
-              <Button variant="link" className="text-indigo-500 hover:text-indigo-600 transition">
-                See more courses
-              </Button>
-            </Card>
-
             {/* Interview Questions */}
 
             <Card className="p-6 space-y-4">
@@ -235,10 +167,10 @@ export default function HomePage() {
               <Button variant="link">See more questions</Button>
             </Card>
 
-            {/* Practice interviews */}
+            {/* Practice mentor */}
 
             <Card className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Practice interviews</h2>
+              <h2 className="text-lg font-semibold">Practice mentor</h2>
 
               <div className="flex justify-between items-center">
                 <div>
@@ -249,7 +181,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <Button>Book Now</Button>
+                <Button>Booking Now</Button>
               </div>
 
               <div className="flex justify-between items-center">
@@ -259,7 +191,7 @@ export default function HomePage() {
                   <p className="text-sm text-muted-foreground">Software Engineer | Amazon</p>
                 </div>
 
-                <Button>Book Now</Button>
+                <Button>Booking Now</Button>
               </div>
 
               <div className="flex justify-between items-center">
@@ -271,7 +203,7 @@ export default function HomePage() {
                   </p>
                 </div>
 
-                <Button>Join Now</Button>
+                <Button>Booking Now</Button>
               </div>
             </Card>
           </div>

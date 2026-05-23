@@ -29,4 +29,13 @@ export interface BookingResponse {
     email: string;
     avatarUrl?: string | null;
   };
+  answers?: AnswerResponse[];
+  rejectionReason?: string;
+}
+
+export interface AnswerResponse {
+  questionId: number;
+  questionText: string;
+  answerText?: string;
+  fileUrl?: string;
 }

@@ -16,14 +16,14 @@ export const ReceivedFeedbackModal = ({ open, onClose }: Props) => {
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-4xl max-h-[85vh] overflow-y-auto p-0 bg-gradient-to-br from-slate-50 to-white rounded-2xl shadow-2xl border-0">
         {/* Header with gradient */}
-        <div className="sticky top-0 z-10 bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-500 rounded-t-2xl p-6 text-white shadow-lg">
+        <div className="sticky top-0 z-10 bg-blue-50 border-b border-blue-100 rounded-t-2xl p-6">
           <DialogHeader>
-            <DialogTitle className="text-2xl font-bold flex items-center gap-3">
-              <Sparkles className="h-6 w-6 text-yellow-300" />
+            <DialogTitle className="text-2xl font-semibold flex items-center gap-2 text-blue-900">
+              <MessageSquare className="h-5 w-5 text-blue-600" />
               Feedback từ đối tác
-              <Sparkles className="h-6 w-6 text-yellow-300" />
             </DialogTitle>
-            <p className="text-indigo-100 text-sm mt-1">
+
+            <p className="text-blue-700/70 text-sm mt-1">
               Những đánh giá mà bạn đã nhận được từ các buổi phỏng vấn cùng đối tác
             </p>
           </DialogHeader>

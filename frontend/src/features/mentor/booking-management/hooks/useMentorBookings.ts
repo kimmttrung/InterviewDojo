@@ -41,3 +41,12 @@ export const useRejectBooking = () => {
     },
   });
 };
+
+export const useBookingDetail = (bookingId: number | null) => {
+  return useQuery({
+    queryKey: ['booking-detail', bookingId],
+    queryFn: () => bookingService.getBookingDetail(bookingId!),
+    enabled: !!bookingId,
+    staleTime: 5 * 60 * 1000,
+  });
+};
