@@ -103,8 +103,8 @@ export default function HomePage() {
               </p>
 
               <ul className="space-y-2 text-sm">
-                <li>Sign up for Exponent</li>
-                <li>Start your first course</li>
+                <li>Sign up for InterviewDojo</li>
+                <li>Practic question</li>
                 <li>Explore interview questions</li>
                 <li>Join a practice interview</li>
                 <li>Book a coaching session</li>

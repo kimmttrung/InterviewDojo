@@ -319,7 +319,7 @@ export class BookingService {
             type: NotificationType.TRANSACTION_SUCCESS,
             title: 'Thanh toán thành công',
             message: 'Bạn đã thanh toán thành công cho lịch phỏng vấn.',
-            targetUrl: '/dashboard/transactions',
+            targetUrl: '/wallet',
           },
         ],
       });
