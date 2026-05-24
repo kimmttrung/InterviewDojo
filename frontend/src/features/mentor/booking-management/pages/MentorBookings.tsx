@@ -21,6 +21,7 @@ import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { toast } from 'sonner';
 import { bookingService } from '../services/booking.service';
+import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
 
 const getStatusUI = (status: Booking['status']) => {
   switch (status) {
@@ -187,7 +188,7 @@ export default function MentorBookings() {
                   {/* Left info */}
                   <div className="flex-1 flex items-start gap-3">
                     {/* Avatar */}
-                    {booking.candidate.avatarUrl ? (
+                    {/* {booking.candidate.avatarUrl ? (
                       <img
                         src={booking.candidate.avatarUrl}
                         alt={booking.candidate.name}
@@ -197,7 +198,14 @@ export default function MentorBookings() {
                       <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
                         <User className="w-5 h-5 text-slate-500" />
                       </div>
-                    )}
+                    )} */}
+
+                    <UserAvatar
+                      userId={booking.candidate.id}
+                      avatarUrl={booking.candidate.avatarUrl}
+                      name={booking.candidate.name}
+                      className="w-10 h-10"
+                    />
 
                     {/* Thông tin */}
                     <div>

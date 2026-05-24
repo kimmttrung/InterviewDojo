@@ -7,12 +7,10 @@ import { Toaster } from '../shared/components/ui/toaster';
 import i18n from '../shared/i18n';
 import NotFound from '../shared/components/layout/NotFound';
 import Unauthorized from '../shared/components/layout/Unauthorized';
-
 import CandidateDashboardPage from '../features/candidate/dashboard/pages/CandidateDashboardPage';
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
-
 import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';

@@ -4,7 +4,7 @@ import { SessionCard } from './SessionCard';
 import { SessionItem } from '../types/session.types';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
-import { UserProfileModal } from '../components/modals/UserProfileModal';
+import { UserProfileModal } from '../../shared-domain/users/components/UserProfileModal';
 import { CancelSessionModal } from '../components/modals/CancelSessionModal';
 
 export const SessionListByType = ({ type }: { type: string }) => {

@@ -4,6 +4,8 @@ import relativeTime from 'dayjs/plugin/relativeTime';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
 import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
+import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
+
 dayjs.extend(relativeTime);
 
 interface Props {
@@ -11,7 +13,7 @@ interface Props {
 }
 
 export const SessionCard = ({ session }: Props) => {
-  const { openCancelModal, openProfileModal, openRejectModal } = useSessionStore();
+  const { openCancelModal, openRejectModal } = useSessionStore();
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isJoinable, setIsJoinable] = useState(false);
@@ -57,14 +59,12 @@ export const SessionCard = ({ session }: Props) => {
   return (
     <div className="border rounded-lg p-4 shadow-sm flex flex-col gap-3 bg-white">
       <div className="flex justify-between items-center">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => session.opponentId && openProfileModal(session.opponentId)}
-        >
-          <img
-            src={session.opponentAvatar || '/default-avatar.png'}
-            alt="avatar"
-            className="w-10 h-10 rounded-full"
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            userId={session.opponentId ?? 0} // Nếu null thì truyền 0
+            avatarUrl={session.opponentAvatar}
+            name={session.opponentName ?? undefined} // Biến null thành undefined
+            className="h-10 w-10"
           />
           <div>
             <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
@@ -131,7 +131,7 @@ export const SessionCard = ({ session }: Props) => {
               onClick={() => openRejectModal(session.rejectedReason)}
               className="px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10"
             >
-              Rejected reason
+              Cancel reason
             </button>
           )}
 

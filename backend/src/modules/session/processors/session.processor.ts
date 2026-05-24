@@ -3,7 +3,7 @@ import { Job } from 'bullmq';
 import { SocketService } from '../../socket/socket.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-@Processor('session')
+@Processor('session') // tên queue
 export class SessionProcessor extends WorkerHost {
   constructor(
     private socketService: SocketService,
