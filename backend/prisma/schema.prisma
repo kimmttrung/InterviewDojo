@@ -54,11 +54,11 @@ enum SkillType {
 }
 
 enum SkillLevel {
-  LEARNING
-  PRACTICED
-  PERSONAL_PROJECT
-  PRODUCTION_READY
-  EXPERT
+  AWARENESS       // Mới biết / Đang tìm hiểu
+  FOUNDATION      // Có nền tảng / Có thể làm khi có hướng dẫn
+  AUTONOMOUS      // Tự chủ / Làm việc độc lập tốt
+  FLUENT          // Thuần thục / Có thể tối ưu hoặc ứng biến linh hoạt
+  LEADERSHIP      // Chuyên gia / Có thể dẫn dắt, dạy lại người khác
 }
 
 enum SessionStatus {

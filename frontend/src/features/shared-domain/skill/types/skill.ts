@@ -8,7 +8,7 @@ export type UserSkillPayload = {
   skillId: number;
   type: 'HARDSKILL' | 'SOFTSKILL' | 'LANGUAGE';
   experienceMonths: number;
-  level: 'LEARNING' | 'PRACTICED' | 'PERSONAL_PROJECT' | 'PRODUCTION_READY' | 'EXPERT';
+  level: '' | 'AWARENESS' | 'FOUNDATION' | 'AUTONOMOUS' | 'FLUENT' | 'LEADERSHIP';
 
   proofUrl?: string;
 };
