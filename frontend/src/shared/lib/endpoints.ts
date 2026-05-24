@@ -91,9 +91,14 @@ export const API_ENDPOINT = {
   SKILLS: {
     GET_ALL: '/skills',
   },
+
   COACHING_CATEGORIES: {
     GET_ALL: '/coaching-categories',
+    CREATE: '/coaching-categories',
+    UPDATE: (id: number) => `/coaching-categories/${id}`,
+    DELETE: (id: number) => `/coaching-categories/${id}`,
   },
+
   PLANS: {
     GET_BY_USER: (userId: number | string) => `/plans/users/${userId}`,
   },
@@ -159,7 +164,5 @@ export const API_ENDPOINT = {
     CREATE_QUESTION: '/admin/questions',
     UPDATE_QUESTION: (id: number) => `/admin/questions/${id}`,
     DELETE_QUESTION: (id: number) => `/admin/questions/${id}`,
-    COACHING_CATEGORIES: '/admin/coaching-categories',
-    COACHING_CATEGORY_DETAIL: (id: number) => `/admin/coaching-categories/${id}`,
   },
 };

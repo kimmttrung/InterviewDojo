@@ -46,6 +46,7 @@ import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprova
 import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
 import { UserManagement } from '@/features/admin/users/pages/UserManagement';
 import { UserDetail } from '@/features/admin/users/pages/UserDetail';
+import { CoachingCategoryList } from '@/features/admin/coaching-categories/pages/CoachingCategoryList';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -326,6 +327,7 @@ export function App() {
               <Route path="users/:id" element={<UserDetail />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="companies" element={<CompaniesPage />} />
+              <Route path="coaching-categories" element={<CoachingCategoryList />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 
