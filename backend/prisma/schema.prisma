@@ -1,10 +1,11 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres"]
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector] 
 }
 
 // ==================== ENUMS ====================
@@ -238,6 +239,7 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   targetRoleId    Int?       @map("target_role_id")
+  embeddingVector Unsupported("vector(768)")? @map("embedding_vector")
 
   targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
   mentorProfile       MentorProfile?
@@ -347,7 +349,7 @@ model MentorProfile {
   id                   Int            @id @default(autoincrement())
   userId               Int            @unique @map("user_id")
   headline             String
-  introductionVideoUrl String?        @map("introdcution_video_url")
+  introductionVideoUrl String?        @map("introduction_video_url")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   approvalStatus       ApprovalStatus @default(INCOMPLETE) @map("approval_status")
@@ -411,6 +413,9 @@ model JobRole {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
+  jobFamily   String? 
+  coreDomain  String? 
+  embeddingVector Unsupported("vector(768)")? @map("embedding_vector")
 
   experiences Experience[]
   questions   QuestionJobRole[]

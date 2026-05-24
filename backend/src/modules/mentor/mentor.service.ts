@@ -388,9 +388,10 @@ export class MentorService {
               name: data.name,
               bio: data.bio,
               avatarUrl: data.avatarUrl,
-              experienceYears: data.experienceYears,
               linkedInLink: data.linkedInLink,
               githubLink: data.githubLink,
+              // ĐÃ THÊM VÀ SỬA LỖI CHÍNH TẢ: Cập nhật chính xác số năm kinh nghiệm vào bảng User
+              experienceYears: data.experienceYears,
             },
           });
 
@@ -503,7 +504,7 @@ export class MentorService {
                   userId,
                   skillId: sk.skillId,
                   experienceMonths: sk.experienceMonths,
-                  level: sk.level ?? SkillLevel.LEARNING,
+                  level: sk.level ?? SkillLevel.AWARENESS,
                   proofUrl: sk.proofUrl,
                 },
               });
@@ -597,9 +598,7 @@ export class MentorService {
             }
           }
 
-          // ==============================================================
           // 7. TRUY VẤN TRẢ VỀ TOÀN BỘ DATA MỚI NHẤT
-          // ==============================================================
           return tx.user.findUnique({
             where: { id: userId },
             include: {

@@ -31,7 +31,7 @@ type UserSkillResponse = {
   skillId: number;
   name: string;
   type: 'HARDSKILL' | 'SOFTSKILL' | 'LANGUAGE';
-  level: 'LEARNING' | 'PRACTICED' | 'PERSONAL_PROJECT' | 'PRODUCTION_READY' | 'EXPERT';
+  level: 'AWARENESS' | 'FOUNDATION' | 'AUTONOMOUS' | 'FLUENT' | 'LEADERSHIP';
   experienceMonths: number;
   proofUrl?: string;
 };

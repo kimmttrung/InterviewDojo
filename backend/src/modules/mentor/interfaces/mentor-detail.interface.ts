@@ -8,7 +8,7 @@ export interface MentorDetail {
     id: number;
     name: string;
     type: 'HARD_SKILL' | 'SOFT_SKILL';
-    level: 'LEARNING' | 'PRACTICED' | 'PROJECT_READY' | 'PROFESSIONAL';
+    level: 'AWARENESS' | 'FOUNDATION' | 'AUTONOMOUS' | 'FLUENT' | 'LEADERSHIP';
     timeUse: number;
     description?: string | null;
   }[];
