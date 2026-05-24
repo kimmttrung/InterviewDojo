@@ -7,12 +7,10 @@ import { Toaster } from '../shared/components/ui/toaster';
 import i18n from '../shared/i18n';
 import NotFound from '../shared/components/layout/NotFound';
 import Unauthorized from '../shared/components/layout/Unauthorized';
-
 import CandidateDashboardPage from '../features/candidate/dashboard/pages/CandidateDashboardPage';
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
-
 import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
@@ -41,6 +39,8 @@ import WalletPage from '@/features/wallet/pages/WalletPage';
 import SessionPage from '@/features/session/page/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
+
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -348,6 +348,7 @@ export function App() {
               }
             />
           </Routes>
+          <UserProfileModal />
         </TooltipProvider>
       </ThemeProvider>
     </I18nextProvider>

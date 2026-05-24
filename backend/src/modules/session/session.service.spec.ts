@@ -5,6 +5,12 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import { SessionService } from './session.service';
 
+// Mock queue trả về đúng cấu trúc Job của BullMQ
+const createMockJob = () => ({
+  id: 'job-123',
+  remove: jest.fn().mockResolvedValue(undefined),
+});
+
 describe('SessionService', () => {
   let service: SessionService;
   let consoleLogSpy: jest.SpyInstance;
@@ -28,6 +34,7 @@ describe('SessionService', () => {
   const sessionQueue = {
     getJob: jest.fn(),
     add: jest.fn(),
+    // removeJobs không được dùng trong service thật, nhưng giữ lại nếu cần
     removeJobs: jest.fn(),
   };
 
@@ -136,6 +143,7 @@ describe('SessionService', () => {
 
     it('does not add a duplicate or already-ended job', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-01-01T01:00:00.000Z'));
+      // Trả về một job giả (không cần remove ở đây)
       sessionQueue.getJob.mockResolvedValue({ id: 'session-21' });
 
       await service.scheduleSessionEnd(
@@ -157,6 +165,7 @@ describe('SessionService', () => {
   });
 
   describe('getSessions', () => {
+    // ... các test getSessions giữ nguyên như cũ (không thay đổi)
     it('combines and maps all session types for the ALL tab', async () => {
       const upcoming = {
         id: 1,
@@ -532,6 +541,9 @@ describe('SessionService', () => {
 
   describe('cancelSession', () => {
     it('cancels a booking and its linked mock sessions', async () => {
+      const mockJob = createMockJob();
+      sessionQueue.getJob.mockResolvedValue(mockJob);
+
       prisma.booking.findFirst.mockResolvedValue({
         id: 31,
         status: BookingStatus.ACCEPTED,
@@ -560,11 +572,16 @@ describe('SessionService', () => {
         where: { bookingId: 31 },
         data: { status: SessionStatus.CANCELLED },
       });
-      expect(sessionQueue.removeJobs).toHaveBeenCalledWith('session-31');
+      // Kiểm tra job.remove được gọi
+      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-31');
+      expect(mockJob.remove).toHaveBeenCalled();
       expect(result.success).toBe(true);
     });
 
     it('cancels a standalone mock session', async () => {
+      const mockJob = createMockJob();
+      sessionQueue.getJob.mockResolvedValue(mockJob);
+
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.mockSession.findFirst.mockResolvedValue({ id: 41 });
 
@@ -575,10 +592,14 @@ describe('SessionService', () => {
         data: { status: SessionStatus.CANCELLED },
       });
       expect(prisma.booking.update).not.toHaveBeenCalled();
-      expect(sessionQueue.removeJobs).toHaveBeenCalledWith('session-41');
+      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-41');
+      expect(mockJob.remove).toHaveBeenCalled();
     });
 
     it('cancels a booking without linked mock sessions', async () => {
+      const mockJob = createMockJob();
+      sessionQueue.getJob.mockResolvedValue(mockJob);
+
       prisma.booking.findFirst.mockResolvedValue({
         id: 32,
         status: BookingStatus.PENDING_ACCEPTANCE,
@@ -590,6 +611,8 @@ describe('SessionService', () => {
 
       expect(prisma.booking.update).toHaveBeenCalled();
       expect(prisma.mockSession.updateMany).not.toHaveBeenCalled();
+      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-32');
+      expect(mockJob.remove).toHaveBeenCalled();
     });
 
     it('throws when the user has no cancellable session', async () => {
@@ -600,7 +623,7 @@ describe('SessionService', () => {
         /phi.+n h.+c ho.+c b.+n kh.+ng c.+ quy.+n h.+y/,
       );
 
-      expect(sessionQueue.removeJobs).not.toHaveBeenCalled();
+      expect(sessionQueue.getJob).not.toHaveBeenCalled();
     });
   });
 });

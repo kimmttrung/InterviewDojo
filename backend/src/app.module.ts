@@ -34,6 +34,7 @@ import { CandidateDashboardModule } from './modules/candidate-dashboard/candidat
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -53,6 +54,7 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
       { name: 'ai-analysis' }, // cho AI phân tích
       { name: 'notification' }, // cho gửi thông báo sau này
       { name: 'email' }, // cho gửi email
+      { name: 'session' },
     ),
 
     PrismaModule,
@@ -83,6 +85,7 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
     NotificationsModule,
     SessionModule,
     BookmarkModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
