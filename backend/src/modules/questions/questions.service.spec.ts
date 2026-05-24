@@ -140,6 +140,105 @@ describe('QuestionsService', () => {
         }),
       );
     });
+
+    it('should filter by category and role and annotate bookmarks for a signed-in user', async () => {
+      prisma.question.findMany.mockResolvedValue([
+        {
+          id: 8,
+          title: 'Architecture',
+          slug: 'architecture',
+          difficulty: Difficulty.MEDIUM,
+          type: QuestionType.TECHNICAL,
+          isPublished: true,
+          createdAt: mockDate,
+          categories: [],
+          companies: [],
+          jobRoles: [],
+          theoryQuestion: { data: { question: 'Explain architecture' } },
+          codingQuestion: null,
+        },
+      ] as any);
+      prisma.question.count.mockResolvedValue(1);
+      prisma.userBookmark.findMany.mockResolvedValue([
+        { questionId: 8 },
+      ] as any);
+
+      const result = await service.findAll(
+        { category: 'Backend', jobRole: 'Developer' } as any,
+        7,
+      );
+
+      expect(prisma.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            categories: expect.any(Object),
+            jobRoles: expect.any(Object),
+          }),
+        }),
+      );
+      expect(result.items[0].description).toBe('Explain architecture');
+      expect(result.items[0].isBookmarked).toBe(true);
+    });
+
+    it('should return empty optional text and relation arrays when coding data is absent', async () => {
+      prisma.question.findMany.mockResolvedValue([
+        {
+          id: 9,
+          title: 'Incomplete',
+          slug: 'incomplete',
+          difficulty: Difficulty.EASY,
+          type: QuestionType.CODING,
+          isPublished: true,
+          createdAt: mockDate,
+          codingQuestion: null,
+          theoryQuestion: null,
+        },
+        {
+          id: 10,
+          title: 'Theory missing data',
+          slug: 'theory-missing',
+          difficulty: Difficulty.EASY,
+          type: QuestionType.TECHNICAL,
+          isPublished: true,
+          createdAt: mockDate,
+          theoryQuestion: null,
+        },
+        {
+          id: 11,
+          title: 'Missing related records',
+          slug: 'missing-related',
+          difficulty: Difficulty.EASY,
+          type: QuestionType.CODING,
+          isPublished: true,
+          createdAt: mockDate,
+          categories: [{ category: null }],
+          companies: [{ company: null }],
+          jobRoles: [{ jobRole: null }],
+          codingQuestion: null,
+          theoryQuestion: null,
+        },
+      ] as any);
+      prisma.question.count.mockResolvedValue(3);
+
+      const result = await service.findAll({});
+
+      expect(result.items[0]).toEqual(
+        expect.objectContaining({
+          description: '',
+          categories: [],
+          companies: [],
+          jobRoles: [],
+        }),
+      );
+      expect(result.items[1].description).toBe('');
+      expect(result.items[2]).toEqual(
+        expect.objectContaining({
+          categories: [''],
+          companies: [''],
+          jobRoles: [''],
+        }),
+      );
+    });
   });
 
   describe('findOne', () => {
@@ -201,6 +300,114 @@ describe('QuestionsService', () => {
 
       await expect(service.findOne(999)).rejects.toThrow(NotFoundException);
     });
+
+    it('should mark a question as bookmarked for a user', async () => {
+      prisma.question.findFirst.mockResolvedValue({
+        id: 1,
+        title: 'Theory',
+        slug: 'theory',
+        difficulty: Difficulty.EASY,
+        type: QuestionType.TECHNICAL,
+        isPublished: true,
+        createdAt: mockDate,
+        updatedAt: mockDate,
+        categories: [],
+        companies: [],
+        jobRoles: [],
+        theoryQuestion: { data: { answer: 'Answer' } },
+        codingQuestion: null,
+      } as any);
+      prisma.userBookmark.findUnique.mockResolvedValue({
+        questionId: 1,
+      } as any);
+
+      const result = await service.findOne(1, 'CANDIDATE', 7);
+
+      expect(result.isBookmarked).toBe(true);
+      expect(prisma.userBookmark.findUnique).toHaveBeenCalledWith({
+        where: { userId_questionId: { userId: 7, questionId: 1 } },
+      });
+    });
+
+    it('should expose all test cases to an admin and map missing relation labels', async () => {
+      prisma.question.findFirst.mockResolvedValue({
+        id: 1,
+        title: 'Admin Coding',
+        slug: 'admin-coding',
+        difficulty: Difficulty.EASY,
+        type: QuestionType.CODING,
+        isPublished: true,
+        createdAt: mockDate,
+        updated_at: mockDate,
+        categories: [{ category: null }],
+        companies: [{ company: null }],
+        jobRoles: [{ jobRole: null }],
+        theoryQuestion: null,
+        codingQuestion: {
+          description: 'Description',
+          testCases: [
+            {
+              id: 1,
+              input: 'a',
+              expectedOutput: 'b',
+              order: 1,
+              isHidden: true,
+              isSample: false,
+            },
+          ],
+        },
+      } as any);
+
+      const result = await service.findOne(1, 'ADMIN');
+
+      expect(result.testCases).toEqual([
+        expect.objectContaining({ output: 'b', isHidden: true }),
+      ]);
+      expect(result.categories).toEqual(['']);
+    });
+
+    it('should expose only visible sample test cases to a candidate', async () => {
+      prisma.question.findFirst.mockResolvedValue({
+        id: 2,
+        title: 'Candidate Coding',
+        slug: 'candidate-coding',
+        difficulty: Difficulty.EASY,
+        type: QuestionType.CODING,
+        isPublished: true,
+        createdAt: mockDate,
+        updated_at: mockDate,
+        categories: [],
+        companies: [],
+        jobRoles: [],
+        theoryQuestion: null,
+        codingQuestion: {
+          testCases: [
+            {
+              id: 1,
+              input: 'a',
+              expectedOutput: 'b',
+              order: 1,
+              isHidden: false,
+              isSample: true,
+            },
+            {
+              id: 2,
+              input: 'x',
+              expectedOutput: 'y',
+              order: 2,
+              isHidden: true,
+              isSample: true,
+            },
+          ],
+        },
+      } as any);
+
+      const result = await service.findOne(2, 'CANDIDATE');
+
+      expect(result.testCases).toEqual([
+        expect.objectContaining({ id: 1, output: 'b', isHidden: false }),
+      ]);
+    });
   });
 
   describe('create', () => {
@@ -252,6 +459,27 @@ describe('QuestionsService', () => {
         }),
       });
     });
+
+    it('should create a theory question payload', async () => {
+      prisma.question.create.mockResolvedValue({} as any);
+
+      await service.create({
+        title: 'Explain DI',
+        slug: 'explain-di',
+        difficulty: Difficulty.MEDIUM,
+        type: QuestionType.TECHNICAL,
+        theoryData: { answer: 'Dependency injection' },
+      } as any);
+
+      expect(prisma.question.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({
+          type: QuestionType.TECHNICAL,
+          theoryQuestion: {
+            create: { data: { answer: 'Dependency injection' } },
+          },
+        }),
+      });
+    });
   });
 
   describe('update', () => {
@@ -295,6 +523,29 @@ describe('QuestionsService', () => {
         NotFoundException,
       );
     });
+
+    it('should update theory data and relationship collections', async () => {
+      prisma.question.findUnique.mockResolvedValue({
+        id: 1,
+        type: QuestionType.TECHNICAL,
+      } as any);
+      prisma.question.update.mockResolvedValue({} as any);
+
+      await service.update(1, {
+        companyIds: [2],
+        jobRoleIds: [3],
+        theoryData: { answer: 'Updated' },
+      } as any);
+
+      expect(prisma.question.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({
+          companies: { deleteMany: {}, create: [{ companyId: 2 }] },
+          jobRoles: { deleteMany: {}, create: [{ jobRoleId: 3 }] },
+          theoryQuestion: { update: { data: { answer: 'Updated' } } },
+        }),
+      });
+    });
   });
 
   describe('remove', () => {
@@ -307,6 +558,72 @@ describe('QuestionsService', () => {
       expect(prisma.question.delete).toHaveBeenCalledWith({
         where: { id: 1 },
       });
+    });
+
+    it('should reject deleting a missing question', async () => {
+      prisma.question.findUnique.mockResolvedValue(null);
+
+      await expect(service.remove(99)).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('findRandom', () => {
+    it('should pick one random question matching all filters', async () => {
+      jest.spyOn(Math, 'random').mockReturnValue(0.5);
+      prisma.question.count.mockResolvedValue(2);
+      prisma.question.findMany.mockResolvedValue([
+        {
+          id: 1,
+          title: 'Question',
+          slug: 'question',
+          difficulty: Difficulty.EASY,
+          type: QuestionType.TECHNICAL,
+          isPublished: true,
+          createdAt: mockDate,
+          updatedAt: mockDate,
+          categories: [],
+          companies: [],
+          jobRoles: [],
+          theoryQuestion: { data: { answer: 'A' } },
+          codingQuestion: null,
+        },
+      ] as any);
+
+      await service.findRandom({
+        difficulty: Difficulty.EASY,
+        type: QuestionType.TECHNICAL,
+        category: 'System',
+        jobRole: 'Backend',
+      } as any);
+
+      expect(prisma.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          skip: 1,
+          take: 1,
+          where: expect.objectContaining({
+            difficulty: Difficulty.EASY,
+            type: QuestionType.TECHNICAL,
+          }),
+        }),
+      );
+      jest.restoreAllMocks();
+    });
+
+    it('should reject random lookup when no questions match', async () => {
+      prisma.question.count.mockResolvedValue(0);
+
+      await expect(service.findRandom({} as any)).rejects.toThrow(
+        NotFoundException,
+      );
+    });
+
+    it('should reject random lookup when count exists but the selected row disappears', async () => {
+      prisma.question.count.mockResolvedValue(1);
+      prisma.question.findMany.mockResolvedValue([]);
+
+      await expect(service.findRandom({} as any)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

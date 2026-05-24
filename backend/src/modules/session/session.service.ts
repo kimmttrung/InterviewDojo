@@ -90,45 +90,51 @@ export class SessionService implements OnModuleInit {
     const buildSearchCondition = (searchTerm?: string) => {
       if (!searchTerm) return {};
       return {
-        OR: [
+        AND: [
           {
-            booking: {
-              coachingPlan: {
-                title: { contains: searchTerm, mode: 'insensitive' },
+            OR: [
+              {
+                booking: {
+                  coachingPlan: {
+                    title: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            booking: {
-              mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
-            },
-          },
-          {
-            booking: {
-              candidate: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                booking: {
+                  mentor: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            match: {
-              candidateA: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                booking: {
+                  candidate: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            match: {
-              candidateB: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                match: {
+                  candidateA: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
+              {
+                match: {
+                  candidateB: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                interviewee: {
+                  name: { contains: searchTerm, mode: 'insensitive' },
+                },
+              }, // solo
+            ],
           },
-          {
-            interviewee: {
-              name: { contains: searchTerm, mode: 'insensitive' },
-            },
-          }, // solo
         ],
       };
     };

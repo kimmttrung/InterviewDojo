@@ -8,11 +8,15 @@ jest.mock('groq-sdk');
 
 describe('AiAgentService', () => {
   let service: AiAgentService;
+  let consoleErrorSpy: jest.SpyInstance;
+  let consoleLogSpy: jest.SpyInstance;
 
   const mockCreate = jest.fn();
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
     (Groq as unknown as jest.Mock).mockImplementation(() => ({
       chat: {
@@ -44,8 +48,48 @@ describe('AiAgentService', () => {
     service = module.get<AiAgentService>(AiAgentService);
   });
 
+  afterEach(() => {
+    consoleErrorSpy.mockRestore();
+    consoleLogSpy.mockRestore();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  it('should require an api key and use the default model when not configured', async () => {
+    expect(
+      () =>
+        new AiAgentService({
+          get: jest.fn().mockReturnValue(undefined),
+        } as any),
+    ).toThrow('Missing GROQ_API_KEY');
+
+    const defaultModelService = new AiAgentService({
+      get: jest.fn((key: string) =>
+        key === 'GROQ_API_KEY' ? 'fake-api-key' : undefined,
+      ),
+    } as any);
+    mockCreate.mockResolvedValue({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({
+              overallScore: 5,
+              strengths: ['one', 'two', 'three'],
+              weaknesses: ['one', 'two', 'three'],
+              suggestions: ['one', 'two', 'three'],
+            }),
+          },
+        },
+      ],
+    });
+
+    await defaultModelService.generateFeedback({ transcript: 'answer' });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({ model: 'llama-3.3-70b-versatile' }),
+    );
   });
 
   describe('generateFeedback', () => {
@@ -213,6 +257,49 @@ describe('AiAgentService', () => {
       expect(result.strengths).toBeDefined();
       expect(result.weaknesses).toBeDefined();
       expect(result.suggestions).toBeDefined();
+    });
+
+    it('should clean valid array items and fallback when the AI returns no content', async () => {
+      mockCreate.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                overallScore: null,
+                strengths: [' a ', '', 3, 'b', 'c', 'd', 'e', 'f'],
+                weaknesses: ['w1', 'w2', 'w3'],
+                suggestions: ['s1', 's2', 's3'],
+              }),
+            },
+          },
+        ],
+      });
+
+      const normalized = await service.generateFeedback({ transcript: 'Test' });
+      expect(normalized.overallScore).toBe(5);
+      expect(normalized.strengths).toEqual(['a', 'b', 'c', 'd', 'e']);
+
+      mockCreate.mockResolvedValueOnce({
+        choices: [
+          {
+            message: {
+              content: JSON.stringify({
+                overallScore: 5,
+                strengths: ['only one'],
+                weaknesses: ['w1', 'w2', 'w3'],
+                suggestions: ['s1', 's2', 's3'],
+              }),
+            },
+          },
+        ],
+      });
+      const shortList = await service.generateFeedback({ transcript: 'Test' });
+      expect(shortList.strengths).toHaveLength(3);
+
+      mockCreate.mockResolvedValueOnce({ choices: [] });
+      await expect(
+        service.generateFeedback({ transcript: 'Test' }),
+      ).resolves.toEqual(expect.objectContaining({ overallScore: 5 }));
     });
   });
 });
