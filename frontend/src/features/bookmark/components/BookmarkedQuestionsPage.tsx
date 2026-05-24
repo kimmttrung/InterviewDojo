@@ -6,21 +6,10 @@ import { useDebounce } from '@/hooks/use-debounce';
 import { Difficulty } from '@/features/shared-domain/question-bank/types/question.types';
 import dayjs from 'dayjs';
 
-// Tạm thời mock categories (bạn có thể thay bằng API thật sau)
-const useCategories = () => {
-  const [data, setData] = useState<{ id: number; name: string }[]>([]);
-  useEffect(() => {
-    // Gọi API lấy danh sách categories (nếu có)
-    // fetch('/categories').then(res => res.json()).then(setData);
-  }, []);
-  return { data };
-};
-
 export const BookmarkedQuestionsPage = () => {
   const { filters, setFilters, resetFilters } = useBookmarkStore();
   const { data, isLoading, isError } = useBookmarks();
   const { mutate: unbookmark } = useUnbookmark();
-  const { data: categories } = useCategories();
 
   const [searchTerm, setSearchTerm] = useState(filters.search);
   const debouncedSearch = useDebounce(searchTerm, 500);
@@ -29,7 +18,7 @@ export const BookmarkedQuestionsPage = () => {
     if (debouncedSearch !== filters.search) {
       setFilters({ search: debouncedSearch });
     }
-  }, [debouncedSearch, filters.search, setFilters]); // ✅ thêm đủ dependencies
+  }, [debouncedSearch, filters.search, setFilters]);
 
   if (isError) {
     return <div className="text-center text-red-500 py-10">Lỗi khi tải danh sách</div>;
@@ -42,7 +31,7 @@ export const BookmarkedQuestionsPage = () => {
     <div className="container mx-auto py-6 px-4">
       <h1 className="text-2xl font-bold mb-6">Câu hỏi đã lưu</h1>
 
-      {/* Bộ lọc */}
+      {/* Bộ lọc (bỏ category) */}
       <div className="bg-white p-4 rounded-lg border shadow-sm mb-6 space-y-4">
         <div className="flex flex-wrap gap-4">
           <input
@@ -61,20 +50,6 @@ export const BookmarkedQuestionsPage = () => {
             <option value={Difficulty.EASY}>Easy</option>
             <option value={Difficulty.MEDIUM}>Medium</option>
             <option value={Difficulty.HARD}>Hard</option>
-          </select>
-          <select
-            className="px-4 py-2 border rounded-md"
-            value={filters.categoryIds?.[0] || ''}
-            onChange={(e) =>
-              setFilters({ categoryIds: e.target.value ? [Number(e.target.value)] : [] })
-            }
-          >
-            <option value="">Tất cả danh mục</option>
-            {categories?.map((cat: any) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
-              </option>
-            ))}
           </select>
           <input
             type="date"
@@ -99,7 +74,7 @@ export const BookmarkedQuestionsPage = () => {
         </div>
       </div>
 
-      {/* Danh sách */}
+      {/* Danh sách câu hỏi đã lưu (giữ nguyên) */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3].map((i) => (
@@ -129,7 +104,7 @@ export const BookmarkedQuestionsPage = () => {
                     >
                       {q.difficulty}
                     </span>
-                    {q.categories.map((c) => (
+                    {q.categories?.map((c) => (
                       <span key={c.id} className="text-xs px-2 py-1 bg-gray-100 rounded-full">
                         {c.name}
                       </span>
