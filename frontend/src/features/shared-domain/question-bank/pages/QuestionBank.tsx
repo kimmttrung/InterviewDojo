@@ -9,7 +9,8 @@ import { useQuestions } from '../hooks/useQuestions';
 import { useQuestionsFilters } from '@/stores/questionFilters.store';
 
 export default function QuestionBank() {
-  const { page, limit, keyword, difficulty, type, setPage, setKeyword } = useQuestionsFilters();
+  const { page, limit, keyword, difficulty, type, bookmarked, setPage, setKeyword } =
+    useQuestionsFilters();
   const debouncedKeyword = useDebounce(keyword, 500);
 
   const { data, isLoading, error } = useQuestions({
@@ -18,6 +19,7 @@ export default function QuestionBank() {
     keyword: debouncedKeyword,
     difficulty,
     type,
+    bookmarked,
   });
 
   if (error) {
