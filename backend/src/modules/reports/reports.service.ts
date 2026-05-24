@@ -18,6 +18,8 @@ export class ReportsService {
     dto: CreateUserReportDto,
   ): Promise<UserReportItem> {
     // ... giữ nguyên phần validate
+    console.log('dto.targetType:', dto.targetType);
+    console.log('dto.targetUserId:', dto.targetUserId);
     if (dto.targetType === ReportTargetType.USER) {
       if (!dto.targetUserId) {
         throw new BadRequestException(Messages.REPORTS.INVALID_TARGET_TYPE);

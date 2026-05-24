@@ -1,4 +1,3 @@
-// src/modules/reports/dto/create-user-report.dto.ts
 import {
   IsEnum,
   IsOptional,
@@ -7,13 +6,15 @@ import {
   MaxLength,
   IsUrl,
 } from 'class-validator';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import { ReportType, ReportTargetType } from '@prisma/client';
 
 export class CreateUserReportDto {
+  @Type(() => String) // giữ nguyên string rồi ép enum
   @IsEnum(ReportTargetType)
   targetType: ReportTargetType;
 
+  @Type(() => String)
   @IsEnum(ReportType)
   type: ReportType;
 
@@ -23,16 +24,15 @@ export class CreateUserReportDto {
 
   @IsOptional()
   @IsUrl({}, { each: true })
-  evidenceUrls?: string[] = [];
+  evidenceUrls?: string[];
 
-  // Context fields - chỉ 1 field được dùng dựa trên targetType
   @IsOptional()
   @Type(() => Number)
   @IsInt()
   targetUserId?: number;
 
   @IsOptional()
-  @Type(() => Number)
+  @Transform(({ value }) => (value ? Number(value) : undefined))
   @IsInt()
   targetQuestionId?: number;
 

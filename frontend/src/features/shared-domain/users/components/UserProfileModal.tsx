@@ -1,6 +1,6 @@
 // src/features/users/components/UserProfileModal.tsx
 import { Dialog, Transition } from '@headlessui/react';
-import { Fragment, useEffect, useState } from 'react';
+import { Fragment, useEffect, useRef, useState } from 'react';
 import { useUserProfileModalStore } from '../stores/userProfileModalStore';
 
 import { useReportUser } from '@/features/reports/hooks/useReportUser';
@@ -19,13 +19,13 @@ const REPORT_TYPES = [
 export const UserProfileModal = () => {
   const { isOpen, userId, closeModal } = useUserProfileModalStore();
   const { data: user, isLoading } = useUserProfile(userId);
-  console.log('check user', user);
-  const { mutate: reportUser, isPending: isReporting } = useReportUser();
+  const { mutateAsync: reportUserAsync, isPending: isReporting } = useReportUser();
 
   const [showReportForm, setShowReportForm] = useState(false);
   const [reportType, setReportType] = useState('');
   const [reason, setReason] = useState('');
-  const [evidenceUrls, setEvidenceUrls] = useState('');
+  const [evidenceFiles, setEvidenceFiles] = useState<File[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Reset form khi modal mở lại hoặc userId thay đổi
   useEffect(() => {
@@ -33,21 +33,53 @@ export const UserProfileModal = () => {
       setShowReportForm(false);
       setReportType('');
       setReason('');
-      setEvidenceUrls('');
+      setEvidenceFiles([]);
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   }, [isOpen, userId]);
 
-  const handleSubmitReport = () => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    // Giới hạn 5 file, dung lượng tuỳ backend (vd 10MB/video, 5MB/ảnh)
+    const allowedTypes = [
+      'image/jpeg',
+      'image/png',
+      'image/webp',
+      'video/mp4',
+      'video/webm',
+      'video/quicktime',
+    ];
+    const validFiles = files.filter((f) => allowedTypes.includes(f.type));
+    if (validFiles.length !== files.length) {
+      alert('Chỉ chấp nhận file ảnh (jpeg, png, webp) và video (mp4, webm, mov)');
+    }
+    setEvidenceFiles(validFiles.slice(0, 5));
+  };
+
+  const removeFile = (index: number) => {
+    setEvidenceFiles((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleSubmitReport = async () => {
     if (!userId || !reportType || !reason.trim()) return;
-    reportUser({
-      targetType: 'USER',
-      type: reportType,
-      reason: reason.trim(),
-      evidenceUrls: evidenceUrls ? evidenceUrls.split(',').map((url) => url.trim()) : [],
-      targetUserId: userId,
-    });
-    setShowReportForm(false);
-    closeModal();
+
+    const formData = new FormData();
+    formData.append('targetType', 'USER');
+    formData.append('type', reportType);
+    formData.append('reason', reason.trim());
+    formData.append('targetUserId', userId.toString());
+    if (evidenceFiles.length) {
+      evidenceFiles.forEach((file) => formData.append('evidenceFiles', file));
+    }
+
+    try {
+      await reportUserAsync(formData); // chờ API trả về
+      // Chỉ đóng modal và reset sau khi thành công
+      setShowReportForm(false);
+      closeModal();
+    } catch (error) {
+      // lỗi đã được toast trong hook, không cần xử lý thêm
+    }
   };
 
   return (
@@ -194,13 +226,44 @@ export const UserProfileModal = () => {
                           onChange={(e) => setReason(e.target.value)}
                           className="w-full rounded-lg border p-2 text-sm"
                         />
-                        <input
-                          type="text"
-                          placeholder="URL bằng chứng (cách nhau dấu phẩy)"
-                          value={evidenceUrls}
-                          onChange={(e) => setEvidenceUrls(e.target.value)}
-                          className="w-full rounded-lg border p-2 text-sm"
-                        />
+                        <div className="space-y-2">
+                          <input
+                            ref={fileInputRef}
+                            type="file"
+                            multiple
+                            accept="image/*,video/*"
+                            onChange={handleFileChange}
+                            className="w-full text-sm"
+                          />
+                          {evidenceFiles.length > 0 && (
+                            <div className="flex flex-wrap gap-2 mt-2">
+                              {evidenceFiles.map((file, idx) => (
+                                <div key={idx} className="relative">
+                                  {file.type.startsWith('image/') ? (
+                                    <img
+                                      src={URL.createObjectURL(file)}
+                                      className="h-16 w-16 object-cover rounded"
+                                      alt="preview"
+                                    />
+                                  ) : (
+                                    <video
+                                      src={URL.createObjectURL(file)}
+                                      className="h-16 w-16 object-cover rounded"
+                                      controls={false}
+                                    />
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => removeFile(idx)}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 text-xs"
+                                  >
+                                    ×
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
                         <div className="flex gap-2">
                           <button
                             onClick={handleSubmitReport}
