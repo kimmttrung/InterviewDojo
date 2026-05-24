@@ -34,17 +34,26 @@ export const RejectMentorDialog = ({
     resolver: zodResolver(rejectSchema),
   });
   const onSubmit = (data: any) => onConfirm(data.reason);
+
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        if (!isLoading && !v) onClose();
+      }}
+    >
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Lý do từ chối</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className={isLoading ? 'pointer-events-none opacity-80' : ''}
+        >
           <Textarea {...register('reason')} placeholder="Nhập lý do..." />
           {errors.reason && <p className="text-red-500 text-sm">{errors.reason.message}</p>}
           <DialogFooter className="mt-4">
-            <Button variant="outline" onClick={onClose}>
+            <Button variant="outline" onClick={onClose} disabled={isLoading}>
               Hủy
             </Button>
             <Button type="submit" disabled={isLoading}>
