@@ -139,4 +139,9 @@ export const API_ENDPOINT = {
     BOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
     UNBOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
   },
+
+  RECOMMENDATIONS: {
+    GET_FOR_CANDIDATE: (candidateUserId: number | string) =>
+      `/recommendations/candidate/${candidateUserId}`,
+  },
 };

@@ -9,6 +9,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { Role, SessionMode, Prisma } from '@prisma/client';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { UploadedFileType } from '../../common/types/uploaded-file.type';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 type UserWithRelations = Prisma.UserGetPayload<{
   include: {
@@ -26,6 +27,7 @@ export class UserService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly cloudinaryService: CloudinaryService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   // ========== USER PROFILE ==========
@@ -156,6 +158,11 @@ export class UserService {
             },
           },
         },
+      });
+
+      this.eventEmitter.emit('user.profile.updated', {
+        userId: updatedUser.id,
+        role: updatedUser.role,
       });
 
       return this.mapUserResponse(updatedUser);

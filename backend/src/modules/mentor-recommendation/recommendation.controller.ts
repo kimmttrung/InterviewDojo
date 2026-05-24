@@ -20,11 +20,6 @@ export class RecommendationController {
     const recommendedMentors =
       await this.recommendationService.recommend(candidateId);
 
-    return {
-      success: true,
-      statusCode: HttpStatus.OK,
-      message: 'Gợi ý danh sách Mentor thành công',
-      data: recommendedMentors,
-    };
+    return recommendedMentors;
   }
 }

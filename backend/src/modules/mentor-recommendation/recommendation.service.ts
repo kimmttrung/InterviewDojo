@@ -25,12 +25,12 @@ export class RecommendationService {
 
   async recommend(candidateId: number) {
     const candidate = await this.loadCandidate(candidateId);
+
     const mentors = await this.loadMentors();
 
     const filtered = this.hardFilter.filter(candidate, mentors);
 
-    const result = filtered.map((mentor) => {
-      // Fallback về 0 nếu một trong hai chưa có embedding, tránh NaN
+    const rankingResult = filtered.map((mentor) => {
       const hasEmbedding =
         candidate.embedding.length > 0 && mentor.embedding.length > 0;
 
@@ -55,33 +55,116 @@ export class RecommendationService {
         mentor.availableSlots,
       );
 
-      const mentorRoles: string[] = (mentor as any).rawRoles || [];
-      let targetRole = 0.15;
-
-      if (mentorRoles.length > 0) {
-        const roleScores = mentorRoles.map((mRole) =>
-          this.targetRoleScore.calculateRoleScore(candidate.role, mRole),
-        );
-        targetRole = Math.max(...roleScores);
-      }
-
       const finalScore = this.ranking.rank({
         semantic,
         skill,
         experience,
-        targetRole,
         language,
         availability,
+        targetRole: 0.15,
         finalScore: 0,
       });
 
       return {
         mentorId: mentor.id,
-        finalScore,
+
+        recommendationScore: finalScore,
       };
     });
 
-    return result.sort((a, b) => b.finalScore - a.finalScore);
+    const sorted = rankingResult
+      .sort((a, b) => b.recommendationScore - a.recommendationScore)
+      .slice(0, 5);
+
+    const mentorIds = sorted.map((item) => item.mentorId);
+
+    const mentorEntities = await this.prisma.user.findMany({
+      where: {
+        id: {
+          in: mentorIds,
+        },
+
+        mentorProfile: {
+          isNot: null,
+        },
+      },
+
+      select: {
+        id: true,
+
+        name: true,
+
+        avatarUrl: true,
+
+        bio: true,
+
+        skills: {
+          select: {
+            skill: {
+              select: {
+                id: true,
+
+                name: true,
+
+                type: true,
+              },
+            },
+
+            level: true,
+
+            experienceMonths: true,
+          },
+        },
+
+        mentorProfile: {
+          select: {
+            headline: true,
+
+            experiences: {
+              where: {
+                isCurrent: true,
+              },
+
+              take: 1,
+
+              select: {
+                isCurrent: true,
+
+                company: {
+                  select: {
+                    id: true,
+
+                    name: true,
+
+                    logoUrl: true,
+                  },
+                },
+
+                jobRole: {
+                  select: {
+                    id: true,
+
+                    name: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    const mentorMap = new Map(
+      mentorEntities.map((mentor) => [mentor.id, mentor]),
+    );
+
+    return sorted
+      .map((item) => ({
+        ...mentorMap.get(item.mentorId),
+
+        recommendationScore: item.recommendationScore,
+      }))
+      .filter(Boolean);
   }
 
   // ─────────────────────────────────────────────────────────────

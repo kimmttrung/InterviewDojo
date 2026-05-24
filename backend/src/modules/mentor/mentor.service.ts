@@ -17,6 +17,7 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UploadedFileType } from '@/common/types/uploaded-file.type';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { SkillLevel } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 // ==================== REUSABLE INCLUDES ====================
 const mentorListInclude = {
@@ -72,6 +73,7 @@ export class MentorService {
   constructor(
     private prisma: PrismaService,
     private cloudinaryService: CloudinaryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -638,6 +640,11 @@ export class MentorService {
       if (!result) {
         throw new NotFoundException(Messages.MENTOR.NOT_FOUND);
       }
+
+      this.eventEmitter.emit('user.profile.updated', {
+        userId: result.id,
+        role: result.role,
+      });
 
       // 8. Mapping data sang Interface MentorResponse
       return this.mapToMentorResponse(result);
