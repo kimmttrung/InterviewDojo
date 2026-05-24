@@ -21,6 +21,11 @@ interface SessionState {
   rejectModalData: { isOpen: boolean; reason: string | null };
   openRejectModal: (reason: string | null) => void;
   closeRejectModal: () => void;
+
+  // --- 5. (Tùy chọn) Quản lý Modal Feedback đã nhận (Received Feedback) ---
+  feedbackModalData: { isOpen: boolean; sessionId: number | null };
+  openFeedbackModal: (sessionId: number) => void;
+  closeFeedbackModal: () => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
@@ -57,4 +62,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   rejectModalData: { isOpen: false, reason: null },
   openRejectModal: (reason) => set({ rejectModalData: { isOpen: true, reason } }),
   closeRejectModal: () => set({ rejectModalData: { isOpen: false, reason: null } }),
+
+  // 5. Khởi tạo Feedback Modal
+  feedbackModalData: { isOpen: false, sessionId: null },
+  openFeedbackModal: (sessionId) => set({ feedbackModalData: { isOpen: true, sessionId } }),
+  closeFeedbackModal: () => set({ feedbackModalData: { isOpen: false, sessionId: null } }),
 }));

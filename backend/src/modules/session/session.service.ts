@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import {
@@ -6,10 +6,78 @@ import {
   SessionItem,
 } from './interfaces/session.interfaces';
 import { Prisma, SessionStatus, BookingStatus } from '@prisma/client';
-
+import { InjectQueue } from '@nestjs/bull';
+import { Queue } from 'bull';
 @Injectable()
-export class SessionService {
-  constructor(private prisma: PrismaService) {}
+export class SessionService implements OnModuleInit {
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('session') private sessionQueue: Queue,
+  ) {}
+
+  async onModuleInit() {
+    await this.prisma.mockSession.updateMany({
+      where: {
+        status: SessionStatus.SCHEDULED,
+        scheduledAt: { lt: new Date() },
+      },
+      data: { status: SessionStatus.COMPLETED },
+    });
+    await this.scheduleAllUpcomingSessions();
+  }
+
+  private async scheduleAllUpcomingSessions() {
+    const upcomingSessions = await this.prisma.mockSession.findMany({
+      where: {
+        status: SessionStatus.SCHEDULED,
+        scheduledAt: { gt: new Date() },
+      },
+      include: {
+        booking: { select: { mentorId: true, candidateId: true } },
+        match: { select: { candidateAId: true, candidateBId: true } },
+      },
+    });
+
+    for (const session of upcomingSessions) {
+      const userIds: number[] = [session.intervieweeId];
+      if (session.booking) {
+        userIds.push(session.booking.mentorId, session.booking.candidateId);
+      } else if (session.match) {
+        userIds.push(session.match.candidateAId, session.match.candidateBId);
+      }
+      const uniqueUserIds = [...new Set(userIds)];
+      await this.scheduleSessionEnd(
+        session.id,
+        uniqueUserIds,
+        session.scheduledAt,
+        session.durationMinutes,
+      );
+    }
+  }
+
+  async scheduleSessionEnd(
+    sessionId: number,
+    userIds: number[],
+    scheduledAt: Date,
+    durationMinutes: number,
+  ) {
+    const endTime = new Date(
+      scheduledAt.getTime() + durationMinutes * 60 * 1000,
+    );
+    const delay = endTime.getTime() - Date.now();
+    if (delay > 0) {
+      const jobId = `session-${sessionId}`;
+      const existingJob = await this.sessionQueue.getJob(jobId);
+      if (!existingJob) {
+        await this.sessionQueue.add(
+          'end-session',
+          { sessionId, userIds },
+          { delay, jobId },
+        );
+        console.log(`✅ Scheduled end for session ${sessionId} in ${delay}ms`);
+      }
+    }
+  }
 
   async getSessions(
     userId: number,
@@ -313,7 +381,7 @@ export class SessionService {
 
     // 3. Emit socket event để frontend reload
     // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
-
+    await this.sessionQueue.removeJobs(`session-${sessionId}`);
     return { success: true, message: 'Đã hủy phiên học' };
   }
 

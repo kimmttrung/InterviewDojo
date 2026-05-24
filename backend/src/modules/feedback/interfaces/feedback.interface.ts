@@ -22,4 +22,6 @@ export interface PartnerFeedbackResponse {
   strengths: string[] | null;
   weaknesses: string[] | null;
   suggestions: string[] | null;
+  reviewerName: string; // thêm
+  createdAt: Date; // thêm                  // thêm
 }
