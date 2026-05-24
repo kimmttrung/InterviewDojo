@@ -24,7 +24,7 @@ export class HardFilterService {
         );
 
       const hasAvailableSlot = mentor.availableSlots.some(
-        (slot) => slot.isActive && slot.endTime > now,
+        (slot) => slot.isActive && slot.startTime > now,
       );
 
       return (

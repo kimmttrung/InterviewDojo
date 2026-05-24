@@ -7,7 +7,7 @@ export class RankingService {
   rank(score: RecommendationScore): number {
     return (
       score.semantic * RECOMMENDATION_WEIGHT.semantic +
-      score.role * RECOMMENDATION_WEIGHT.role +
+      score.targetRole * RECOMMENDATION_WEIGHT.role +
       score.skill * RECOMMENDATION_WEIGHT.skill +
       score.availability * RECOMMENDATION_WEIGHT.availability +
       score.language * RECOMMENDATION_WEIGHT.language +

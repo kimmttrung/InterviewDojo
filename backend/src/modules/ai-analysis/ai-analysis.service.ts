@@ -1,12 +1,12 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from '@/prisma/prisma.service';
 import { FeedbackStatus } from '@prisma/client';
 
 @Injectable()
 export class AiAnalysisService {
   constructor(private readonly prisma: PrismaService) {}
 
-  async getSessionFeedback(sessionId: number) {
+  getSessionFeedback(sessionId: number) {
     return this.prisma.mockSession.findUnique({
       where: { id: sessionId },
       include: {

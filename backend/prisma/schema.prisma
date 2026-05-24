@@ -239,7 +239,7 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   targetRoleId    Int?       @map("target_role_id")
-  embeddingVector Unsupported("vector(768)")? @map("embedding_vector")
+  embeddingVector Unsupported("vector(1024)")? @map("embedding_vector")
 
   targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
   mentorProfile       MentorProfile?
@@ -413,10 +413,7 @@ model JobRole {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
-  jobFamily   String? 
-  coreDomain  String? 
-  embeddingVector Unsupported("vector(768)")? @map("embedding_vector")
-
+  
   experiences Experience[]
   questions   QuestionJobRole[]
   candidates  User[]            @relation("CandidateTargetRole")

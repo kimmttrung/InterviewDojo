@@ -1,7 +1,7 @@
 export interface RecommendationScore {
   semantic: number;
 
-  role: number;
+  targetRole: number;
 
   skill: number;
 

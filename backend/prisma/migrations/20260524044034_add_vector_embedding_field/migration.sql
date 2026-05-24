@@ -8,13 +8,8 @@
 CREATE EXTENSION IF NOT EXISTS "vector";
 
 -- AlterTable
-ALTER TABLE "job_roles" ADD COLUMN     "coreDomain" TEXT,
-ADD COLUMN     "embedding_vector" vector(768),
-ADD COLUMN     "jobFamily" TEXT;
-
--- AlterTable
 ALTER TABLE "mentor_profiles" DROP COLUMN "introdcution_video_url",
 ADD COLUMN     "introduction_video_url" TEXT;
 
 -- AlterTable
-ALTER TABLE "users" ADD COLUMN     "embedding_vector" vector(768);
+ALTER TABLE "users" ADD COLUMN     "embedding_vector" vector(1024);
