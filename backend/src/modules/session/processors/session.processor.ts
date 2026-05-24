@@ -1,26 +1,28 @@
-import { Processor, Process } from '@nestjs/bull';
-import { Job } from 'bull';
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
 import { SocketService } from '../../socket/socket.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 
 @Processor('session')
-export class SessionProcessor {
+export class SessionProcessor extends WorkerHost {
   constructor(
     private socketService: SocketService,
     private prisma: PrismaService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process('end-session')
-  async handleSessionEnd(job: Job<{ sessionId: number; userIds: number[] }>) {
+  async process(job: Job<{ sessionId: number; userIds: number[] }>) {
     const { sessionId, userIds } = job.data;
-    // Cập nhật status trong DB
+    console.log(`✅ Processing end-session for session ${sessionId}`);
+
     await this.prisma.mockSession.update({
       where: { id: sessionId },
       data: { status: 'COMPLETED' },
     });
-    // Emit socket cho cả hai bên
-    userIds.forEach((userId) => {
+
+    for (const userId of userIds) {
       this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
-    });
+    }
   }
 }

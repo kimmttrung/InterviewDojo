@@ -1,4 +1,5 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import {
@@ -6,7 +7,6 @@ import {
   SessionItem,
 } from './interfaces/session.interfaces';
 import { Prisma, SessionStatus, BookingStatus } from '@prisma/client';
-import { InjectQueue } from '@nestjs/bull';
 import { Queue } from 'bull';
 @Injectable()
 export class SessionService implements OnModuleInit {
@@ -376,11 +376,8 @@ export class SessionService implements OnModuleInit {
         where: { id: mockSession.id },
         data: { status: SessionStatus.CANCELLED },
       });
-      // Ghi log riêng nếu cần (có thể tạo bảng log)
     }
 
-    // 3. Emit socket event để frontend reload
-    // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
     await this.sessionQueue.removeJobs(`session-${sessionId}`);
     return { success: true, message: 'Đã hủy phiên học' };
   }
@@ -462,9 +459,7 @@ export class SessionService implements OnModuleInit {
       avatarUrl: string | null;
     } | null = booking.mentorId === userId ? booking.candidate : booking.mentor;
     // Lấy lý do từ chối từ log gần nhất
-    const rejectLog = booking.logs?.find(
-      (log: any) => log.action === 'REJECT_BOOKING',
-    );
+    const rejectLog = booking.logs?.find((log: any) => log.action === 'REJECT');
     const rejectedReason = rejectLog?.note || null;
     return {
       id: booking.id,

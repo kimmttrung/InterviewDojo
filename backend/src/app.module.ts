@@ -53,6 +53,7 @@ import { BookmarkModule } from './modules/bookmark/bookmark.module';
       { name: 'ai-analysis' }, // cho AI phân tích
       { name: 'notification' }, // cho gửi thông báo sau này
       { name: 'email' }, // cho gửi email
+      { name: 'session' }, // cho quản lý session học
     ),
 
     PrismaModule,

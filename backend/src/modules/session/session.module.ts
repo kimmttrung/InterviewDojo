@@ -3,7 +3,7 @@ import { SessionController } from './session.controller';
 import { SessionService } from './session.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { SocketModule } from '../socket/socket.module';
-import { BullModule } from '@nestjs/bull';
+import { BullModule } from '@nestjs/bullmq';
 import { SessionProcessor } from './processors/session.processor';
 @Module({
   imports: [
