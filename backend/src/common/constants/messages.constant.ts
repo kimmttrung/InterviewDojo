@@ -194,5 +194,9 @@ export const Messages = {
 
   ADMIN: {
     STATISTICS_FETCHED: 'Lấy thống kê thành công',
+    MENTORS_FETCHED: 'Lấy danh sách mentor thành công',
+    MENTOR_DETAIL_FETCHED: 'Lấy chi tiết mentor thành công',
+    MENTOR_APPROVED: 'Duyệt mentor thành công',
+    MENTOR_REJECTED: 'Từ chối mentor thành công',
   },
 } as const;

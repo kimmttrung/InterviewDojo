@@ -42,6 +42,8 @@ import SessionPage from '@/features/session/components/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
 import AdminLayout from '@/features/admin/components/AdminLayout';
+import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprovalList';
+import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -316,6 +318,8 @@ export function App() {
             >
               <Route index element={<Navigate to="dashboard" />} />
               <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="mentors" element={<MentorApprovalList />} />
+              <Route path="mentors/:id" element={<MentorDetail />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="companies" element={<CompaniesPage />} />
               {/* Thêm các route admin khác sau */}
