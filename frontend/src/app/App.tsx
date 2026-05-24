@@ -38,10 +38,9 @@ import QuestionDetailContainer from '../features/shared-domain/question-bank/pag
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
 import WalletPage from '@/features/wallet/pages/WalletPage';
-import SessionPage from '@/features/session/components/SessionPage';
+import SessionPage from '@/features/session/page/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
-
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -67,7 +66,6 @@ const SelectRoleGuard = () => {
   return <Navigate to="/" replace />;
 };
 
-// Layout bọc DUY NHẤT cho Session để thêm Navbar
 const SessionLayout = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -189,6 +187,7 @@ export function App() {
             {/* ========================================== */}
             {/* NHÓM 2: CHỈ THÊM NAVBAR KHI VÀO SESSIONS   */}
             {/* ========================================== */}
+
             <Route element={<SessionLayout />}>
               <Route
                 path="/sessions"

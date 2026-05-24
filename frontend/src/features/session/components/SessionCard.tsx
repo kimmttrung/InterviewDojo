@@ -1,10 +1,9 @@
-// SessionCard.tsx (loại bỏ handleViewRejectReason)
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
-
+import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
 dayjs.extend(relativeTime);
 
 interface Props {
@@ -13,6 +12,7 @@ interface Props {
 
 export const SessionCard = ({ session }: Props) => {
   const { openCancelModal, openProfileModal, openRejectModal } = useSessionStore();
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isJoinable, setIsJoinable] = useState(false);
 
@@ -143,12 +143,18 @@ export const SessionCard = ({ session }: Props) => {
                   Xem Record
                 </a>
               )}
-              <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+              <button
+                onClick={() => setIsFeedbackModalOpen(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
                 Feedback
               </button>
-              <button className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50">
-                Report
-              </button>
+              <SessionFeedbackModal
+                open={isFeedbackModalOpen}
+                onClose={() => setIsFeedbackModalOpen(false)}
+                sessionId={Number(session.id)}
+                sessionType={session.type as 'MENTOR' | 'P2P' | 'SOLO'}
+              />
             </>
           )}
         </div>

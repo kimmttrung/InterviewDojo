@@ -3,11 +3,16 @@ import { SessionController } from './session.controller';
 import { SessionService } from './session.service';
 import { PrismaModule } from '../../prisma/prisma.module';
 import { SocketModule } from '../socket/socket.module';
-
+import { BullModule } from '@nestjs/bull';
+import { SessionProcessor } from './processors/session.processor';
 @Module({
-  imports: [PrismaModule, SocketModule],
+  imports: [
+    PrismaModule,
+    SocketModule,
+    BullModule.registerQueue({ name: 'session' }),
+  ],
   controllers: [SessionController],
-  providers: [SessionService],
+  providers: [SessionService, SessionProcessor],
   exports: [SessionService],
 })
 export class SessionModule {}
