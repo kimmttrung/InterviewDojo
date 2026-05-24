@@ -3,9 +3,10 @@ import { BookingService } from './booking.service';
 import { BookingController } from './booking.controller';
 import { PrismaModule } from '@/prisma/prisma.module';
 import { SocketModule } from '../socket/socket.module';
+import { SessionModule } from '../session/session.module';
 
 @Module({
-  imports: [PrismaModule, SocketModule],
+  imports: [PrismaModule, SocketModule, SessionModule],
   controllers: [BookingController],
   providers: [BookingService],
   exports: [BookingService],

@@ -165,4 +165,10 @@ export const API_ENDPOINT = {
     UPDATE_QUESTION: (id: number) => `/admin/questions/${id}`,
     DELETE_QUESTION: (id: number) => `/admin/questions/${id}`,
   },
+
+  REPORT: {
+    CREATE_USER: '/reports/user', // POST
+    GET_LIST: '/reports', // GET (admin)
+    GET_ONE: (id: number) => `/reports/${id}`,
+  },
 };

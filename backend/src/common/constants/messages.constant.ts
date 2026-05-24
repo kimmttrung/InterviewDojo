@@ -199,4 +199,18 @@ export const Messages = {
     MENTOR_APPROVED: 'Duyệt mentor thành công',
     MENTOR_REJECTED: 'Từ chối mentor thành công',
   },
+  REPORTS: {
+    // Success
+    REPORT_CREATED: 'Báo cáo đã được gửi thành công, admin sẽ xem xét',
+    REPORT_FETCHED: 'Lấy thông tin báo cáo thành công',
+    REPORTS_LIST_FETCHED: 'Lấy danh sách báo cáo thành công',
+
+    // Error
+    CANNOT_REPORT_SELF: 'Bạn không thể báo cáo chính mình',
+    REPORT_NOT_FOUND: 'Không tìm thấy báo cáo',
+    INVALID_TARGET_TYPE: 'Loại đối tượng báo cáo không hợp lệ',
+    USER_NOT_FOUND: 'Người dùng không tồn tại',
+    QUESTION_NOT_FOUND: 'Câu hỏi không tồn tại',
+    ALREADY_REPORTED: 'Bạn đã báo cáo đối tượng này trước đó',
+  },
 } as const;

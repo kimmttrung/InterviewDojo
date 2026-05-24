@@ -7,6 +7,7 @@ import { format } from 'date-fns';
 interface Props {
   open: boolean;
   onClose: () => void;
+  sessionId: number | null;
 }
 
 export const ReceivedFeedbackModal = ({ open, onClose }: Props) => {

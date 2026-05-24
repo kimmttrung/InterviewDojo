@@ -3,7 +3,7 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { createMock } from '@golevelup/ts-jest';
-import { UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, UnauthorizedException } from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
 import { Role } from '@prisma/client';
@@ -114,6 +114,33 @@ describe('AuthService - login', () => {
     });
 
     expect(result).toBeDefined();
+  });
+
+  it('should redirect incomplete mentor and candidate profiles to setup', async () => {
+    jest.spyOn(service as any, 'generateTokens').mockResolvedValue({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      user: {},
+    });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+    prisma.user.findUnique = jest.fn().mockResolvedValueOnce({
+      ...mockUser,
+      role: Role.MENTOR,
+      mentorProfile: null,
+    });
+    await expect(service.login(validDto)).resolves.toEqual(
+      expect.objectContaining({ redirect: '/mentor/setup' }),
+    );
+
+    (prisma.user.findUnique as jest.Mock).mockResolvedValueOnce({
+      ...mockUser,
+      role: Role.CANDIDATE,
+      targetRoleId: null,
+    });
+    await expect(service.login(validDto)).resolves.toEqual(
+      expect.objectContaining({ redirect: '/candidate/setup' }),
+    );
   });
 
   it('should throw if email does not exist', async () => {
@@ -229,5 +256,219 @@ describe('RegisterDto Validation', () => {
     });
     const errors = await validate(dto);
     expect(errors.length).toBe(0);
+  });
+});
+
+describe('AuthService - account and token flows', () => {
+  let service: AuthService;
+  let prisma: any;
+  let jwt: any;
+
+  beforeEach(async () => {
+    prisma = {
+      user: {
+        findUnique: jest.fn(),
+        create: jest.fn(),
+      },
+      $transaction: jest.fn(),
+    };
+    jwt = {
+      signAsync: jest.fn(),
+      verifyAsync: jest.fn(),
+    };
+    const moduleRef = await Test.createTestingModule({
+      providers: [
+        AuthService,
+        { provide: PrismaService, useValue: prisma },
+        { provide: JwtService, useValue: jwt },
+      ],
+    }).compile();
+    service = moduleRef.get(AuthService);
+    jest.clearAllMocks();
+    jest.spyOn(console, 'error').mockImplementation(() => undefined);
+    process.env.JWT_ACCESS_SECRET = 'access';
+    process.env.JWT_REFRESH_SECRET = 'refresh';
+  });
+
+  afterEach(() => {
+    jest.restoreAllMocks();
+  });
+
+  it('registers a candidate and generates both tokens', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback({
+        user: {
+          create: jest.fn().mockResolvedValue({
+            id: 1,
+            email: 'user@test.com',
+            role: Role.CANDIDATE,
+          }),
+        },
+        mentorProfile: { create: jest.fn() },
+      }),
+    );
+    jwt.signAsync
+      .mockResolvedValueOnce('access-token')
+      .mockResolvedValueOnce('refresh-token');
+
+    const result = await service.register({
+      email: 'user@test.com',
+      password: '123456',
+      name: 'User',
+      role: Role.CANDIDATE,
+    });
+
+    expect(bcrypt.hash).toHaveBeenCalledWith('123456', 10);
+    expect(result).toEqual({
+      accessToken: 'access-token',
+      refreshToken: 'refresh-token',
+      user: { id: 1, email: 'user@test.com', role: Role.CANDIDATE },
+    });
+  });
+
+  it('defaults registration role to candidate when role is omitted', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+    const create = jest.fn().mockResolvedValue({
+      id: 5,
+      email: 'default@test.com',
+      role: Role.CANDIDATE,
+    });
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback({ user: { create }, mentorProfile: { create: jest.fn() } }),
+    );
+    jwt.signAsync.mockResolvedValue('token');
+
+    await service.register({
+      email: 'default@test.com',
+      password: '123456',
+      name: 'Default',
+    } as any);
+
+    expect(create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ role: Role.CANDIDATE }),
+    });
+  });
+
+  it('creates a mentor profile when registering a mentor', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+    const mentorProfileCreate = jest.fn();
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback({
+        user: {
+          create: jest.fn().mockResolvedValue({
+            id: 2,
+            email: 'mentor@test.com',
+            role: Role.MENTOR,
+          }),
+        },
+        mentorProfile: { create: mentorProfileCreate },
+      }),
+    );
+    jwt.signAsync.mockResolvedValue('token');
+
+    await service.register({
+      email: 'mentor@test.com',
+      password: '123456',
+      name: 'Mentor',
+      role: Role.MENTOR,
+    });
+
+    expect(mentorProfileCreate).toHaveBeenCalledWith({
+      data: { userId: 2, headline: '' },
+    });
+  });
+
+  it('rejects duplicate email and public admin registration', async () => {
+    prisma.user.findUnique.mockResolvedValueOnce({ id: 1 });
+    await expect(
+      service.register({ email: 'used@test.com' } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.user.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      service.register({
+        email: 'admin@test.com',
+        password: '123456',
+        role: Role.ADMIN,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refreshes tokens for a valid user and rejects invalid refresh tokens', async () => {
+    jwt.verifyAsync.mockResolvedValueOnce({ sub: 1 });
+    prisma.user.findUnique.mockResolvedValueOnce({
+      id: 1,
+      email: 'user@test.com',
+      role: Role.CANDIDATE,
+    });
+    jwt.signAsync
+      .mockResolvedValueOnce('access')
+      .mockResolvedValueOnce('refresh');
+
+    await expect(service.refresh({ refreshToken: 'valid' })).resolves.toEqual(
+      expect.objectContaining({ accessToken: 'access' }),
+    );
+
+    jwt.verifyAsync.mockRejectedValueOnce(new Error('invalid'));
+    await expect(
+      service.refresh({ refreshToken: 'invalid' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+
+    jwt.verifyAsync.mockResolvedValueOnce({ sub: 99 });
+    prisma.user.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      service.refresh({ refreshToken: 'removed-user' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('validates users and creates admin accounts', async () => {
+    prisma.user.findUnique.mockResolvedValueOnce({
+      id: 3,
+      email: 'user@test.com',
+      name: 'User',
+      role: Role.CANDIDATE,
+    });
+    await expect(service.validateUser(3)).resolves.toEqual({
+      sub: 3,
+      id: 3,
+      email: 'user@test.com',
+      name: 'User',
+      role: Role.CANDIDATE,
+    });
+
+    prisma.user.findUnique.mockResolvedValueOnce(null);
+    await expect(service.validateUser(99)).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+
+    prisma.user.findUnique.mockResolvedValueOnce(null);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+    prisma.user.create.mockResolvedValue({ id: 4, role: Role.ADMIN });
+    await service.createAdmin({
+      email: 'admin@test.com',
+      password: 'secret',
+      name: 'Admin',
+    });
+    expect(prisma.user.create).toHaveBeenCalledWith({
+      data: {
+        email: 'admin@test.com',
+        password: 'hashed',
+        name: 'Admin',
+        role: Role.ADMIN,
+      },
+    });
+
+    prisma.user.findUnique.mockResolvedValueOnce({ id: 1 });
+    await expect(
+      service.createAdmin({
+        email: 'admin@test.com',
+        password: 'secret',
+        name: 'Admin',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
   });
 });

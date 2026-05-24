@@ -7,12 +7,10 @@ import { Toaster } from '../shared/components/ui/toaster';
 import i18n from '../shared/i18n';
 import NotFound from '../shared/components/layout/NotFound';
 import Unauthorized from '../shared/components/layout/Unauthorized';
-
 import CandidateDashboardPage from '../features/candidate/dashboard/pages/CandidateDashboardPage';
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
-
 import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
@@ -38,7 +36,7 @@ import QuestionDetailContainer from '../features/shared-domain/question-bank/pag
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
 import WalletPage from '@/features/wallet/pages/WalletPage';
-import SessionPage from '@/features/session/components/SessionPage';
+import SessionPage from '@/features/session/page/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
 import AdminLayout from '@/features/admin/components/AdminLayout';
@@ -47,6 +45,7 @@ import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
 import { UserManagement } from '@/features/admin/users/pages/UserManagement';
 import { UserDetail } from '@/features/admin/users/pages/UserDetail';
 import { CoachingCategoryList } from '@/features/admin/coaching-categories/pages/CoachingCategoryList';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -73,7 +72,6 @@ const SelectRoleGuard = () => {
   return <Navigate to="/" replace />;
 };
 
-// Layout bọc DUY NHẤT cho Session để thêm Navbar
 const SessionLayout = () => {
   return (
     <div className="min-h-screen bg-background">
@@ -195,6 +193,7 @@ export function App() {
             {/* ========================================== */}
             {/* NHÓM 2: CHỈ THÊM NAVBAR KHI VÀO SESSIONS   */}
             {/* ========================================== */}
+
             <Route element={<SessionLayout />}>
               <Route
                 path="/sessions"
@@ -341,6 +340,7 @@ export function App() {
               }
             />
           </Routes>
+          <UserProfileModal />
         </TooltipProvider>
       </ThemeProvider>
     </I18nextProvider>

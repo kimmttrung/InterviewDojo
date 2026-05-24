@@ -22,6 +22,7 @@
     "db:seed1": "ts-node prisma/seed1.ts"
   },
   "dependencies": {
+    "@nestjs/bull": "^11.0.4",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.3",
@@ -38,6 +39,7 @@
     "@stream-io/node-sdk": "^0.7.49",
     "axios": "^1.15.0",
     "bcrypt": "^6.0.0",
+    "bull": "^4.16.5",
     "bullmq": "^5.73.4",
     "class-transformer": "^0.5.1",
     "class-validator": "^0.15.1",
@@ -68,6 +70,7 @@
     "@nestjs/schematics": "^11.0.0",
     "@nestjs/testing": "^11.1.19",
     "@types/bcrypt": "^6.0.0",
+    "@types/bull": "^3.15.9",
     "@types/express": "^5.0.6",
     "@types/jest": "29.5.12",
     "@types/multer": "^2.1.0",
@@ -98,16 +101,31 @@
       "ts"
     ],
     "rootDir": ".",
-    "testRegex": "src/.*\\.spec\\.ts$",
+    "testRegex": "src/.*\\.(spec|integration-spec)\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
-    "testEnvironment": "allure-jest/node",
-    "testEnvironmentOptions": {
-      "resultsDir": "../allure-results"
-    },
+    "testEnvironment": "node",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1"
+    },
+    "collectCoverageFrom": [
+      "src/modules/**/*.service.ts",
+      "!src/modules/**/*.module.ts",
+      "!src/modules/**/*.controller.ts",
+      "!src/modules/**/*.gateway.ts",
+      "!src/modules/**/*.processor.ts",
+      "!src/modules/**/*.spec.ts",
+      "!src/modules/**/dto/**",
+      "!src/modules/**/types/**"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 100,
+        "functions": 100,
+        "lines": 100,
+        "statements": 100
+      }
     },
     "reporters": [
       "default"

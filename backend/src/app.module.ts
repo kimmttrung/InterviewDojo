@@ -35,6 +35,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -54,6 +55,7 @@ import { AdminModule } from './modules/admin/admin.module';
       { name: 'ai-analysis' }, // cho AI phân tích
       { name: 'notification' }, // cho gửi thông báo sau này
       { name: 'email' }, // cho gửi email
+      { name: 'session' },
     ),
 
     PrismaModule,
@@ -85,6 +87,7 @@ import { AdminModule } from './modules/admin/admin.module';
     SessionModule,
     BookmarkModule,
     AdminModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [
