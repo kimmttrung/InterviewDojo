@@ -29,10 +29,6 @@ interface SessionState {
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
-  // ==========================================
-  // KHỞI TẠO GIÁ TRỊ VÀ LOGIC CHO TỪNG STATE
-  // ==========================================
-
   // 1. Khởi tạo Filters
   filters: {
     // SỬA Ở ĐÂY: Chuyển tab mặc định thành UPCOMING để khi vừa vào trang
@@ -45,7 +41,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
   setFilters: (newFilters) =>
     set((state) => ({
-      filters: { ...state.filters, ...newFilters, page: 1 },
+      filters: { ...state.filters, page: 1, ...newFilters },
     })), // Tự động reset page về 1 mỗi khi đổi filter
 
   // 2. Khởi tạo Cancel Modal

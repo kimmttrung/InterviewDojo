@@ -1,5 +1,14 @@
-import { IsOptional, IsInt, Min, Max, IsString, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsString,
+  IsEnum,
+  IsArray,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { SessionSource, SessionStatus } from '@prisma/client';
 
 export enum SessionTab {
   ALL = 'ALL',
@@ -38,4 +47,18 @@ export class GetSessionsDto {
   @IsOptional()
   @IsString()
   endDate?: string; // Format: YYYY-MM-DD
+
+  @IsOptional()
+  @IsEnum(SessionSource)
+  type?: SessionSource; // MENTOR_BOOKING, P2P_MATCH, SOLO
+
+  @IsOptional()
+  @IsArray()
+  @IsEnum(SessionStatus, { each: true })
+  @Transform(({ value }) => {
+    if (value === undefined || value === null || value === '') return undefined;
+    // Nếu nó là mảng rồi thì giữ nguyên, nếu là chuỗi (vd: 'SCHEDULED') thì bọc vào mảng
+    return Array.isArray(value) ? value : [value];
+  })
+  statuses?: SessionStatus[];
 }

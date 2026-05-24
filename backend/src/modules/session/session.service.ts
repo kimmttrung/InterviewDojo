@@ -1,13 +1,18 @@
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import {
   PaginatedResponse,
   SessionItem,
 } from './interfaces/session.interfaces';
-import { Prisma, SessionStatus, BookingStatus } from '@prisma/client';
-import { Queue } from 'bull';
+import {
+  Prisma,
+  SessionStatus,
+  BookingStatus,
+  SessionSource,
+} from '@prisma/client';
 @Injectable()
 export class SessionService implements OnModuleInit {
   constructor(
@@ -85,6 +90,10 @@ export class SessionService implements OnModuleInit {
   ): Promise<PaginatedResponse<SessionItem>> {
     const { page = 1, limit = 10, tab, search, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    const { type, ...rest } = query;
+    if (type) {
+      return this.getSessionsByType(userId, type, rest);
+    }
 
     // Hàm helper xây dựng điều kiện tìm kiếm mở rộng (cho các bảng khác nhau)
     const buildSearchCondition = (searchTerm?: string) => {
@@ -378,7 +387,7 @@ export class SessionService implements OnModuleInit {
       });
     }
 
-    await this.sessionQueue.removeJobs(`session-${sessionId}`);
+    await this.sessionQueue.remove(`session-${sessionId}`);
     return { success: true, message: 'Đã hủy phiên học' };
   }
 
@@ -412,10 +421,14 @@ export class SessionService implements OnModuleInit {
       createdAtStr = session.match.createdAt.toISOString();
     }
 
+    let status = session.status;
+    if (status === 'SCHEDULED') status = 'UPCOMING';
+    else if (status === 'COMPLETED') status = 'FINISHED';
+
     return {
       id: session.id,
       type,
-      status: 'UPCOMING',
+      status: status,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -426,6 +439,73 @@ export class SessionService implements OnModuleInit {
       recordingUrl: null,
       rejectedReason: null,
       hasFeedback: false,
+    };
+  }
+
+  private async getSessionsByType(
+    userId: number,
+    type: SessionSource,
+    query: any,
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      startDate,
+      endDate,
+      statuses,
+    } = query;
+    const skip = (page - 1) * limit;
+    console.log('🔍 [DEBUG] statuses received:', statuses);
+    const where: Prisma.MockSessionWhereInput = {
+      source: type,
+      // ...(statuses?.length ? { status: { in: statuses } } : {}),
+      OR: [
+        { intervieweeId: userId },
+        { booking: { mentorId: userId } },
+        { match: { candidateAId: userId } },
+        { match: { candidateBId: userId } },
+      ],
+      ...this.buildSearchCondition(search),
+      ...this.buildDateCondition('scheduledAt', startDate, endDate),
+    };
+
+    // if (statuses && statuses.length > 0) {
+    //   where.status = { in: statuses };
+    // }
+
+    if (statuses) {
+      const statusArray = Array.isArray(statuses) ? statuses : [statuses];
+      if (statusArray.length > 0) {
+        where.status = { in: statusArray };
+      }
+    }
+
+    console.log('🔍 [DEBUG] Final where:', JSON.stringify(where, null, 2));
+
+    const [data, total] = await Promise.all([
+      this.prisma.mockSession.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { scheduledAt: 'desc' },
+        include: {
+          booking: {
+            include: { mentor: true, candidate: true, coachingPlan: true },
+          },
+          match: { include: { candidateA: true, candidateB: true } },
+          feedbacks: { where: { revieweeId: userId } },
+        },
+      }),
+      this.prisma.mockSession.count({ where }),
+    ]);
+
+    const items = data.map((session) =>
+      this.mapMockSessionToItem(session, userId),
+    );
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
 
@@ -522,5 +602,59 @@ export class SessionService implements OnModuleInit {
       rejectedReason: null,
       hasFeedback,
     };
+  }
+
+  // HELPERS
+  private buildSearchCondition(searchTerm?: string) {
+    if (!searchTerm) return {};
+    return {
+      OR: [
+        {
+          booking: {
+            coachingPlan: {
+              title: { contains: searchTerm, mode: 'insensitive' },
+            },
+          },
+        },
+        {
+          booking: {
+            mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          booking: {
+            candidate: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          match: {
+            candidateA: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          match: {
+            candidateB: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          interviewee: { name: { contains: searchTerm, mode: 'insensitive' } },
+        },
+      ],
+    };
+  }
+
+  private buildDateCondition(
+    dateField: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const condition: any = {};
+    if (startDate) condition[dateField] = { gte: new Date(startDate) };
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      condition[dateField] = { ...condition[dateField], lte: end };
+    }
+    return condition;
   }
 }

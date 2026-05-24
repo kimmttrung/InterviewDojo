@@ -89,7 +89,7 @@ export const SessionCard = ({ session }: Props) => {
         <p className="font-medium">Plan: {session.coachingPlan || 'N/A'}</p>
         {session.candidateAnswers && (
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-            Câu trả lời: {session.candidateAnswers}
+            Answers: {session.candidateAnswers}
           </p>
         )}
       </div>
@@ -106,7 +106,7 @@ export const SessionCard = ({ session }: Props) => {
                 onClick={() => openCancelModal(session.id.toString())}
                 className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
               >
-                Hủy lịch
+                Cancel session
               </button>
               <a
                 href={isJoinable ? (session.meetingLink ?? undefined) : '#'}
@@ -117,7 +117,7 @@ export const SessionCard = ({ session }: Props) => {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {timeLeft === 'Đang diễn ra' ? 'In-progress (Join)' : 'Tham gia'}
+                {timeLeft === 'On live' ? 'In-progress ' : 'Join'}
               </a>
             </>
           )}
@@ -127,7 +127,7 @@ export const SessionCard = ({ session }: Props) => {
               onClick={() => openRejectModal(session.rejectedReason)}
               className="px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10"
             >
-              Xem lý do từ chối
+              Rejected reason
             </button>
           )}
 
@@ -140,7 +140,7 @@ export const SessionCard = ({ session }: Props) => {
                   rel="noopener noreferrer"
                   className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
                 >
-                  Xem Record
+                  Record session
                 </a>
               )}
               <button
