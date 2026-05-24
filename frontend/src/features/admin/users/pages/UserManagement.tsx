@@ -9,6 +9,8 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avat
 import { Search, Ban, Unlock, ShieldAlert, Users, AlertTriangle } from 'lucide-react';
 import { AdminUser, ReportedUserItem, BanFormData } from '../types/user.types';
 import { useDebounce } from '@/hooks/use-debounce';
+import { Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 
 // ─── Config ──────────────────────────────────────────────────────────
 const ROLE_CONFIG: Record<string, { label: string; className: string }> = {
@@ -102,6 +104,7 @@ function UserRow({
     label: user.role,
     className: 'bg-gray-100 text-gray-700',
   };
+  const navigate = useNavigate();
 
   return (
     <tr className="border-b hover:bg-muted/30 transition-colors">
@@ -165,13 +168,25 @@ function UserRow({
 
       {/* Actions */}
       <td className="px-4 py-3">
-        <UserActions
-          user={user}
-          onBan={onBan}
-          onUnban={onUnban}
-          banPending={banPending}
-          unbanPending={unbanPending}
-        />
+        <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => navigate(`/admin/users/${user.id}`)}
+            className="gap-1.5"
+          >
+            <Eye className="h-3.5 w-3.5" />
+            Xem
+          </Button>
+
+          <UserActions
+            user={user}
+            onBan={onBan}
+            onUnban={onUnban}
+            banPending={banPending}
+            unbanPending={unbanPending}
+          />
+        </div>
       </td>
     </tr>
   );

@@ -37,6 +37,12 @@ export class UserAdminController {
     return this.userAdminService.getReportedUsers();
   }
 
+  @Get(':id')
+  @ResponseMessage('Lấy thông tin người dùng thành công')
+  async findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.userAdminService.findOne(id);
+  }
+
   @Post(':id/ban')
   @ResponseMessage('Khóa người dùng thành công')
   async banUser(

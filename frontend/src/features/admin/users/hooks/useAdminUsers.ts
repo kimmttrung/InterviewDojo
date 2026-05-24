@@ -1,3 +1,4 @@
+// src/features/admin/users/hooks/useAdminUsers.ts
 import { useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { userAdminApi } from '../api/userApi';
@@ -6,14 +7,11 @@ import { showToast } from '@/shared/lib/toast';
 import { AdminUser, BanFormData } from '../types/user.types';
 
 // ─── Helpers để unwrap double-axios-wrapper ───────────────────────────
-// Backend: { success, data: <payload>, message }
-// Axios:   response.data = that object
-// → payload = response.data.data
 function unwrapItems(response: any) {
   return response?.data?.data; // { items, meta }
 }
 function unwrapList(response: any) {
-  return response?.data?.data ?? []; // array (reported users)
+  return response?.data?.data ?? [];
 }
 
 // ─── Queries ─────────────────────────────────────────────────────────
@@ -37,7 +35,6 @@ export const useAdminUsers = (filters: {
     }
   }, [query.error]);
 
-  // Trả thêm payload đã unwrap để component dùng trực tiếp
   const payload = unwrapItems(query.data);
   return {
     ...query,
@@ -81,7 +78,7 @@ export const useBanUser = () => {
       const snapshots = queryClient.getQueriesData<any>({ queryKey: ['admin', 'users'] });
 
       // Optimistic: cập nhật status trong cache
-      queryClient.setQueriesData<any>({ queryKey: ['admin', 'users'] }, (old) => {
+      queryClient.setQueriesData<any>({ queryKey: ['admin', 'users'] }, (old: any) => {
         if (!old) return old;
         const payload = old?.data?.data;
         if (!payload?.items) return old;
@@ -110,11 +107,10 @@ export const useBanUser = () => {
 
     onSuccess: () => {
       showToast.success('Khóa người dùng thành công');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'], refetchType: 'active' });
     },
 
     onError: (err: any, _vars, context) => {
-      // Rollback toàn bộ
       context?.snapshots?.forEach(([key, data]: [any, any]) => {
         queryClient.setQueryData(key, data);
       });
@@ -135,7 +131,7 @@ export const useUnbanUser = () => {
 
       const snapshots = queryClient.getQueriesData<any>({ queryKey: ['admin', 'users'] });
 
-      queryClient.setQueriesData<any>({ queryKey: ['admin', 'users'] }, (old) => {
+      queryClient.setQueriesData<any>({ queryKey: ['admin', 'users'] }, (old: any) => {
         if (!old) return old;
         const payload = old?.data?.data;
         if (!payload?.items) return old;
@@ -159,7 +155,7 @@ export const useUnbanUser = () => {
 
     onSuccess: () => {
       showToast.success('Mở khóa người dùng thành công');
-      queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'users'], refetchType: 'active' });
     },
 
     onError: (err: any, _vars, context) => {

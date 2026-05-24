@@ -147,6 +147,7 @@ export const API_ENDPOINT = {
     APPROVE_MENTOR: (id: number) => `/admin/mentors/${id}/approve`,
     REJECT_MENTOR: (id: number) => `/admin/mentors/${id}/reject`,
     USERS: '/admin/users',
+    USER_DETAIL: (id: number) => `/admin/users/${id}`,
     REPORTED_USERS: '/admin/users/reported',
     BAN_USER: (id: number) => `/admin/users/${id}/ban`,
     UNBAN_USER: (id: number) => `/admin/users/${id}/unban`,

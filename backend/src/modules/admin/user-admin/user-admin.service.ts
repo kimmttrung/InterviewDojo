@@ -236,64 +236,28 @@ export class UserAdminService {
     ]);
   }
 
-  // ──────────────────────────────────────────
-  // Lazy unban — gọi trong Auth Guard khi user đăng nhập
-  // Trả về thông tin để frontend hiển thị (còn bao lâu / vĩnh viễn / đã unban)
-  // ──────────────────────────────────────────
-  async tryAutoUnban(userId: number): Promise<
-    | { unbanned: true }
-    | { unbanned: false; isPermanent: true }
-    | {
-        unbanned: false;
-        isPermanent: false;
-        days: number;
-        hours: number;
-        bannedUntilLocal: string;
-      }
-  > {
+  async findOne(userId: number) {
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
-      select: { id: true, status: true, banReason: true, bannedUntil: true },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        avatarUrl: true,
+        bio: true,
+        role: true,
+        status: true,
+        creditBalance: true,
+        createdAt: true,
+        experienceYears: true,
+        linkedInLink: true,
+        githubLink: true,
+        targetRoleId: true,
+        banReason: true,
+        bannedUntil: true,
+      },
     });
-
-    // Không bị ban → không làm gì
-    if (!user || user.status !== UserStatus.BANNED) {
-      return { unbanned: true };
-    }
-
-    // Ban vĩnh viễn (bannedUntil = null)
-    if (!user.bannedUntil) {
-      return { unbanned: false, isPermanent: true };
-    }
-
-    const nowUtc = new Date();
-
-    // Ban đã hết hạn → tự động mở
-    if (user.bannedUntil <= nowUtc) {
-      await this.prisma.user.update({
-        where: { id: userId },
-        data: { status: UserStatus.ACTIVE, banReason: null, bannedUntil: null },
-      });
-      return { unbanned: true };
-    }
-
-    // Ban tạm thời còn hiệu lực → tính thời gian còn lại theo ICT
-    const diffMs = user.bannedUntil.getTime() - nowUtc.getTime();
-    const totalMins = Math.ceil(diffMs / (1000 * 60));
-    const days = Math.floor(totalMins / (60 * 24));
-    const hours = Math.floor((totalMins % (60 * 24)) / 60);
-
-    const bannedUntilLocal = formatLocalDateTime(
-      user.bannedUntil,
-      DEFAULT_TIMEZONE,
-    );
-
-    return {
-      unbanned: false,
-      isPermanent: false,
-      days,
-      hours,
-      bannedUntilLocal,
-    };
+    if (!user) throw new NotFoundException('User không tồn tại');
+    return user;
   }
 }

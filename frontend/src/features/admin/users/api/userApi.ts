@@ -11,6 +11,8 @@ export const userAdminApi = {
     search?: string;
   }) => api.get(API_ENDPOINT.ADMIN.USERS, { params }),
 
+  getOne: (id: number) => api.get(API_ENDPOINT.ADMIN.USER_DETAIL(id)),
+
   getReported: () => api.get(API_ENDPOINT.ADMIN.REPORTED_USERS),
 
   ban: (id: number, data: BanFormData) => api.post(API_ENDPOINT.ADMIN.BAN_USER(id), data),

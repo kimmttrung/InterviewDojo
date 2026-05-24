@@ -45,6 +45,7 @@ import AdminLayout from '@/features/admin/components/AdminLayout';
 import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprovalList';
 import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
 import { UserManagement } from '@/features/admin/users/pages/UserManagement';
+import { UserDetail } from '@/features/admin/users/pages/UserDetail';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -322,6 +323,7 @@ export function App() {
               <Route path="mentors" element={<MentorApprovalList />} />
               <Route path="mentors/:id" element={<MentorDetail />} />
               <Route path="users" element={<UserManagement />} />
+              <Route path="users/:id" element={<UserDetail />} />
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="companies" element={<CompaniesPage />} />
               {/* Thêm các route admin khác sau */}
