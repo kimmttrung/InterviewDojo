@@ -68,8 +68,12 @@ export const SessionCard = ({ session }: Props) => {
           />
           <div>
             <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
-            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-              {session.type}
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full inline-block mt-1">
+              {session.type === 'MENTOR'
+                ? 'Mentor Session'
+                : session.type === 'P2P'
+                  ? 'P2P Session'
+                  : 'Solo Session'}
             </span>
           </div>
         </div>
@@ -122,7 +126,7 @@ export const SessionCard = ({ session }: Props) => {
             </>
           )}
 
-          {session.status === 'REJECTED' && (
+          {(session.status === 'REJECTED' || session.status === 'CANCELLED') && (
             <button
               onClick={() => openRejectModal(session.rejectedReason)}
               className="px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10"

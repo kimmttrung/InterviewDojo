@@ -5,6 +5,7 @@ import { SessionItem } from '../types/session.types';
 import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { UserProfileModal } from '../components/modals/UserProfileModal';
+import { CancelSessionModal } from '../components/modals/CancelSessionModal';
 
 export const SessionListByType = ({ type }: { type: string }) => {
   // Lấy filters.status từ global store thay vì dùng useState
@@ -87,6 +88,7 @@ export const SessionListByType = ({ type }: { type: string }) => {
         </>
       )}
       <UserProfileModal />
+      <CancelSessionModal />
     </div>
   );
 };
