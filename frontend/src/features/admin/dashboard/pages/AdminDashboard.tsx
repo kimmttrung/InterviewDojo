@@ -1,47 +1,42 @@
-import { Users, FileText, Activity, Code } from 'lucide-react';
-import { Card } from '../../../../shared/components/ui/card';
-import AdminLayout from '../components/AdminLayout';
+import { useStatistics } from '../hooks/useDashboard';
+import { Card, CardContent, CardHeader, CardTitle } from '../../../../shared/components/ui/card';
+import { Loader2 } from 'lucide-react';
 
-const stats = [
-  { label: 'Users', value: 1240, icon: Users },
-  { label: 'Questions', value: 320, icon: FileText },
-  { label: 'Mock Sessions', value: 890, icon: Activity },
-  { label: 'Code Runs', value: 5400, icon: Code },
-];
+export const AdminDashboard = () => {
+  const { data: stats, isLoading } = useStatistics();
 
-export default function AdminDashboard() {
-  return (
-    <AdminLayout>
-      <div className="space-y-6">
-        {/* Title */}
-        <h1 className="text-2xl font-bold">Admin Dashboard</h1>
-
-        {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {stats.map((s, i) => {
-            const Icon = s.icon;
-            return (
-              <Card key={i} className="p-5 flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-muted-foreground">{s.label}</p>
-                  <p className="text-2xl font-bold">{s.value}</p>
-                </div>
-                <Icon className="w-6 h-6 text-primary" />
-              </Card>
-            );
-          })}
-        </div>
-
-        {/* Fake Analytics */}
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold mb-4">System Overview</h2>
-          <ul className="space-y-2 text-sm">
-            <li>🟢 AI API: Healthy</li>
-            <li>🟢 Judge0: Running</li>
-            <li>🟡 WebRTC: Slight delay</li>
-          </ul>
-        </Card>
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
-    </AdminLayout>
+    );
+  }
+
+  const items = [
+    { label: 'Tổng người dùng', value: stats?.totalUsers || 0, color: 'bg-blue-500' },
+    { label: 'Mentors', value: stats?.totalMentors || 0, color: 'bg-green-500' },
+    { label: 'Candidates', value: stats?.totalCandidates || 0, color: 'bg-purple-500' },
+    { label: 'Câu hỏi', value: stats?.totalQuestions || 0, color: 'bg-yellow-500' },
+    { label: 'Đặt lịch', value: stats?.totalBookings || 0, color: 'bg-pink-500' },
+    { label: 'Report chờ xử lý', value: stats?.pendingReports || 0, color: 'bg-red-500' },
+  ];
+
+  return (
+    <div>
+      <h1 className="text-2xl font-bold mb-6">Dashboard</h1>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item, idx) => (
+          <Card key={idx}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium text-gray-500">{item.label}</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="text-3xl font-bold">{item.value}</div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
   );
-}
+};

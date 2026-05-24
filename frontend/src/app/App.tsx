@@ -20,7 +20,7 @@ import MentorSchedule from '../features/mentor/schedule-management/pages/MentorS
 import MentorDetailPage from '../features/candidate/mentor-booking/pages/MentorDetailPage';
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfileManagement';
 
-import AdminDashboard from '../features/admin/dashboard/pages/AdminDashboard';
+import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard';
 import CategoriesPage from '../features/admin/category-management/pages/CategoriesPage';
 import CompaniesPage from '../features/admin/company-management/pages/CompaniesPage';
 import SelectTargetRole from '../features/candidate/target-role/pages/SelectTargetRole';
@@ -30,7 +30,7 @@ import InterviewRoom from '../features/candidate/practice/interviews/peer-interv
 import SoloRecording from '../features/candidate/practice/interviews/solo-ai/pages/SoloRecording';
 import PeerMatchingPage from '../features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage';
 import QuestionBank from '../features/shared-domain/question-bank/pages/QuestionBank';
-import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
+// import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import { BookmarkedQuestionsPage } from '../features/bookmark/components/BookmarkedQuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
@@ -41,6 +41,7 @@ import WalletPage from '@/features/wallet/pages/WalletPage';
 import SessionPage from '@/features/session/components/SessionPage';
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { Navbar } from '@/shared/components/layout/Navbar';
+import AdminLayout from '@/features/admin/components/AdminLayout';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -305,39 +306,20 @@ export function App() {
               }
             />
 
-            {/* Admin routes – bắt buộc role ADMIN */}
             <Route
-              path="/admin/dashboard"
+              path="/admin"
               element={
                 <ProtectedRoute roles={['ADMIN']}>
-                  <AdminDashboard />
+                  <AdminLayout />
                 </ProtectedRoute>
               }
-            />
-            <Route
-              path="/admin/questions"
-              element={
-                <ProtectedRoute roles={['ADMIN']}>
-                  <QuestionsPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/categories"
-              element={
-                <ProtectedRoute roles={['ADMIN']}>
-                  <CategoriesPage />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/admin/companies"
-              element={
-                <ProtectedRoute roles={['ADMIN']}>
-                  <CompaniesPage />
-                </ProtectedRoute>
-              }
-            />
+            >
+              <Route index element={<Navigate to="dashboard" />} />
+              <Route path="dashboard" element={<AdminDashboard />} />
+              <Route path="categories" element={<CategoriesPage />} />
+              <Route path="companies" element={<CompaniesPage />} />
+              {/* Thêm các route admin khác sau */}
+            </Route>
 
             {/* AI Analysis */}
             <Route

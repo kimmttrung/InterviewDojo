@@ -191,4 +191,8 @@ export const Messages = {
     SESSION_CANCELLED: 'Session đã bị hủy',
     MEETING_LINK_READY: 'Đã cập nhật link họp thành công',
   },
+
+  ADMIN: {
+    STATISTICS_FETCHED: 'Lấy thống kê thành công',
+  },
 } as const;

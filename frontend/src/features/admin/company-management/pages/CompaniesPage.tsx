@@ -19,7 +19,7 @@ import {
 } from '../../../../shared/components/ui/dialog';
 import { Plus, Search, Edit2, Trash2, Loader2, Building2, Globe } from 'lucide-react';
 import { toast } from 'sonner';
-import AdminLayout from '../../dashboard/components/AdminLayout';
+import AdminLayout from '../../components/AdminLayout';
 import { Card } from '../../../../shared/components/ui/card';
 
 export default function CompaniesPage() {
