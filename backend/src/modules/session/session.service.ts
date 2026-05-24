@@ -6,8 +6,8 @@ import {
   SessionItem,
 } from './interfaces/session.interfaces';
 import { Prisma, SessionStatus, BookingStatus } from '@prisma/client';
-import { InjectQueue } from '@nestjs/bull';
-import { Queue } from 'bull';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 @Injectable()
 export class SessionService implements OnModuleInit {
   constructor(
@@ -16,14 +16,19 @@ export class SessionService implements OnModuleInit {
   ) {}
 
   async onModuleInit() {
-    await this.prisma.mockSession.updateMany({
-      where: {
-        status: SessionStatus.SCHEDULED,
-        scheduledAt: { lt: new Date() },
-      },
-      data: { status: SessionStatus.COMPLETED },
-    });
-    await this.scheduleAllUpcomingSessions();
+    try {
+      await this.prisma.mockSession.updateMany({
+        where: {
+          status: SessionStatus.SCHEDULED,
+          scheduledAt: { lt: new Date() },
+        },
+        data: { status: SessionStatus.COMPLETED },
+      });
+      await this.scheduleAllUpcomingSessions();
+      console.log('✅ SessionService initialized');
+    } catch (error) {
+      console.error('❌ SessionService initialization failed:', error);
+    }
   }
 
   private async scheduleAllUpcomingSessions() {
@@ -381,7 +386,11 @@ export class SessionService implements OnModuleInit {
 
     // 3. Emit socket event để frontend reload
     // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
-    await this.sessionQueue.removeJobs(`session-${sessionId}`);
+    // await this.sessionQueue.removeJobs(`session-${sessionId}`);
+    const job = await this.sessionQueue.getJob(`session-${sessionId}`);
+    if (job) {
+      await job.remove();
+    }
     return { success: true, message: 'Đã hủy phiên học' };
   }
 

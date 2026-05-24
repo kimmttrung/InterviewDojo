@@ -1,26 +1,56 @@
-import { Processor, Process } from '@nestjs/bull';
-import { Job } from 'bull';
+// import { Processor, Process } from '@nestjs/bull';
+// import { Job } from 'bull';
+// import { SocketService } from '../../socket/socket.service';
+// import { PrismaService } from '../../../prisma/prisma.service';
+
+// @Processor('session')
+// export class SessionProcessor {
+//   constructor(
+//     private socketService: SocketService,
+//     private prisma: PrismaService,
+//   ) {}
+
+//   @Process('end-session')
+//   async handleSessionEnd(job: Job<{ sessionId: number; userIds: number[] }>) {
+//     const { sessionId, userIds } = job.data;
+//     // Cập nhật status trong DB
+//     await this.prisma.mockSession.update({
+//       where: { id: sessionId },
+//       data: { status: 'COMPLETED' },
+//     });
+//     // Emit socket cho cả hai bên
+//     userIds.forEach((userId) => {
+//       this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
+//     });
+//   }
+// }
+
+import { Processor, WorkerHost } from '@nestjs/bullmq';
+import { Job } from 'bullmq';
 import { SocketService } from '../../socket/socket.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-@Processor('session')
-export class SessionProcessor {
+@Processor('session') // tên queue
+export class SessionProcessor extends WorkerHost {
   constructor(
     private socketService: SocketService,
     private prisma: PrismaService,
-  ) {}
+  ) {
+    super();
+  }
 
-  @Process('end-session')
-  async handleSessionEnd(job: Job<{ sessionId: number; userIds: number[] }>) {
-    const { sessionId, userIds } = job.data;
-    // Cập nhật status trong DB
-    await this.prisma.mockSession.update({
-      where: { id: sessionId },
-      data: { status: 'COMPLETED' },
-    });
-    // Emit socket cho cả hai bên
-    userIds.forEach((userId) => {
-      this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
-    });
+  async process(
+    job: Job<{ sessionId: number; userIds: number[] }>,
+  ): Promise<any> {
+    if (job.name === 'end-session') {
+      const { sessionId, userIds } = job.data;
+      await this.prisma.mockSession.update({
+        where: { id: sessionId },
+        data: { status: 'COMPLETED' },
+      });
+      userIds.forEach((userId) => {
+        this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
+      });
+    }
   }
 }
