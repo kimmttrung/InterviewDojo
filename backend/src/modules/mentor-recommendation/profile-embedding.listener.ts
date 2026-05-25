@@ -1,23 +1,45 @@
+// src/modules/mentor-recommendation/listeners/recommendation.listener.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { EmbeddingService } from './services/embedding.service';
 
 @Injectable()
-export class ProfileEmbeddingListener {
-  private readonly logger = new Logger(ProfileEmbeddingListener.name);
+export class RecommendationListener {
+  private readonly logger = new Logger(RecommendationListener.name);
 
   constructor(private readonly embeddingService: EmbeddingService) {}
 
+  // 1. Hồ sơ Candidate thay đổi hoặc Admin duyệt Mentor -> Kích hoạt ngay lập tức
   @OnEvent('user.profile.updated')
-  async handleProfileUpdated(payload: { userId: number; role: string }) {
-    this.logger.log(
-      `🔔 [Event Bus] Đã bắt được sự kiện cập nhật profile của User ID: ${payload.userId}`,
-    );
-
-    if (payload.role === 'MENTOR') {
-      await this.embeddingService.enqueueMentor(payload.userId);
-    } else if (payload.role === 'CANDIDATE') {
+  async handleProfile(payload: { userId: number; role: string }) {
+    if (payload.role === 'CANDIDATE') {
+      this.logger.log(
+        `🔔 [Profile Event] Đẩy Candidate ${payload.userId} đi tính toán.`,
+      );
       await this.embeddingService.enqueueCandidate(payload.userId);
+    } else if (payload.role === 'MENTOR') {
+      this.logger.log(
+        `🔔 [Approval Event] Đẩy Mentor ${payload.userId} (Đã duyệt) đi tính toán.`,
+      );
+      await this.embeddingService.enqueueMentor(payload.userId, 0);
     }
+  }
+
+  // 2. Candidate hoàn thành Booking lịch hẹn -> Đẩy đi tính lại
+  @OnEvent('booking.completed')
+  async handleBooking(payload: { candidateId: number }) {
+    this.logger.log(
+      `🔔 [Booking Event] Đẩy Candidate ${payload.candidateId} đi tính toán lại.`,
+    );
+    await this.embeddingService.enqueueCandidate(payload.candidateId, 0);
+  }
+
+  // 3. Candidate bookmark câu hỏi -> Đẩy đi tính lại
+  @OnEvent('user.bookmark.updated')
+  async handleBookmark(payload: { candidateId: number }) {
+    this.logger.log(
+      `🔔 [Bookmark Event] Đẩy Candidate ${payload.candidateId} đi tính toán lại.`,
+    );
+    await this.embeddingService.enqueueCandidate(payload.candidateId, 0);
   }
 }

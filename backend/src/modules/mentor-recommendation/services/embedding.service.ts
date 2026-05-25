@@ -1,3 +1,4 @@
+// src/modules/mentor-recommendation/services/embedding.service.ts
 import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
@@ -7,56 +8,56 @@ export class EmbeddingService {
   private readonly logger = new Logger(EmbeddingService.name);
 
   constructor(
-    @InjectQueue('embedding-queue') private readonly embeddingQueue: Queue,
+    @InjectQueue('recommendation-queue') private readonly embeddingQueue: Queue,
   ) {}
 
   /**
-   * Xếp hàng Candidate chờ tính toán Embedding sau 5 phút
+   * Đẩy Candidate vào hàng đợi - Xử lý ngay lập tức (Delay = 0)
    */
-  async enqueueCandidate(candidateId: number): Promise<void> {
-    const delayTime = 1 * 60 * 1000; // 5 phút = 300,000 ms
-    // const jobId = `candidate-embedding-${candidateId}`;
-    const jobId = `candidate-embedding-${candidateId}}`; // Thêm timestamp để tránh trùng lặp jobId khi cập nhật liên tục
+  async enqueueCandidate(
+    candidateId: number,
+    delay: number = 0,
+  ): Promise<void> {
+    // Sử dụng timestamp ở jobId để không bị dính cơ chế chặn trùng lặp khi user cập nhật liên tục
+    const jobId = `candidate-embedding-${candidateId}-${Date.now()}`;
 
-    // Đẩy job vào BullMQ với cấu hình delay và gán jobId cố định để debounce rác
     await this.embeddingQueue.add(
       'process-candidate',
       { candidateId },
       {
         jobId,
-        delay: delayTime,
+        delay: delay,
         removeOnComplete: true,
         removeOnFail: true,
-        keepLogs: 10,
+        keepLogs: 5,
       },
     );
 
     this.logger.log(
-      `[BullMQ] Candidate ${candidateId} đã được xếp hàng. Sẽ xử lý sau ${delayTime / 60000} phút.`,
+      `[BullMQ] Candidate ${candidateId} đã được đẩy vào hàng đợi xử lý ngay.`,
     );
   }
 
   /**
-   * Xếp hàng Mentor chờ tính toán Embedding sau 5 phút
+   * Đẩy Mentor vào hàng đợi - Xử lý ngay lập tức sau khi Admin phê duyệt
    */
-  async enqueueMentor(mentorId: number): Promise<void> {
-    const delayTime = 1 * 60 * 1000; // 5 phút = 300,000 ms
-    const jobId = `mentor-embedding-${mentorId}`;
+  async enqueueMentor(mentorId: number, delay: number = 0): Promise<void> {
+    const jobId = `mentor-embedding-${mentorId}-${Date.now()}`;
 
     await this.embeddingQueue.add(
       'process-mentor',
       { mentorId },
       {
         jobId,
-        delay: delayTime,
-        keepLogs: 10,
+        delay: delay,
+        keepLogs: 5,
         removeOnComplete: true,
         removeOnFail: true,
       },
     );
 
     this.logger.log(
-      `[BullMQ] Mentor ${mentorId} đã được xếp hàng. Sẽ xử lý sau ${delayTime / 60000} phút.`,
+      `[BullMQ] Mentor ${mentorId} (Đã được duyệt) đã được đẩy vào hàng đợi xử lý ngay.`,
     );
   }
 }

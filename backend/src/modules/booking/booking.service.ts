@@ -27,12 +27,15 @@ import {
   SessionMode,
 } from '@prisma/client';
 import { SessionService } from '../session/session.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketService: SocketService,
     private readonly sessionService: SessionService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private mapToBookingResponse(
@@ -423,6 +426,9 @@ export class BookingService {
         bookingId,
       });
 
+      this.eventEmitter.emit('booking.completed', {
+        candidateId: booking.candidateId,
+      });
       return this.mapToBookingResponse(updated);
     });
   }

@@ -6,10 +6,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { QueryBookmarkDto } from './dto/query-bookmark.dto';
-
+import { EventEmitter2 } from '@nestjs/event-emitter';
 @Injectable()
 export class BookmarkService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   async getBookmarkedQuestions(userId: number, query: QueryBookmarkDto) {
     const {
@@ -109,6 +112,9 @@ export class BookmarkService {
     if (existing) throw new BadRequestException('Câu hỏi đã được lưu trước đó');
 
     await this.prisma.userBookmark.create({ data: { userId, questionId } });
+
+    this.eventEmitter.emit('user.bookmark.updated', { candidateId: userId });
+
     return { success: true, message: 'Đã lưu câu hỏi' };
   }
 

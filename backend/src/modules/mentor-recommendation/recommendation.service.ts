@@ -1,10 +1,8 @@
+// src/modules/mentor-recommendation/recommendation.service.ts
 import { Injectable, NotFoundException } from '@nestjs/common';
-
 import { PrismaService } from '../../prisma/prisma.service';
-
 import { cosineSimilarity } from './utils/cosine-similarity.util';
 import { jaccard } from './utils/jaccard-similarity.util';
-
 import { HardFilterService } from './services/hard-filter.service';
 import { RankingService } from './services/ranking.service';
 import { ExperienceScoreService } from './services/experience-score.service';
@@ -23,21 +21,80 @@ export class RecommendationService {
     private readonly targetRoleScore: TargetRoleScoreService,
   ) {}
 
-  async recommend(candidateId: number) {
-    const candidate = await this.loadCandidate(candidateId);
+  /**
+   * HÀM CHÍNH GỢI Ý MENTOR: Chỉ đọc từ bảng Cache giúp tăng tốc độ phản hồi vượt bậc
+   */
+  async recommend(candidateId: number, limit = 10) {
+    // 1. Kiểm tra dữ liệu trong bảng Cache thiết lập index trước đó
+    const cachedData = await this.prisma.candidateRecommendation.findMany({
+      where: { candidateId },
+      orderBy: { rank: 'asc' },
+      take: limit,
+      include: {
+        mentor: {
+          include: {
+            skills: { include: { skill: true } },
+            mentorProfile: {
+              include: {
+                experiences: {
+                  where: { isCurrent: true },
+                  take: 1,
+                  include: { company: true, jobRole: true },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
 
+    // 2. Dự phòng (Fallback): Nếu ứng viên mới tinh chưa có Cache, tính realtime tạm thời hoặc lấy Top Mentor mặc định
+    if (cachedData.length === 0) {
+      await this.calculateAndCacheRecommendations(candidateId);
+      return this.recommend(candidateId, limit); // Đệ quy đọc lại sau khi vừa tạo cache xong
+    }
+
+    // 3. Định dạng dữ liệu trả ra tương thích chuẩn giao diện Frontend
+    return cachedData.map((cache) => ({
+      id: cache.mentor.id,
+      name: cache.mentor.name,
+      avatarUrl: cache.mentor.avatarUrl,
+      bio: cache.mentor.bio,
+      experienceYears: cache.mentor.experienceYears,
+      skills: cache.mentor.skills.map((us) => ({
+        id: us.skill.id,
+        name: us.skill.name,
+        type: us.skill.type,
+        level: us.level,
+        experienceMonths: us.experienceMonths,
+      })),
+      mentorProfile: cache.mentor.mentorProfile
+        ? {
+            headline: cache.mentor.mentorProfile.headline,
+            experiences: cache.mentor.mentorProfile.experiences,
+          }
+        : null,
+      recommendationScore: cache.score,
+    }));
+  }
+
+  /**
+   * HÀM WORKER CHẠY NGẦM: Tính toán toàn bộ ma trận điểm số và ghi đè vào bảng Cache
+   */
+  async calculateAndCacheRecommendations(candidateId: number): Promise<void> {
+    const candidate = await this.loadCandidate(candidateId);
     const mentors = await this.loadMentors();
 
-    const filtered = this.hardFilter.filter(candidate, mentors);
+    // Lọc cứng các điều kiện tiên quyết
+    const filteredMentors = this.hardFilter.filter(candidate, mentors);
 
-    const rankingResult = filtered.map((mentor) => {
+    const rankingResult = filteredMentors.map((mentor) => {
       const hasEmbedding =
         candidate.embedding.length > 0 && mentor.embedding.length > 0;
 
       const semantic = hasEmbedding
         ? cosineSimilarity(candidate.embedding, mentor.embedding)
         : 0;
-
       const skill = jaccard(candidate.skills, mentor.skills);
 
       const language =
@@ -49,12 +106,12 @@ export class RecommendationService {
         mentor.experienceYears,
         candidate.experienceYears,
       );
-
       const availability = this.availability.calculateAvailabilityScore(
         candidate.rawBookings,
         mentor.availableSlots,
       );
 
+      // Tính toán độ tương thích vị trí công việc đích (Target Role Score)
       const targetRole = this.targetRoleScore.calculateBestRoleScore(
         candidate.role,
         mentor.rawRoles,
@@ -72,111 +129,35 @@ export class RecommendationService {
 
       return {
         mentorId: mentor.id,
-
         recommendationScore: finalScore,
       };
     });
 
-    const sorted = rankingResult
+    // Sắp xếp thứ hạng điểm số từ cao xuống thấp
+    const top10Result = rankingResult
       .sort((a, b) => b.recommendationScore - a.recommendationScore)
-      .slice(0, 5);
+      .slice(0, 10);
 
-    const mentorIds = sorted.map((item) => item.mentorId);
-
-    const mentorEntities = await this.prisma.user.findMany({
-      where: {
-        id: {
-          in: mentorIds,
-        },
-
-        mentorProfile: {
-          isNot: null,
-        },
-      },
-
-      select: {
-        id: true,
-
-        name: true,
-
-        avatarUrl: true,
-
-        bio: true,
-
-        experienceYears: true,
-
-        skills: {
-          select: {
-            skill: {
-              select: {
-                id: true,
-
-                name: true,
-
-                type: true,
-              },
-            },
-
-            level: true,
-
-            experienceMonths: true,
-          },
-        },
-
-        mentorProfile: {
-          select: {
-            headline: true,
-
-            experiences: {
-              where: {
-                isCurrent: true,
-              },
-
-              take: 1,
-
-              select: {
-                isCurrent: true,
-
-                company: {
-                  select: {
-                    id: true,
-
-                    name: true,
-
-                    logoUrl: true,
-                  },
-                },
-
-                jobRole: {
-                  select: {
-                    id: true,
-
-                    name: true,
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
-    });
-
-    const mentorMap = new Map(
-      mentorEntities.map((mentor) => [mentor.id, mentor]),
-    );
-
-    return sorted
-      .map((item) => ({
-        ...mentorMap.get(item.mentorId),
-
-        recommendationScore: item.recommendationScore,
-      }))
-      .filter(Boolean);
+    // Lưu trữ hàng loạt vào Cache Table sử dụng transaction nhằm tối ưu hóa I/O DB
+    await this.prisma.$transaction([
+      // Xóa bảng cache cũ của candidate này
+      this.prisma.candidateRecommendation.deleteMany({
+        where: { candidateId },
+      }),
+      // Ghi đè ma trận điểm số xếp hạng mới
+      this.prisma.candidateRecommendation.createMany({
+        data: top10Result.map((item, index) => ({
+          candidateId,
+          mentorId: item.mentorId,
+          score: item.recommendationScore,
+          rank: index + 1,
+        })),
+      }),
+    ]);
   }
 
   // ─────────────────────────────────────────────────────────────
-  // Helpers: parse chuỗi vector Postgres trả về thành number[]
-  // Postgres trả về dạng "[0.1,0.2,...]" hoặc "(0.1,0.2,...)"
+  // HELPERS (Giữ nguyên cấu trúc phân tách dữ liệu của bạn)
   // ─────────────────────────────────────────────────────────────
   private parseVector(raw: string | null | undefined): number[] {
     if (!raw) return [];
@@ -216,11 +197,9 @@ export class RecommendationService {
       );
     }
 
-    const embedding = this.parseVector(embeddingRaw[0]?.emb);
-
     return {
       id: candidate.id,
-      embedding,
+      embedding: this.parseVector(embeddingRaw[0]?.emb),
       experienceYears: candidate.experienceYears,
       skills: candidate.skills
         .filter((item) => item.skill.type !== 'LANGUAGE')
@@ -252,10 +231,7 @@ export class RecommendationService {
           mentorProfile: {
             include: {
               coachingPlans: { where: { isActive: true } },
-
-              experiences: {
-                include: { jobRole: true },
-              },
+              experiences: { include: { jobRole: true } },
             },
           },
           slots: {
@@ -266,13 +242,11 @@ export class RecommendationService {
           },
         },
       }),
-
-      // Lấy toàn bộ embedding của MENTOR trong một raw query duy nhất
       this.prisma.$queryRaw<{ id: number; emb: string }[]>`
-      SELECT id, embedding_vector::text AS emb
-      FROM users
-      WHERE role = 'MENTOR'
-    `,
+        SELECT id, embedding_vector::text AS emb
+        FROM users
+        WHERE role = 'MENTOR'
+      `,
     ]);
 
     const embeddingMap = new Map<number, number[]>(
@@ -281,7 +255,6 @@ export class RecommendationService {
 
     return mentors.map((mentor) => {
       const profile = mentor.mentorProfile;
-
       const mentorRoles = profile?.experiences
         ? [...new Set(profile.experiences.map((exp) => exp.jobRole.name))]
         : [];
