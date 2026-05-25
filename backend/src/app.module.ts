@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter'; // <--- 1. IMPORT EVENT EMITTER
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { QuestionsModule } from './modules/questions/questions.module';
@@ -34,6 +35,7 @@ import { CandidateDashboardModule } from './modules/candidate-dashboard/candidat
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { MentorRecommendationModule } from './modules/mentor-recommendation/recommendation.module';
 import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
@@ -41,24 +43,28 @@ import { ReportsModule } from './modules/reports/reports.module';
     ConfigModule.forRoot({
       isGlobal: true,
     }),
-    // setup BullMQ
+
+    EventEmitterModule.forRoot(),
+
+    // Setup BullMQ
     BullModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
       useFactory: bullConfig,
     }),
 
-    // // đăng ký queue sẽ dùng
+    // Đăng ký toàn bộ queue hệ thống sẽ dùng
     BullModule.registerQueue(
-      { name: 'code-execution' }, // cho submit code
-      { name: 'ai-analysis' }, // cho AI phân tích
-      { name: 'notification' }, // cho gửi thông báo sau này
-      { name: 'email' }, // cho gửi email
-      { name: 'session' }, // cho quản lý session học
+      { name: 'code-execution' },
+      { name: 'ai-analysis' },
+      { name: 'notification' },
+      { name: 'email' },
+      { name: 'embedding-queue' },
       { name: 'session' },
     ),
 
     PrismaModule,
+    MentorRecommendationModule,
     QuestionsModule,
     AuthModule,
     RedisModule,
@@ -93,7 +99,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     AppService,
     {
       provide: APP_INTERCEPTOR,
-      useClass: TransformInterceptor, // NestJS tự inject Reflector
+      useClass: TransformInterceptor,
     },
   ],
 })

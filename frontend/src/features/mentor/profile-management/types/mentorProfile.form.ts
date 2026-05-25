@@ -92,6 +92,8 @@ export interface MentorProfileFormValues {
   headline: string;
 
   introductionVideoUrl: string;
+
+  experienceYears?: number;
 }
 
 export interface MentorProfileFormState {

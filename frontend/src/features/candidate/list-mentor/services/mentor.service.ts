@@ -25,7 +25,17 @@ export const mentorService = {
         }
       }
     });
-    const res = await api.get(`${API_ENDPOINT.MENTOR.GET_LIST}?${params.toString()}`);
-    return res.data.data; // { items, meta }
+
+    const response = await api.get(`${API_ENDPOINT.MENTOR.GET_LIST}?${params.toString()}`);
+
+    return response.data.data;
+  },
+
+  getRecommendations: async (candidateUserId: number) => {
+    const response = await api.get(
+      `${API_ENDPOINT.RECOMMENDATIONS.GET_FOR_CANDIDATE(candidateUserId)}`,
+    );
+
+    return response.data.data;
   },
 };

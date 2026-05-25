@@ -1,4 +1,4 @@
-import { getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test } from '@nestjs/testing';
 import { BookingStatus, SessionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';

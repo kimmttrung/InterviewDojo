@@ -76,4 +76,6 @@ export interface SaveMentorProfilePayload {
   skills: SkillPayload[];
 
   coachingPlans: CoachingPlanPayload[];
+
+  experienceYears?: number;
 }
