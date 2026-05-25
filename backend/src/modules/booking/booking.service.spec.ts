@@ -298,7 +298,10 @@ describe('BookingService', () => {
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith({
       data: expect.arrayContaining([
-        expect.objectContaining({ type: NotificationType.BOOKING_CREATED }),
+        expect.objectContaining({
+          type: NotificationType.BOOKING_CREATED,
+          targetUrl: '/mentor/bookings?bookingId=20',
+        }),
         expect.objectContaining({ type: NotificationType.TRANSACTION_SUCCESS }),
       ]),
     });
@@ -382,6 +385,20 @@ describe('BookingService', () => {
       pending.startTime,
       60,
     );
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 1,
+        type: NotificationType.INTERVIEW_UPCOMING,
+        targetUrl: '/sessions',
+      }),
+    });
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 2,
+        type: NotificationType.INTERVIEW_UPCOMING,
+        targetUrl: '/mentor/sessions',
+      }),
+    });
     expect(socketService.emitToUser).toHaveBeenCalledWith(
       1,
       'SESSION_ACCEPTED',

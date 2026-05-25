@@ -230,6 +230,26 @@ describe('Booking Wallet Session Integration', () => {
         coachingPlan: 'Backend Interview',
       }),
     );
-    expect(state.notifications).toHaveLength(3);
+    expect(state.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: mentor.id,
+          targetUrl: `/mentor/bookings?bookingId=${created.id}`,
+        }),
+        expect.objectContaining({
+          userId: candidate.id,
+          targetUrl: '/wallet',
+        }),
+        expect.objectContaining({
+          userId: candidate.id,
+          targetUrl: '/sessions',
+        }),
+        expect.objectContaining({
+          userId: mentor.id,
+          targetUrl: '/mentor/sessions',
+        }),
+      ]),
+    );
+    expect(state.notifications).toHaveLength(4);
   });
 });

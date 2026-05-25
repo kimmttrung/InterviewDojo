@@ -6,6 +6,7 @@ import { useTheme } from '@/contexts/ThemeContext';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useCurrentUser } from '@/features/auth';
 import { useQueryClient } from '@tanstack/react-query';
+import NotificationDropdown from '@/features/notifications/components/NotificationDropdown';
 
 import {
   DropdownMenu,
@@ -58,6 +59,8 @@ export function MentorNavbar() {
               <DropdownMenuItem onClick={() => setTheme('system')}>System</DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          <NotificationDropdown />
 
           {/* Avatar */}
           <DropdownMenu>
