@@ -24,7 +24,7 @@ export class RecommendationService {
   /**
    * HÀM CHÍNH GỢI Ý MENTOR: Chỉ đọc từ bảng Cache giúp tăng tốc độ phản hồi vượt bậc
    */
-  async recommend(candidateId: number, limit = 10) {
+  async recommend(candidateId: number, limit = 9) {
     // 1. Kiểm tra dữ liệu trong bảng Cache thiết lập index trước đó
     const cachedData = await this.prisma.candidateRecommendation.findMany({
       where: { candidateId },
