@@ -1,4 +1,4 @@
-import { getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test } from '@nestjs/testing';
 import {
   BookingStatus,
@@ -54,6 +54,7 @@ describe('Booking Wallet Session Integration', () => {
   };
 
   const socketService = { emitToUser: jest.fn() };
+  // Mock API cơ bản vẫn tương thích tốt giữa Bull và BullMQ trong unit test
   const queue = { getJob: jest.fn(), add: jest.fn(), removeJobs: jest.fn() };
 
   const prisma: any = {

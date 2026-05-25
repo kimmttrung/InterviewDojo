@@ -4,6 +4,7 @@ import { ApprovalStatus, Role } from '@prisma/client';
 import { MentorService } from './mentor.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('MentorService', () => {
   let service: MentorService;
@@ -44,6 +45,7 @@ describe('MentorService', () => {
         MentorService,
         { provide: PrismaService, useValue: prisma },
         { provide: CloudinaryService, useValue: cloudinary },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 
@@ -408,7 +410,7 @@ describe('MentorService', () => {
     expect(tx.experience.upsert).toHaveBeenCalledTimes(2);
     expect(tx.userSkill.upsert).toHaveBeenCalledWith(
       expect.objectContaining({
-        create: expect.objectContaining({ level: 'LEARNING' }),
+        create: expect.objectContaining({ level: 'AWARENESS' }),
       }),
     );
     expect(tx.coachingPlan.upsert).toHaveBeenCalledTimes(2);
