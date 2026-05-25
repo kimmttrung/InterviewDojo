@@ -46,6 +46,8 @@ import { UserManagement } from '@/features/admin/users/pages/UserManagement';
 import { UserDetail } from '@/features/admin/users/pages/UserDetail';
 import { CoachingCategoryList } from '@/features/admin/coaching-categories/pages/CoachingCategoryList';
 import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
+import { ReportList } from '@/features/admin/reports/pages/ReportList';
+import { ReportDetail } from '@/features/admin/reports/pages/ReportDetail';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -327,6 +329,8 @@ export function App() {
               <Route path="categories" element={<CategoriesPage />} />
               <Route path="companies" element={<CompaniesPage />} />
               <Route path="coaching-categories" element={<CoachingCategoryList />} />
+              <Route path="reports" element={<ReportList />} />
+              <Route path="reports/:id" element={<ReportDetail />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 

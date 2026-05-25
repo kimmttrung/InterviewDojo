@@ -156,9 +156,11 @@ export const API_ENDPOINT = {
     REPORTED_USERS: '/admin/users/reported',
     BAN_USER: (id: number) => `/admin/users/${id}/ban`,
     UNBAN_USER: (id: number) => `/admin/users/${id}/unban`,
-    REPORTS: '/admin/reports',
-    REPORT_DETAIL: (id: number) => `/admin/reports/${id}`,
-    RESOLVE_REPORT: (id: number) => `/admin/reports/${id}/resolve`,
+
+    REPORTS: '/reports',
+    REPORT_DETAIL: (id: number) => `/reports/${id}`,
+    UPDATE_REPORT_STATUS: (id: number) => `/reports/${id}/status`,
+
     QUESTIONS: '/admin/questions',
     QUESTION_DETAIL: (id: number) => `/admin/questions/${id}`,
     CREATE_QUESTION: '/admin/questions',

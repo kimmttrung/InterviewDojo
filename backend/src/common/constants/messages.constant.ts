@@ -204,6 +204,7 @@ export const Messages = {
     REPORT_CREATED: 'Báo cáo đã được gửi thành công, admin sẽ xem xét',
     REPORT_FETCHED: 'Lấy thông tin báo cáo thành công',
     REPORTS_LIST_FETCHED: 'Lấy danh sách báo cáo thành công',
+    REPORT_STATUS_UPDATED: 'Cập nhật trạng thái report thành công',
 
     // Error
     CANNOT_REPORT_SELF: 'Bạn không thể báo cáo chính mình',
