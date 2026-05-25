@@ -37,7 +37,7 @@ export class SoloRecordingService {
      */
     const userId = Number(dto.userId);
 
-    const duration = Number(dto.duration);
+    const durationMinutes = Math.ceil(Number(dto.duration ?? 0) / 60);
 
     const question = dto.question?.trim() || 'Unknown question';
 
@@ -55,7 +55,7 @@ export class SoloRecordingService {
     const mockSession = await this.dbService.createSoloSession({
       userId,
 
-      durationMinutes: duration,
+      durationMinutes,
 
       question,
 

@@ -14,9 +14,9 @@ export class EmbeddingService {
    * Xếp hàng Candidate chờ tính toán Embedding sau 5 phút
    */
   async enqueueCandidate(candidateId: number): Promise<void> {
-    const delayTime = 0 * 60 * 1000; // 5 phút = 300,000 ms
+    const delayTime = 1 * 60 * 1000; // 5 phút = 300,000 ms
     // const jobId = `candidate-embedding-${candidateId}`;
-    const jobId = `candidate-embedding-${candidateId}-${Date.now()}`; // Thêm timestamp để tránh trùng lặp jobId khi cập nhật liên tục
+    const jobId = `candidate-embedding-${candidateId}}`; // Thêm timestamp để tránh trùng lặp jobId khi cập nhật liên tục
 
     // Đẩy job vào BullMQ với cấu hình delay và gán jobId cố định để debounce rác
     await this.embeddingQueue.add(
@@ -40,7 +40,7 @@ export class EmbeddingService {
    * Xếp hàng Mentor chờ tính toán Embedding sau 5 phút
    */
   async enqueueMentor(mentorId: number): Promise<void> {
-    const delayTime = 0 * 60 * 1000; // 5 phút = 300,000 ms
+    const delayTime = 1 * 60 * 1000; // 5 phút = 300,000 ms
     const jobId = `mentor-embedding-${mentorId}`;
 
     await this.embeddingQueue.add(

@@ -145,6 +145,9 @@ export class FeedbackService {
         revieweeId: userId,
         status: { not: FeedbackStatus.PENDING },
       },
+      include: {
+        reviewer: { select: { name: true } },
+      },
     });
     if (!feedback) return null;
     return {
@@ -154,6 +157,8 @@ export class FeedbackService {
       strengths: feedback.strengths as any,
       weaknesses: feedback.weaknesses as any,
       suggestions: feedback.suggestions as any,
+      reviewerName: feedback.reviewer?.name || 'Unknown',
+      createdAt: feedback.createdAt,
     };
   }
 

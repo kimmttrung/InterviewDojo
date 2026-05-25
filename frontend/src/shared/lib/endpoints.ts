@@ -144,4 +144,10 @@ export const API_ENDPOINT = {
     GET_FOR_CANDIDATE: (candidateUserId: number | string) =>
       `/recommendations/candidate/${candidateUserId}`,
   },
+
+  REPORT: {
+    CREATE_USER: '/reports/user', // POST
+    GET_LIST: '/reports', // GET (admin)
+    GET_ONE: (id: number) => `/reports/${id}`,
+  },
 };

@@ -84,60 +84,21 @@ export class CloudinaryService {
     });
   }
 
-  // async uploadVideo(file: UploadedFileType): Promise<UploadApiResponse> {
-  //   if (!file?.buffer) {
-  //     throw new BadRequestException('Video file is required');
-  //   }
-
-  //   // // Kiểm tra mimetype
-  //   // if (!ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
-  //   //   throw new BadRequestException(
-  //   //     `Invalid video type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
-  //   //   );
-  //   // }
-  //   const isValid = ALLOWED_VIDEO_TYPES.some((prefix) =>
-  //     file.mimetype?.toLowerCase().startsWith(prefix.toLowerCase()),
-  //   );
-
-  //   if (!isValid) {
-  //     throw new BadRequestException(
-  //       `Định dạng không hợp lệ: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
-  //     );
-  //   }
-
-  //   return this.uploadStream(file.buffer, {
-  //     resource_type: 'video', // Bắt buộc là video để hỗ trợ .mp4, .webm
-  //     folder: 'interview_dojo/solo_recordings', // Đổi folder cho đồng bộ
-  //     chunk_size: 6_000_000,
-  //   });
-  // }
-
-  // async uploadAudio(file: UploadedFileType): Promise<UploadApiResponse> {
-  //   if (!file?.buffer) {
-  //     throw new BadRequestException('Audio file is required');
-  //   }
-
-  //   // if (!ALLOWED_AUDIO_TYPES.includes(file.mimetype)) {
-  //   //   throw new BadRequestException(
-  //   //     `Invalid audio type. Allowed: ${ALLOWED_AUDIO_TYPES.join(', ')}`,
-  //   //   );
-  //   // }
-  //   const isValid = ALLOWED_AUDIO_TYPES.some((prefix) =>
-  //     file.mimetype?.toLowerCase().startsWith(prefix.toLowerCase()),
-  //   );
-
-  //   if (!isValid) {
-  //     throw new BadRequestException(
-  //       `Định dạng không hợp lệ: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_AUDIO_TYPES.join(', ')}`,
-  //     );
-  //   }
-
-  //   return this.uploadStream(file.buffer, {
-  //     resource_type: 'video',
-  //     folder: 'interview_dojo/solo_recordings_audio',
-  //     chunk_size: 6_000_000,
-  //   });
-  // }
+  async uploadImage(
+    file: UploadedFileType,
+    folder: string,
+  ): Promise<UploadApiResponse> {
+    if (!file?.buffer) throw new BadRequestException('Image file required');
+    if (!this.isValidMimetype(file.mimetype, ALLOWED_IMAGE_TYPES)) {
+      throw new BadRequestException(
+        `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
+      );
+    }
+    return this.uploadStream(file.buffer, {
+      folder,
+      transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+    });
+  }
 
   async uploadVideo(
     file: UploadedFileType,

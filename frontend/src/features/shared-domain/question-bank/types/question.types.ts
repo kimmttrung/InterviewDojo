@@ -18,6 +18,7 @@ export interface GetQuestionsParams {
   type?: QuestionType;
   category?: string;
   jobRole?: string;
+  bookmarked?: boolean;
 }
 
 export interface RandomQuestionParams {

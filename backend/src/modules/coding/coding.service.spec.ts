@@ -129,6 +129,17 @@ describe('CodingService', () => {
 
       expect(result).toEqual(mockSubmission);
     });
+
+    it('uses an unknown language id as the stored language name', async () => {
+      prisma.codingQuestion.findUnique.mockResolvedValue(mockQuestion as any);
+      prisma.codeSubmission.create.mockResolvedValue({ id: 501 } as any);
+
+      await service.submitCode(userId, 1, '999', code);
+
+      expect(prisma.codeSubmission.create).toHaveBeenCalledWith({
+        data: expect.objectContaining({ language: '999' }),
+      });
+    });
   });
 
   describe('getSubmissionById', () => {
@@ -287,6 +298,22 @@ describe('CodingService', () => {
           codingQuestion: true,
         },
       });
+    });
+
+    it('defaults coding question difficulty when it is omitted', async () => {
+      prisma.question.create.mockResolvedValue({} as any);
+
+      await service.createCodingQuestion({
+        title: 'Default',
+        slug: 'default',
+        description: 'Desc',
+      } as any);
+
+      expect(prisma.question.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ difficulty: Difficulty.MEDIUM }),
+        }),
+      );
     });
   });
 

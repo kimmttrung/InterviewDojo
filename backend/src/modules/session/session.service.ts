@@ -1,15 +1,93 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, OnModuleInit } from '@nestjs/common';
+import { InjectQueue } from '@nestjs/bullmq';
+import { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import {
   PaginatedResponse,
   SessionItem,
 } from './interfaces/session.interfaces';
-import { Prisma, SessionStatus, BookingStatus } from '@prisma/client';
-
+import {
+  Prisma,
+  SessionStatus,
+  BookingStatus,
+  SessionSource,
+} from '@prisma/client';
 @Injectable()
-export class SessionService {
-  constructor(private prisma: PrismaService) {}
+export class SessionService implements OnModuleInit {
+  constructor(
+    private prisma: PrismaService,
+    @InjectQueue('session') private sessionQueue: Queue,
+  ) {}
+
+  async onModuleInit() {
+    try {
+      await this.prisma.mockSession.updateMany({
+        where: {
+          status: SessionStatus.SCHEDULED,
+          scheduledAt: { lt: new Date() },
+        },
+        data: { status: SessionStatus.COMPLETED },
+      });
+      await this.scheduleAllUpcomingSessions();
+      console.log('✅ SessionService initialized');
+    } catch (error) {
+      console.error('❌ SessionService initialization failed:', error);
+    }
+  }
+
+  private async scheduleAllUpcomingSessions() {
+    const upcomingSessions = await this.prisma.mockSession.findMany({
+      where: {
+        status: SessionStatus.SCHEDULED,
+        scheduledAt: { gt: new Date() },
+      },
+      include: {
+        booking: { select: { mentorId: true, candidateId: true } },
+        match: { select: { candidateAId: true, candidateBId: true } },
+      },
+    });
+
+    for (const session of upcomingSessions) {
+      const userIds: number[] = [session.intervieweeId];
+      if (session.booking) {
+        userIds.push(session.booking.mentorId, session.booking.candidateId);
+      } else if (session.match) {
+        userIds.push(session.match.candidateAId, session.match.candidateBId);
+      }
+      const uniqueUserIds = [...new Set(userIds)];
+      await this.scheduleSessionEnd(
+        session.id,
+        uniqueUserIds,
+        session.scheduledAt,
+        session.durationMinutes,
+      );
+    }
+  }
+
+  async scheduleSessionEnd(
+    sessionId: number,
+    userIds: number[],
+    scheduledAt: Date,
+    durationMinutes: number,
+  ) {
+    const endTime = new Date(
+      scheduledAt.getTime() + durationMinutes * 60 * 1000,
+    );
+    const delay = endTime.getTime() - Date.now();
+    if (delay > 0) {
+      const jobId = `session-${sessionId}`;
+      const existingJob = await this.sessionQueue.getJob(jobId);
+      if (!existingJob) {
+        await this.sessionQueue.add(
+          'end-session',
+          { sessionId, userIds },
+          { delay, jobId },
+        );
+        console.log(`✅ Scheduled end for session ${sessionId} in ${delay}ms`);
+      }
+    }
+  }
 
   async getSessions(
     userId: number,
@@ -17,50 +95,60 @@ export class SessionService {
   ): Promise<PaginatedResponse<SessionItem>> {
     const { page = 1, limit = 10, tab, search, startDate, endDate } = query;
     const skip = (page - 1) * limit;
+    const { type, ...rest } = query;
+    if (type) {
+      return this.getSessionsByType(userId, type, rest);
+    }
 
     // Hàm helper xây dựng điều kiện tìm kiếm mở rộng (cho các bảng khác nhau)
     const buildSearchCondition = (searchTerm?: string) => {
       if (!searchTerm) return {};
       return {
-        OR: [
+        AND: [
           {
-            booking: {
-              coachingPlan: {
-                title: { contains: searchTerm, mode: 'insensitive' },
+            OR: [
+              {
+                booking: {
+                  coachingPlan: {
+                    title: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            booking: {
-              mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
-            },
-          },
-          {
-            booking: {
-              candidate: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                booking: {
+                  mentor: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            match: {
-              candidateA: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                booking: {
+                  candidate: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
-          },
-          {
-            match: {
-              candidateB: {
-                name: { contains: searchTerm, mode: 'insensitive' },
+              {
+                match: {
+                  candidateA: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
               },
-            },
+              {
+                match: {
+                  candidateB: {
+                    name: { contains: searchTerm, mode: 'insensitive' },
+                  },
+                },
+              },
+              {
+                interviewee: {
+                  name: { contains: searchTerm, mode: 'insensitive' },
+                },
+              }, // solo
+            ],
           },
-          {
-            interviewee: {
-              name: { contains: searchTerm, mode: 'insensitive' },
-            },
-          }, // solo
         ],
       };
     };
@@ -308,12 +396,11 @@ export class SessionService {
         where: { id: mockSession.id },
         data: { status: SessionStatus.CANCELLED },
       });
-      // Ghi log riêng nếu cần (có thể tạo bảng log)
     }
 
     // 3. Emit socket event để frontend reload
     // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
-
+    await this.sessionQueue.remove(`session-${sessionId}`);
     return { success: true, message: 'Đã hủy phiên học' };
   }
 
@@ -347,10 +434,14 @@ export class SessionService {
       createdAtStr = session.match.createdAt.toISOString();
     }
 
+    let status = session.status;
+    if (status === 'SCHEDULED') status = 'UPCOMING';
+    else if (status === 'COMPLETED') status = 'FINISHED';
+
     return {
       id: session.id,
       type,
-      status: 'UPCOMING',
+      status: status,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -361,6 +452,73 @@ export class SessionService {
       recordingUrl: null,
       rejectedReason: null,
       hasFeedback: false,
+    };
+  }
+
+  private async getSessionsByType(
+    userId: number,
+    type: SessionSource,
+    query: any,
+  ) {
+    const {
+      page = 1,
+      limit = 10,
+      search,
+      startDate,
+      endDate,
+      statuses,
+    } = query;
+    const skip = (page - 1) * limit;
+    console.log('🔍 [DEBUG] statuses received:', statuses);
+    const where: Prisma.MockSessionWhereInput = {
+      source: type,
+      // ...(statuses?.length ? { status: { in: statuses } } : {}),
+      OR: [
+        { intervieweeId: userId },
+        { booking: { mentorId: userId } },
+        { match: { candidateAId: userId } },
+        { match: { candidateBId: userId } },
+      ],
+      ...this.buildSearchCondition(search),
+      ...this.buildDateCondition('scheduledAt', startDate, endDate),
+    };
+
+    // if (statuses && statuses.length > 0) {
+    //   where.status = { in: statuses };
+    // }
+
+    if (statuses) {
+      const statusArray = Array.isArray(statuses) ? statuses : [statuses];
+      if (statusArray.length > 0) {
+        where.status = { in: statusArray };
+      }
+    }
+
+    console.log('🔍 [DEBUG] Final where:', JSON.stringify(where, null, 2));
+
+    const [data, total] = await Promise.all([
+      this.prisma.mockSession.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { scheduledAt: 'desc' },
+        include: {
+          booking: {
+            include: { mentor: true, candidate: true, coachingPlan: true },
+          },
+          match: { include: { candidateA: true, candidateB: true } },
+          feedbacks: { where: { revieweeId: userId } },
+        },
+      }),
+      this.prisma.mockSession.count({ where }),
+    ]);
+
+    const items = data.map((session) =>
+      this.mapMockSessionToItem(session, userId),
+    );
+    return {
+      items,
+      meta: { total, page, limit, totalPages: Math.ceil(total / limit) || 1 },
     };
   }
 
@@ -394,9 +552,7 @@ export class SessionService {
       avatarUrl: string | null;
     } | null = booking.mentorId === userId ? booking.candidate : booking.mentor;
     // Lấy lý do từ chối từ log gần nhất
-    const rejectLog = booking.logs?.find(
-      (log: any) => log.action === 'REJECT_BOOKING',
-    );
+    const rejectLog = booking.logs?.find((log: any) => log.action === 'REJECT');
     const rejectedReason = rejectLog?.note || null;
     return {
       id: booking.id,
@@ -459,5 +615,59 @@ export class SessionService {
       rejectedReason: null,
       hasFeedback,
     };
+  }
+
+  // HELPERS
+  private buildSearchCondition(searchTerm?: string) {
+    if (!searchTerm) return {};
+    return {
+      OR: [
+        {
+          booking: {
+            coachingPlan: {
+              title: { contains: searchTerm, mode: 'insensitive' },
+            },
+          },
+        },
+        {
+          booking: {
+            mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          booking: {
+            candidate: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          match: {
+            candidateA: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          match: {
+            candidateB: { name: { contains: searchTerm, mode: 'insensitive' } },
+          },
+        },
+        {
+          interviewee: { name: { contains: searchTerm, mode: 'insensitive' } },
+        },
+      ],
+    };
+  }
+
+  private buildDateCondition(
+    dateField: string,
+    startDate?: string,
+    endDate?: string,
+  ) {
+    const condition: any = {};
+    if (startDate) condition[dateField] = { gte: new Date(startDate) };
+    if (endDate) {
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      condition[dateField] = { ...condition[dateField], lte: end };
+    }
+    return condition;
   }
 }

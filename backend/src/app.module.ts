@@ -36,6 +36,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { MentorRecommendationModule } from './modules/mentor-recommendation/recommendation.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -59,6 +60,7 @@ import { MentorRecommendationModule } from './modules/mentor-recommendation/reco
       { name: 'notification' },
       { name: 'email' },
       { name: 'embedding-queue' },
+      { name: 'session' },
     ),
 
     PrismaModule,
@@ -90,6 +92,7 @@ import { MentorRecommendationModule } from './modules/mentor-recommendation/reco
     NotificationsModule,
     SessionModule,
     BookmarkModule,
+    ReportsModule,
   ],
   controllers: [AppController],
   providers: [

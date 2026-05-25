@@ -102,11 +102,10 @@ export class MatchingService {
           token: userToken,
           sessionId: session.id,
         };
-      } catch (error) {
+      } catch {
         // HOÀN TÁC: Nếu lỗi Stream, đẩy đối thủ vào lại hàng chờ (score = 0 để họ vẫn được ưu tiên)
         await this.redis.zadd(queueKey, 0, opponentId);
         throw new InternalServerErrorException('Lỗi khởi tạo phòng phỏng vấn');
-        console.log(error);
       }
     }
 

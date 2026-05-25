@@ -16,6 +16,8 @@ interface QuestionsFilters {
   setDifficulty: (diff: Difficulty | undefined) => void;
   setType: (type: QuestionType | undefined) => void;
   resetFilters: () => void;
+  bookmarked: boolean;
+  setBookmarked: (val: boolean) => void;
 }
 
 export const useQuestionsFilters = create<QuestionsFilters>()(
@@ -31,6 +33,8 @@ export const useQuestionsFilters = create<QuestionsFilters>()(
       setDifficulty: (difficulty) => set({ difficulty, page: 1 }),
       setType: (type) => set({ type, page: 1 }),
       resetFilters: () => set({ page: 1, keyword: '', difficulty: undefined, type: undefined }),
+      bookmarked: false,
+      setBookmarked: (bookmarked) => set({ bookmarked, page: 1 }),
     }),
     { name: 'questions-filters' },
   ),

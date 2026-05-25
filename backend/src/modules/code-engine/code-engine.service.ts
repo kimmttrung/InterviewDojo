@@ -43,12 +43,8 @@ export class CodeEngineService {
 
       const decode = (str?: any): string => {
         if (!str || typeof str !== 'string') return '';
-        try {
-          const clean = str.replace(/[^A-Za-z0-9+/=]/g, '');
-          return Buffer.from(clean, 'base64').toString('utf-8');
-        } catch {
-          return str;
-        }
+        const clean = str.replace(/[^A-Za-z0-9+/=]/g, '');
+        return Buffer.from(clean, 'base64').toString('utf-8');
       };
 
       return {

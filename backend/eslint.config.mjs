@@ -35,4 +35,10 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'warn', // warn thay vì error
     },
   },
+  {
+    files: ['**/*.spec.ts', '**/*.integration-spec.ts'],
+    rules: {
+      '@typescript-eslint/require-await': 'off',
+    },
+  },
 );
