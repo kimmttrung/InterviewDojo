@@ -21,7 +21,7 @@ export class RecommendationListener {
       this.logger.log(
         `🔔 [Approval Event] Đẩy Mentor ${payload.userId} (Đã duyệt) đi tính toán.`,
       );
-      await this.embeddingService.enqueueMentor(payload.userId, 0);
+      await this.embeddingService.enqueueMentor(payload.userId, 5 * 60 * 1000);
     }
   }
 
@@ -31,7 +31,10 @@ export class RecommendationListener {
     this.logger.log(
       `🔔 [Booking Event] Đẩy Candidate ${payload.candidateId} đi tính toán lại.`,
     );
-    await this.embeddingService.enqueueCandidate(payload.candidateId, 0);
+    await this.embeddingService.enqueueCandidate(
+      payload.candidateId,
+      0 * 60 * 1000,
+    );
   }
 
   // 3. Candidate bookmark câu hỏi -> Đẩy đi tính lại
@@ -40,6 +43,9 @@ export class RecommendationListener {
     this.logger.log(
       `🔔 [Bookmark Event] Đẩy Candidate ${payload.candidateId} đi tính toán lại.`,
     );
-    await this.embeddingService.enqueueCandidate(payload.candidateId, 0);
+    await this.embeddingService.enqueueCandidate(
+      payload.candidateId,
+      60 * 60 * 1000,
+    );
   }
 }
