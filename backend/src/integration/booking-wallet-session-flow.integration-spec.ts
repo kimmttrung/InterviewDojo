@@ -129,6 +129,10 @@ describe('Booking Wallet Session Integration', () => {
         state.session = { id: 30, ...data };
         return state.session;
       }),
+      update: jest.fn(async ({ data }: any) => {
+        Object.assign(state.session, data);
+        return state.session;
+      }),
       findMany: jest.fn(async ({ where }: any) => {
         if (!state.session || state.session.status !== where.status) return [];
         return [
@@ -217,6 +221,15 @@ describe('Booking Wallet Session Integration', () => {
       'end-session',
       { sessionId: 30, userIds: [mentor.id, candidate.id] },
       expect.objectContaining({ jobId: 'session-30' }),
+    );
+    expect(queue.add).toHaveBeenCalledWith(
+      'start-session-notification',
+      {
+        sessionId: 30,
+        userIds: [mentor.id, candidate.id],
+        meetingLink: '/interview/mentor-booking-30?sessionId=30',
+      },
+      expect.objectContaining({ jobId: 'session-start-30' }),
     );
 
     const sessions = await sessionService.getSessions(candidate.id, {

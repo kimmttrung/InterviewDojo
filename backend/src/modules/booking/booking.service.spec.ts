@@ -38,6 +38,7 @@ describe('BookingService', () => {
 
   const sessionService = {
     scheduleSessionEnd: jest.fn(),
+    scheduleSessionStartNotification: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -352,6 +353,7 @@ describe('BookingService', () => {
       id: 80,
       scheduledAt: pending.startTime,
       durationMinutes: 60,
+      meetingLink: null,
     };
     const tx = {
       booking: {
@@ -364,6 +366,10 @@ describe('BookingService', () => {
       mockSession: {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(mockSession),
+        update: jest.fn().mockResolvedValue({
+          ...mockSession,
+          meetingLink: '/interview/mentor-booking-80?sessionId=80',
+        }),
       },
       bookingActionLog: { create: jest.fn() },
       notification: { create: jest.fn() },
@@ -384,6 +390,18 @@ describe('BookingService', () => {
       [2, 1],
       pending.startTime,
       60,
+    );
+    expect(tx.mockSession.update).toHaveBeenCalledWith({
+      where: { id: 80 },
+      data: { meetingLink: '/interview/mentor-booking-80?sessionId=80' },
+    });
+    expect(
+      sessionService.scheduleSessionStartNotification,
+    ).toHaveBeenCalledWith(
+      80,
+      [2, 1],
+      pending.startTime,
+      '/interview/mentor-booking-80?sessionId=80',
     );
     expect(tx.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -443,6 +461,7 @@ describe('BookingService', () => {
       id: 81,
       scheduledAt: pending.startTime,
       durationMinutes: 30,
+      meetingLink: '/interview/mentor-booking-81?sessionId=81',
     };
     const tx = {
       booking: {
@@ -455,6 +474,7 @@ describe('BookingService', () => {
       mockSession: {
         findFirst: jest.fn().mockResolvedValue(existingSession),
         create: jest.fn(),
+        update: jest.fn(),
       },
       bookingActionLog: { create: jest.fn() },
       notification: { create: jest.fn() },
@@ -626,6 +646,12 @@ describe('BookingService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockImplementation(async ({ data }) => ({
           id: 82,
+          ...data,
+        })),
+        update: jest.fn().mockImplementation(async ({ data }) => ({
+          id: 82,
+          scheduledAt: pending.startTime,
+          durationMinutes: 60,
           ...data,
         })),
       },

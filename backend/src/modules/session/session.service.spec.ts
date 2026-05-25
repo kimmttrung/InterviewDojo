@@ -164,6 +164,30 @@ describe('SessionService', () => {
     });
   });
 
+  describe('scheduleSessionStartNotification', () => {
+    it('queues the meeting-room notification at the scheduled start time', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      sessionQueue.getJob.mockResolvedValue(null);
+
+      await service.scheduleSessionStartNotification(
+        20,
+        [1, 2],
+        new Date('2026-01-01T00:05:00.000Z'),
+        '/interview/mentor-booking-20?sessionId=20',
+      );
+
+      expect(sessionQueue.add).toHaveBeenCalledWith(
+        'start-session-notification',
+        {
+          sessionId: 20,
+          userIds: [1, 2],
+          meetingLink: '/interview/mentor-booking-20?sessionId=20',
+        },
+        { delay: 300000, jobId: 'session-start-20' },
+      );
+    });
+  });
+
   describe('getSessions', () => {
     it('combines and maps all session types for the ALL tab', async () => {
       const upcoming = {

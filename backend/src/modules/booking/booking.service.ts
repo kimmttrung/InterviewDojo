@@ -384,12 +384,26 @@ export class BookingService {
         });
       }
 
+      const meetingLink = `/interview/mentor-booking-${mockSession.id}?sessionId=${mockSession.id}`;
+      if (mockSession.meetingLink !== meetingLink) {
+        mockSession = await tx.mockSession.update({
+          where: { id: mockSession.id },
+          data: { meetingLink },
+        });
+      }
+
       const userIds = [updated.mentorId, updated.candidateId];
       await this.sessionService.scheduleSessionEnd(
         mockSession.id,
         userIds,
         mockSession.scheduledAt,
         mockSession.durationMinutes,
+      );
+      await this.sessionService.scheduleSessionStartNotification(
+        mockSession.id,
+        userIds,
+        mockSession.scheduledAt,
+        meetingLink,
       );
 
       await tx.bookingActionLog.create({
