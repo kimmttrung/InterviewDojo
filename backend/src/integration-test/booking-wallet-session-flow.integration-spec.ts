@@ -13,6 +13,7 @@ import { SessionService } from '../modules/session/session.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 describe('Booking Wallet Session Integration', () => {
   let bookingService: BookingService;
@@ -162,6 +163,7 @@ describe('Booking Wallet Session Integration', () => {
     queue.getJob.mockResolvedValue(null);
 
     const moduleRef = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         BookingService,
         WalletService,
