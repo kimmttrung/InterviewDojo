@@ -1,366 +1,347 @@
 import 'dotenv/config';
-import { PrismaClient, Role, BookingStatus, SkillLevel } from '@prisma/client';
+import {
+  PrismaClient,
+  Role,
+  ApprovalStatus,
+  SkillLevel,
+  SkillType,
+  SlotRecurrentType,
+} from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { Pool } from 'pg';
+import { Queue } from 'bullmq'; // 👈 Import trực tiếp BullMQ vào đây
 
-// Đính kèm sslmode=verify-full nếu connection string hỗ trợ để dập tắt warning SSL
+// 1. Khởi tạo Database
 const pool = new Pool({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 
+// 2. Khởi tạo kết nối tới Redis cho BullMQ
+const redisOptions = {
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+};
+const embeddingQueue = new Queue('embedding-queue', {
+  connection: redisOptions,
+});
+
+// ==========================================
+// UTILS: HÀM RANDOM DATA
+// ==========================================
+const randomInt = (min: number, max: number) =>
+  Math.floor(Math.random() * (max - min + 1)) + min;
+const randomItem = <T>(arr: T[]): T =>
+  arr[Math.floor(Math.random() * arr.length)];
+const randomItems = <T>(arr: T[], count: number): T[] => {
+  const shuffled = [...arr].sort(() => 0.5 - Math.random());
+  return shuffled.slice(0, count);
+};
+
+const FIRST_NAMES = [
+  'Nguyễn',
+  'Trần',
+  'Lê',
+  'Phạm',
+  'Hoàng',
+  'Huỳnh',
+  'Phan',
+  'Vũ',
+  'Võ',
+  'Đặng',
+  'Bùi',
+];
+const MID_NAMES = [
+  'Văn',
+  'Thị',
+  'Thanh',
+  'Minh',
+  'Hải',
+  'Ngọc',
+  'Quang',
+  'Hữu',
+  'Đức',
+  'Thùy',
+];
+const LAST_NAMES = [
+  'Hảo',
+  'Bình',
+  'Phúc',
+  'Linh',
+  'Trang',
+  'Hùng',
+  'Cường',
+  'Nam',
+  'An',
+  'Khoa',
+];
+
+const HEADLINES = [
+  'Senior Software Engineer',
+  'Lead Backend Developer',
+  'Data Scientist',
+  'Frontend Architect',
+  'Fullstack Engineer',
+  'Machine Learning Engineer',
+  'DevOps Engineer',
+  'Solutions Architect',
+];
+
 async function main() {
   console.log(
-    '🌱 Trực quan hóa dữ liệu hạt giống cho Recommendation System...',
+    '🌱 Bắt đầu tạo 50 Mentors và đẩy Job tính toán Vector vào BullMQ...',
   );
 
-  // 0. Làm sạch dữ liệu kiểm thử cũ để tránh xung đột trùng lặp bản ghi
-  await prisma.booking.deleteMany({
-    where: { candidate: { email: 'candidate.test@dojo.com' } },
+  // 1. DỌN DẸP DỮ LIỆU CŨ
+  console.log('🧹 Đang dọn dẹp dữ liệu test cũ...');
+  const testUsers = await prisma.user.findMany({
+    where: { email: { contains: '@dojo.com' } },
+    select: { id: true },
   });
-  await prisma.userBookmark.deleteMany({
-    where: { user: { email: 'candidate.test@dojo.com' } },
-  });
-  await prisma.userSkill.deleteMany({
-    where: {
-      user: {
-        email: {
-          in: [
-            'candidate.test@dojo.com',
-            'mentor.perfect@dojo.com',
-            'mentor.mid@dojo.com',
-            'mentor.miss@dojo.com',
-          ],
-        },
+  const testUserIds = testUsers.map((u) => u.id);
+
+  if (testUserIds.length > 0) {
+    await prisma.booking.deleteMany({
+      where: {
+        OR: [
+          { mentorId: { in: testUserIds } },
+          { candidateId: { in: testUserIds } },
+        ],
       },
+    });
+    await prisma.userSkill.deleteMany({
+      where: { userId: { in: testUserIds } },
+    });
+    await prisma.mentorProfile.deleteMany({
+      where: { userId: { in: testUserIds } },
+    });
+    await prisma.slot.deleteMany({ where: { mentorId: { in: testUserIds } } });
+    await prisma.user.deleteMany({ where: { id: { in: testUserIds } } });
+  }
+
+  // 2. KHỞI TẠO METADATA TỰ ĐỘNG (Upsert)
+  console.log('📦 Đang chuẩn bị Metadata...');
+  const baseSkills = [
+    'React',
+    'Node.js',
+    'TypeScript',
+    'Python',
+    'Java',
+    'System Design',
+    'Go',
+    'AWS',
+  ];
+  const dbSkills = await Promise.all(
+    baseSkills.map((name) =>
+      prisma.skill.upsert({
+        where: { name },
+        update: {},
+        create: { name, type: SkillType.HARDSKILL },
+      }),
+    ),
+  );
+
+  const baseCompanies = [
+    'Google',
+    'Meta',
+    'Amazon',
+    'VNG',
+    'FPT Software',
+    'Shopee',
+  ];
+  const dbCompanies = await Promise.all(
+    baseCompanies.map((name) =>
+      prisma.company.upsert({
+        where: { name },
+        update: {},
+        create: { name, industry: 'Technology' },
+      }),
+    ),
+  );
+
+  const baseRoles = [
+    'Software Engineer',
+    'Data Scientist',
+    'Frontend Engineer',
+    'Backend Engineer',
+    'DevOps Engineer',
+  ];
+  const dbRoles = await Promise.all(
+    baseRoles.map((name) =>
+      prisma.jobRole.upsert({
+        where: { name },
+        update: {},
+        create: { name },
+      }),
+    ),
+  );
+
+  const techCategory = await prisma.coachingCategory.upsert({
+    where: { slug: 'technical-interview' },
+    update: {},
+    create: {
+      name: 'Technical Interview',
+      slug: 'technical-interview',
+      description: 'Phỏng vấn kỹ thuật',
     },
   });
-  await prisma.experience.deleteMany({
-    where: {
-      mentor: {
-        user: {
-          email: {
-            in: [
-              'mentor.perfect@dojo.com',
-              'mentor.mid@dojo.com',
-              'mentor.miss@dojo.com',
-            ],
+
+  // 3. TẠO CANDIDATE VÀ XẾP HÀNG TÍNH VECTOR
+  console.log('👤 Đang tạo Candidate test...');
+  const candidate = await prisma.user.create({
+    data: {
+      email: 'candidate.test@dojo.com',
+      name: 'Bùi Trung Thanh (Candidate)',
+      password: '$2b$10$pFhkcRtJ72Aq9Og2rLjjtu.LcSQcjKLkZlXhn1X5n8HN0eKPKriWm',
+      role: Role.CANDIDATE,
+      experienceYears: 2,
+      targetRoleId: dbRoles[0].id,
+      skills: {
+        create: [
+          {
+            skillId: dbSkills[0].id,
+            level: SkillLevel.FOUNDATION,
+            experienceMonths: 18,
           },
-        },
-      },
-    },
-  });
-  await prisma.coachingPlan.deleteMany({
-    where: {
-      mentor: {
-        user: {
-          email: {
-            in: [
-              'mentor.perfect@dojo.com',
-              'mentor.mid@dojo.com',
-              'mentor.miss@dojo.com',
-            ],
+          {
+            skillId: dbSkills[1].id,
+            level: SkillLevel.FOUNDATION,
+            experienceMonths: 12,
           },
-        },
-      },
-    },
-  });
-  await prisma.slot.deleteMany({
-    where: {
-      mentor: {
-        email: {
-          in: [
-            'mentor.perfect@dojo.com',
-            'mentor.mid@dojo.com',
-            'mentor.miss@dojo.com',
-          ],
-        },
-      },
-    },
-  });
-  await prisma.mentorProfile.deleteMany({
-    where: {
-      user: {
-        email: {
-          in: [
-            'candidate.test@dojo.com',
-            'mentor.perfect@dojo.com',
-            'mentor.mid@dojo.com',
-            'mentor.miss@dojo.com',
-          ],
-        },
-      },
-    },
-  });
-  await prisma.user.deleteMany({
-    where: {
-      email: {
-        in: [
-          'candidate.test@dojo.com',
-          'mentor.perfect@dojo.com',
-          'mentor.mid@dojo.com',
-          'mentor.miss@dojo.com',
         ],
       },
     },
   });
 
-  // 1. Thu thập Metadata sẵn có từ hệ thống
-  const reactSkill = await prisma.skill.findUnique({
-    where: { name: 'React' },
-  });
-  const nodeSkill = await prisma.skill.findUnique({
-    where: { name: 'Node.js' },
-  });
-  const tsSkill = await prisma.skill.findUnique({
-    where: { name: 'TypeScript' },
-  });
-  const pythonSkill = await prisma.skill.findUnique({
-    where: { name: 'Python' },
-  });
-  const javaSkill = await prisma.skill.findUnique({ where: { name: 'Java' } });
-  const sysDesignSkill = await prisma.skill.findUnique({
-    where: { name: 'System Design' },
-  });
+  // 🚀 Đẩy Candidate vào BullMQ để hệ thống tự gọi API/Python tính Embedding
+  await embeddingQueue.add(
+    'process-candidate',
+    { candidateId: candidate.id },
+    {
+      jobId: `seed-candidate-embedding-${candidate.id}`,
+      removeOnComplete: true,
+    },
+  );
 
-  const sweRole = await prisma.jobRole.findUnique({
-    where: { name: 'Software Engineer' },
-  });
-  const dsRole = await prisma.jobRole.findUnique({
-    where: { name: 'Data Scientist' },
-  });
+  // 4. VÒNG LẶP TẠO 50 MENTORS
+  console.log('🚀 Đang tạo 50 Mentors và xếp hàng xử lý Vector...');
+  const MENTOR_COUNT = 50;
 
-  const techCategory = await prisma.coachingCategory.findUnique({
-    where: { slug: 'technical-interview' },
-  });
-  const googleCompany = await prisma.company.findUnique({
-    where: { name: 'Google' },
-  });
+  for (let i = 1; i <= MENTOR_COUNT; i++) {
+    const fullName = `${randomItem(FIRST_NAMES)} ${randomItem(MID_NAMES)} ${randomItem(LAST_NAMES)}`;
+    const expYears = randomInt(3, 12);
 
-  if (
-    !reactSkill ||
-    !nodeSkill ||
-    !tsSkill ||
-    !pythonSkill ||
-    !javaSkill ||
-    !sysDesignSkill ||
-    !sweRole ||
-    !techCategory
-  ) {
-    throw new Error(
-      '❌ Hãy chắc chắn rằng bạn đã chạy file seed gốc trước để khởi tạo hệ thống Skill và JobRole!',
+    // Create User & Profile
+    const mentor = await prisma.user.create({
+      data: {
+        email: `mentor${i}@dojo.com`,
+        name: fullName,
+        password:
+          '$2b$10$pFhkcRtJ72Aq9Og2rLjjtu.LcSQcjKLkZlXhn1X5n8HN0eKPKriWm',
+        role: Role.MENTOR,
+        experienceYears: expYears,
+        bio: `Xin chào, mình là ${fullName}. Mình có ${expYears} năm kinh nghiệm.`,
+        mentorProfile: {
+          create: {
+            headline: randomItem(HEADLINES),
+            approvalStatus: ApprovalStatus.ACTIVE,
+          },
+        },
+      },
+      include: { mentorProfile: true },
+    });
+
+    const mentorProfileId = mentor.mentorProfile!.id;
+
+    // Skills
+    const mentorSkills = randomItems(dbSkills, randomInt(3, 5));
+    await prisma.userSkill.createMany({
+      data: mentorSkills.map((s) => ({
+        userId: mentor.id,
+        skillId: s.id,
+        level: randomItem([
+          SkillLevel.AUTONOMOUS,
+          SkillLevel.FLUENT,
+          SkillLevel.LEADERSHIP,
+        ]),
+        experienceMonths: randomInt(24, expYears * 12),
+      })),
+    });
+
+    // Experiences
+    const mentorComps = randomItems(dbCompanies, randomInt(1, 3));
+    const mentorJobRoles = randomItems(dbRoles, mentorComps.length);
+    for (let j = 0; j < mentorComps.length; j++) {
+      const isCurrent = j === 0;
+      await prisma.experience.create({
+        data: {
+          mentorId: mentorProfileId,
+          companyId: mentorComps[j].id,
+          jobRoleId: mentorJobRoles[j].id,
+          isCurrent: isCurrent,
+          startDate: new Date(
+            new Date().getFullYear() - randomInt(1, expYears),
+            randomInt(0, 11),
+            1,
+          ),
+          endDate: isCurrent
+            ? null
+            : new Date(new Date().getFullYear() - 1, randomInt(0, 11), 1),
+        },
+      });
+    }
+
+    // Coaching Plan
+    await prisma.coachingPlan.create({
+      data: {
+        mentorId: mentorProfileId,
+        categoryId: techCategory.id,
+        title: `Mock Interview 1-1: ${randomItem(['System Design', 'Coding', 'Behavioral'])}`,
+        duration: randomItem([45, 60, 90]),
+        price: randomItem([200000, 350000, 500000]),
+        isActive: true,
+      },
+    });
+
+    // Slots
+    const slotsData = Array.from({ length: randomInt(5, 10) }).map(() => {
+      const startTime = new Date();
+      startTime.setDate(startTime.getDate() + randomInt(1, 7));
+      startTime.setHours(randomInt(8, 20), 0, 0, 0);
+      const endTime = new Date(startTime);
+      endTime.setHours(startTime.getHours() + 1);
+
+      return {
+        mentorId: mentor.id,
+        startTime,
+        endTime,
+        isActive: true,
+        recurrentType: SlotRecurrentType.NONE,
+      };
+    });
+    await prisma.slot.createMany({ data: slotsData });
+
+    // 🚀 BẮT ĐẦU ĐIỀU KỲ DIỆU TẠI ĐÂY
+    // Đẩy Mentor vừa tạo vào thẳng Queue thay vì chèn Vector ảo
+    await embeddingQueue.add(
+      'process-mentor',
+      { mentorId: mentor.id },
+      {
+        jobId: `seed-mentor-embedding-${mentor.id}`,
+        removeOnComplete: true,
+      },
     );
   }
 
-  // Giả lập Vector Embedding 1024 chiều
-  const baseVector = new Array(1024).fill(0.1);
-  const matchedVector = [...baseVector];
-  matchedVector[0] = 0.12;
-
-  const unMatchedVector = new Array(1024).fill(-0.1);
-
-  // 2. KHỞI TẠO CANDIDATE KIỂM THỬ
-  const candidate = await prisma.user.create({
-    data: {
-      email: 'candidate.test@dojo.com',
-      name: 'Bùi Trung Thanh (Test)',
-      password: '$2b$10$pFhkcRtJ72Aq9Og2rLjjtu.LcSQcjKLkZlXhn1X5n8HN0eKPKriWm',
-      role: Role.CANDIDATE,
-      experienceYears: 2,
-      targetRoleId: sweRole.id,
-    },
-  });
-
-  await prisma.userSkill.createMany({
-    data: [
-      {
-        userId: candidate.id,
-        skillId: reactSkill.id,
-        level: SkillLevel.FOUNDATION,
-        experienceMonths: 18,
-      },
-      {
-        userId: candidate.id,
-        skillId: nodeSkill.id,
-        level: SkillLevel.FOUNDATION,
-        experienceMonths: 12,
-      },
-      {
-        userId: candidate.id,
-        skillId: tsSkill.id,
-        level: SkillLevel.FOUNDATION,
-        experienceMonths: 12,
-      },
-    ],
-  });
-
-  // SỬA TẠI ĐÂY: Ép kiểu vector thuần Postgres (Bỏ cryptopro)
-  await prisma.$executeRawUnsafe(
-    `UPDATE users SET embedding_vector = '${JSON.stringify(baseVector)}'::vector WHERE id = ${candidate.id}`,
-  );
-
-  // 3. KHỞI TẠO MENTOR 1: "Nguyễn Văn Hoàn Hảo" (Match 100%)
-  const mentorPerfect = await prisma.user.create({
-    data: {
-      email: 'mentor.perfect@dojo.com',
-      name: 'Nguyễn Văn Hoàn Hảo',
-      password: '$2b$10$pFhkcRtJ72Aq9Og2rLjjtu.LcSQcjKLkZlXhn1X5n8HN0eKPKriWm',
-      role: Role.MENTOR,
-      experienceYears: 6,
-      bio: 'Chuyên gia xây dựng hệ thống phần mềm quy mô lớn, thành thục NodeJS và React',
-    },
-  });
-  const profilePerfect = await prisma.mentorProfile.create({
-    data: {
-      userId: mentorPerfect.id,
-      headline: 'Staff Engineer @ TechCorp',
-      approvalStatus: 'ACTIVE',
-    },
-  });
-  await prisma.userSkill.createMany({
-    data: [
-      {
-        userId: mentorPerfect.id,
-        skillId: reactSkill.id,
-        level: SkillLevel.LEADERSHIP,
-        experienceMonths: 60,
-      },
-      {
-        userId: mentorPerfect.id,
-        skillId: nodeSkill.id,
-        level: SkillLevel.FLUENT,
-        experienceMonths: 48,
-      },
-      {
-        userId: mentorPerfect.id,
-        skillId: tsSkill.id,
-        level: SkillLevel.FLUENT,
-        experienceMonths: 36,
-      },
-    ],
-  });
-  await prisma.experience.create({
-    data: {
-      mentorId: profilePerfect.id,
-      companyId: googleCompany?.id || 1,
-      jobRoleId: sweRole.id,
-      startDate: new Date(2018, 1, 1),
-      isCurrent: true,
-    },
-  });
-  await prisma.slot.create({
-    data: {
-      mentorId: mentorPerfect.id,
-      startTime: new Date(Date.now() + 86400000),
-      endTime: new Date(Date.now() + 90000000),
-      isActive: true,
-    },
-  });
-
-  // SỬA TẠI ĐÂY: Ép kiểu vector thuần Postgres
-  await prisma.$executeRawUnsafe(
-    `UPDATE users SET embedding_vector = '${JSON.stringify(matchedVector)}'::vector WHERE id = ${mentorPerfect.id}`,
-  );
-
-  // 4. KHỞI TẠO MENTOR 2: "Trần Văn Trung Bình" (Match 50%)
-  const mentorMid = await prisma.user.create({
-    data: {
-      email: 'mentor.mid@dojo.com',
-      name: 'Trần Văn Trung Bình',
-      password: '$2b$10$pFhkcRtJ72Aq9Og2rLjjtu.LcSQcjKLkZlXhn1X5n8HN0eKPKriWm',
-      role: Role.MENTOR,
-      experienceYears: 4,
-      bio: 'Backend Engineer chuyên phát triển API. Biết một chút frontend React',
-    },
-  });
-  const profileMid = await prisma.mentorProfile.create({
-    data: {
-      userId: mentorMid.id,
-      headline: 'Senior Dev',
-      approvalStatus: 'ACTIVE',
-    },
-  });
-  await prisma.userSkill.createMany({
-    data: [
-      {
-        userId: mentorMid.id,
-        skillId: reactSkill.id,
-        level: SkillLevel.AUTONOMOUS,
-        experienceMonths: 24,
-      },
-      {
-        userId: mentorMid.id,
-        skillId: pythonSkill.id,
-        level: SkillLevel.FLUENT,
-        experienceMonths: 48,
-      },
-    ],
-  });
-  await prisma.slot.create({
-    data: {
-      mentorId: mentorMid.id,
-      startTime: new Date(Date.now() + 172800000),
-      endTime: new Date(Date.now() + 176400000),
-      isActive: true,
-    },
-  });
-
-  // SỬA TẠI ĐÂY: Ép kiểu vector thuần Postgres
-  await prisma.$executeRawUnsafe(
-    `UPDATE users SET embedding_vector = '${JSON.stringify(baseVector)}'::vector WHERE id = ${mentorMid.id}`,
-  );
-
-  // 5. KHỞI TẠO MENTOR 3: "Lê Văn Lệch Pha" (Match 0%)
-  const mentorMiss = await prisma.user.create({
-    data: {
-      email: 'mentor.miss@dojo.com',
-      name: 'Lê Văn Lệch Pha',
-      password: 'password_secured',
-      role: Role.MENTOR,
-      experienceYears: 8,
-      bio: 'Data Scientist chuyên sâu phân tích dữ liệu thuật toán cốt lõi, mô hình AI bằng Java',
-    },
-  });
-  const profileMiss = await prisma.mentorProfile.create({
-    data: {
-      userId: mentorMiss.id,
-      headline: 'Lead Data Scientist',
-      approvalStatus: 'ACTIVE',
-    },
-  });
-  await prisma.userSkill.createMany({
-    data: [
-      {
-        userId: mentorMiss.id,
-        skillId: javaSkill.id,
-        level: SkillLevel.LEADERSHIP,
-        experienceMonths: 80,
-      },
-      {
-        userId: mentorMiss.id,
-        skillId: sysDesignSkill.id,
-        level: SkillLevel.FLUENT,
-        experienceMonths: 50,
-      },
-    ],
-  });
-  await prisma.slot.create({
-    data: {
-      mentorId: mentorMiss.id,
-      startTime: new Date(Date.now() + 86400000),
-      endTime: new Date(Date.now() + 90000000),
-      isActive: true,
-    },
-  });
-
-  // SỬA TẠI ĐÂY: Ép kiểu vector thuần Postgres
-  await prisma.$executeRawUnsafe(
-    `UPDATE users SET embedding_vector = '${JSON.stringify(unMatchedVector)}'::vector WHERE id = ${mentorMiss.id}`,
-  );
-
+  console.log('🎉 Đã Seed xong 50 Mentors!');
   console.log(
-    `🚀 Hoàn tất tạo dữ liệu thử nghiệm! Hãy dùng Candidate ID: ${candidate.id} để test API.`,
+    '⏳ Bạn hãy bật server NestJS lên, BullMQ Worker sẽ tự động nuốt 51 Jobs này và gọi API/Python để lưu Vector thật vào Database.',
   );
 }
 
 main()
-  .catch(console.error)
-  .finally(() => prisma.$disconnect());
+  .catch((e) => {
+    console.error('❌ Lỗi trong quá trình Seed:', e);
+    process.exit(1);
+  })
+  .finally(async () => {
+    await embeddingQueue.close(); // Đóng kết nối Redis an toàn
+    await prisma.$disconnect();
+  });

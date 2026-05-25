@@ -55,13 +55,18 @@ export class RecommendationService {
         mentor.availableSlots,
       );
 
+      const targetRole = this.targetRoleScore.calculateBestRoleScore(
+        candidate.role,
+        mentor.rawRoles,
+      );
+
       const finalScore = this.ranking.rank({
         semantic,
         skill,
         experience,
         language,
         availability,
-        targetRole: 0.15,
+        targetRole,
         finalScore: 0,
       });
 
@@ -97,6 +102,8 @@ export class RecommendationService {
         avatarUrl: true,
 
         bio: true,
+
+        experienceYears: true,
 
         skills: {
           select: {
@@ -245,7 +252,10 @@ export class RecommendationService {
           mentorProfile: {
             include: {
               coachingPlans: { where: { isActive: true } },
-              experiences: { include: { jobRole: true } },
+
+              experiences: {
+                include: { jobRole: true },
+              },
             },
           },
           slots: {
@@ -256,15 +266,15 @@ export class RecommendationService {
           },
         },
       }),
+
       // Lấy toàn bộ embedding của MENTOR trong một raw query duy nhất
       this.prisma.$queryRaw<{ id: number; emb: string }[]>`
-        SELECT id, embedding_vector::text AS emb
-        FROM users
-        WHERE role = 'MENTOR'
-      `,
+      SELECT id, embedding_vector::text AS emb
+      FROM users
+      WHERE role = 'MENTOR'
+    `,
     ]);
 
-    // Build Map<mentorId, number[]> để tra cứu O(1)
     const embeddingMap = new Map<number, number[]>(
       mentorEmbeddingsRaw.map(({ id, emb }) => [id, this.parseVector(emb)]),
     );

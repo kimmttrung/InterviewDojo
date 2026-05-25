@@ -5,18 +5,11 @@ export class TargetRoleScoreService {
   calculateRoleScore(candidateRole: string, mentorRole: string): number {
     if (!candidateRole || !mentorRole || candidateRole === 'Unknown') return 0;
 
-    // Chuẩn hóa chuỗi dữ liệu đầu vào (Lower case và xóa khoảng trắng thừa)
     const cRole = candidateRole.toLowerCase().trim();
     const mRole = mentorRole.toLowerCase().trim();
 
-    // Khớp hoàn toàn vị trí mục tiêu và năng lực thực tế
     if (cRole === mRole) return 1.0;
 
-    /**
-     * MA TRẬN BẤT ĐỐI XỨNG (ASYMMETRIC MATRIX)
-     * Key bên ngoài: Vai trò Ứng viên cần học (Candidate Target Role)
-     * Key bên trong: Vai trò Mentor đang làm (Mentor Current Role)
-     */
     const asymmetricMatrix: Record<string, Record<string, number>> = {
       // ==================== KHỐI WEB & SOFTWARE (ĐÃ CÓ & TINH CHỈNH) ====================
       'software engineer': {
@@ -141,5 +134,17 @@ export class TargetRoleScoreService {
 
     // Nếu tìm thấy hệ số giao thoa thì trả về, nếu không thuộc nhóm liên quan trả điểm sàn 0.15
     return score !== undefined ? score : 0.15;
+  }
+
+  calculateBestRoleScore(candidateRole: string, mentorRoles: string[]): number {
+    if (!mentorRoles || mentorRoles.length === 0 || !candidateRole) {
+      return 0.15;
+    }
+
+    const scores = mentorRoles.map((mRole) =>
+      this.calculateRoleScore(candidateRole, mRole),
+    );
+
+    return Math.max(...scores);
   }
 }

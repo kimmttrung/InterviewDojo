@@ -10,6 +10,8 @@ export interface MentorFeature extends BaseFeature {
   approvalStatus: ApprovalStatus;
 
   availableSlots: MentorAvailableSlot[];
+
+  rawRoles: string[];
 }
 
 export interface MentorAvailableSlot {
