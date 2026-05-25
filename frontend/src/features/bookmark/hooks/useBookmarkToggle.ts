@@ -31,6 +31,7 @@ export const useBookmarkToggle = () => {
       });
       queryClient.invalidateQueries({ queryKey: ['questions'] });
       queryClient.invalidateQueries({ queryKey: ['bookmarks'] });
+      queryClient.invalidateQueries({ queryKey: ['question', questionId] });
     },
   });
 

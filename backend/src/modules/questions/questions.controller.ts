@@ -71,7 +71,8 @@ export class QuestionsController {
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
   ): Promise<QuestionDetail> {
-    return this.questionsService.findOne(id, user?.role);
+    const userId = user ? Number(user.sub) : undefined;
+    return this.questionsService.findOne(id, user?.role, userId);
   }
 
   @Post()

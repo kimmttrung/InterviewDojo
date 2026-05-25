@@ -6,7 +6,7 @@ import { matchingService } from '../services/matching.service';
 import { useSocketStore } from '@/stores/useSocketStore';
 import { Layout } from '@/shared/components/layout/Layout';
 import { Button } from '@/shared/components/ui/button';
-import { useCurrentUser } from '@/features/auth'; // ✅ lấy user từ server state
+import { useCurrentUser } from '@/features/auth';
 import { ReceivedFeedbackModal } from '@/features/shared-domain/feedback/components/ReceivedFeedbackModal';
 
 export default function PeerMatchingPage() {
@@ -44,7 +44,7 @@ export default function PeerMatchingPage() {
     if (!socket) return;
 
     const handleMatchFound = (data: { roomId: string; sessionId: number; token: string }) => {
-      console.log('🎯 MATCH FOUND:', data);
+      console.log('MATCH FOUND:', data);
       setIsSearching(false);
       navigate(`/interview/${data.roomId}?token=${data.token}&sessionId=${data.sessionId}`);
     };

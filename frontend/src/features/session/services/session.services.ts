@@ -4,7 +4,6 @@ import { API_ENDPOINT } from '@/shared/lib/endpoints';
 
 export const getSessions = async (params: SessionFilters) => {
   const response = await api.get(API_ENDPOINT.SESSION.GET_ALL, { params });
-  // response.data = { success, data: { items, meta }, message }
   return response.data.data as PaginatedResponse<SessionItem>;
 };
 

@@ -12,18 +12,17 @@ export class SessionProcessor extends WorkerHost {
     super();
   }
 
-  async process(
-    job: Job<{ sessionId: number; userIds: number[] }>,
-  ): Promise<any> {
-    if (job.name === 'end-session') {
-      const { sessionId, userIds } = job.data;
-      await this.prisma.mockSession.update({
-        where: { id: sessionId },
-        data: { status: 'COMPLETED' },
-      });
-      userIds.forEach((userId) => {
-        this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
-      });
+  async process(job: Job<{ sessionId: number; userIds: number[] }>) {
+    const { sessionId, userIds } = job.data;
+    console.log(`✅ Processing end-session for session ${sessionId}`);
+
+    await this.prisma.mockSession.update({
+      where: { id: sessionId },
+      data: { status: 'COMPLETED' },
+    });
+
+    for (const userId of userIds) {
+      this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });
     }
   }
 }

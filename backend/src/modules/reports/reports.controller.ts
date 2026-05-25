@@ -29,7 +29,6 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Multer } from 'multer';
-
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 @UsePipes(new ValidationPipe({ transform: true }))

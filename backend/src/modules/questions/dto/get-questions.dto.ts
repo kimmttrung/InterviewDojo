@@ -1,6 +1,13 @@
 // get-questions.dto.ts
-import { IsOptional, IsString, IsInt, Min, IsEnum } from 'class-validator';
-import { Type } from 'class-transformer';
+import {
+  IsOptional,
+  IsString,
+  IsInt,
+  Min,
+  IsEnum,
+  IsBoolean,
+} from 'class-validator';
+import { Transform, Type } from 'class-transformer';
 import { Difficulty, QuestionType } from '@prisma/client';
 
 export class GetQuestionsDto {
@@ -35,4 +42,9 @@ export class GetQuestionsDto {
   @IsOptional()
   @IsString()
   jobRole?: string; // lọc theo tên job role
+
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  bookmarked?: boolean;
 }
