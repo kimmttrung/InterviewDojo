@@ -10,7 +10,7 @@ import {
 } from '../hooks/useAdminQuestions';
 import { useCategories } from '../hooks/useCategories';
 import { useCompanies } from '../../companies/hooks/useCompanies';
-import { useJobRoles } from '../hooks/useJobRoles';
+import { useJobRoles } from '../../job-roles/hooks/useJobRoles';
 import { RelationSelector } from '../components/RelationSelector';
 import { TheorySection } from '../components/TheorySection';
 import { CodingSection } from '../components/CodingSection';
@@ -35,7 +35,7 @@ import { showToast } from '@/shared/lib/toast';
 import { slugify } from '@/shared/lib/utils';
 import { categoryApi } from '../api/categoryApi';
 import { companyApi } from '../../companies';
-import { jobRoleApi } from '../api/jobRoleApi';
+import { jobRoleApi } from '../../job-roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 

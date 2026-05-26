@@ -49,6 +49,7 @@ import { ReportList } from '@/features/admin/reports/pages/ReportList';
 import { ReportDetail } from '@/features/admin/reports/pages/ReportDetail';
 import { QuestionList } from '@/features/admin/questions/pages/QuestionList';
 import { QuestionForm } from '@/features/admin/questions/pages/QuestionForm';
+import JobRolesPage from '@/features/admin/job-roles/pages/JobRolesPage';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -328,6 +329,7 @@ export function App() {
               <Route path="users" element={<UserManagement />} />
               <Route path="users/:id" element={<UserDetail />} />
               <Route path="companies" element={<CompaniesPage />} />
+              <Route path="job-roles" element={<JobRolesPage />} />
               <Route path="coaching-categories" element={<CoachingCategoryList />} />
               <Route path="reports" element={<ReportList />} />
               <Route path="reports/:id" element={<ReportDetail />} />
