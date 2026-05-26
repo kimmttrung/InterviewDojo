@@ -3,6 +3,7 @@ import { Test } from '@nestjs/testing';
 import { Difficulty } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { BookmarkService } from './bookmark.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('BookmarkService', () => {
   let service: BookmarkService;
@@ -23,6 +24,12 @@ describe('BookmarkService', () => {
       providers: [
         BookmarkService,
         { provide: PrismaService, useValue: prisma },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
       ],
     }).compile();
     service = moduleRef.get(BookmarkService);

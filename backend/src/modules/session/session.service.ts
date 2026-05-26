@@ -64,6 +64,35 @@ export class SessionService implements OnModuleInit {
         session.scheduledAt,
         session.durationMinutes,
       );
+      if (
+        session.source === SessionSource.MENTOR_BOOKING &&
+        session.meetingLink
+      ) {
+        await this.scheduleSessionStartNotification(
+          session.id,
+          uniqueUserIds,
+          session.scheduledAt,
+          session.meetingLink,
+        );
+      }
+    }
+  }
+
+  async scheduleSessionStartNotification(
+    sessionId: number,
+    userIds: number[],
+    scheduledAt: Date,
+    meetingLink: string,
+  ) {
+    const delay = Math.max(scheduledAt.getTime() - Date.now(), 0);
+    const jobId = `session-start-${sessionId}`;
+    const existingJob = await this.sessionQueue.getJob(jobId);
+    if (!existingJob) {
+      await this.sessionQueue.add(
+        'start-session-notification',
+        { sessionId, userIds, meetingLink },
+        { delay, jobId },
+      );
     }
   }
 

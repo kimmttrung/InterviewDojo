@@ -269,7 +269,26 @@ model User {
   moderationLogsReceived ModerationLog[] @relation("ModeratedUsers")
   moderationLogsCreated  ModerationLog[] @relation("ModeratorActions")
 
+  // cache recommendation 
+  recommendationsAsCandidate CandidateRecommendation[] @relation("CandidateRecommendations")
+  recommendationsAsMentor    CandidateRecommendation[] @relation("RecommendedMentors")
+
   @@map("users")
+}
+
+model CandidateRecommendation {
+  candidateId Int   @map("candidate_id")
+  mentorId    Int   @map("mentor_id")
+  score       Float
+  rank        Int   // Thứ hạng (1, 2, 3...) để sort nhanh hơn
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  candidate   User  @relation("CandidateRecommendations", fields: [candidateId], references: [id], onDelete: Cascade)
+  mentor      User  @relation("RecommendedMentors", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, mentorId])
+  @@index([candidateId, rank]) // Đánh index để query tốc độ bàn thờ
+  @@map("candidate_recommendations")
 }
 
 model UserReport {

@@ -14,6 +14,11 @@ export class CoachingCategoryService {
   async findAll() {
     return await this.prisma.coachingCategory.findMany({
       orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: { plans: true },
+        },
+      },
     });
   }
 

@@ -1,25 +1,60 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+// src/modules/reports/reports.service.ts
+import {
+  Injectable,
+  BadRequestException,
+  NotFoundException,
+} from '@nestjs/common';
+import { PrismaService } from '../../prisma/prisma.service';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { CreateUserReportDto } from './dto/create-user-report.dto';
+import { UpdateReportStatusDto } from './dto/update-report-status.dto';
 import { QueryReportsDto } from './dto/query-reports.dto';
-import { ReportTargetType, ReportStatus } from '@prisma/client';
-import { PrismaService } from '@/prisma/prisma.service';
+import { ReportStatus, ReportTargetType } from '@prisma/client';
 import { Messages } from '@/common/constants/messages.constant';
 import {
   ReportsPaginatedResponse,
   UserReportItem,
 } from './interfaces/user-report.interface';
+import { UploadedFileType } from '@/common/types/uploaded-file.type';
 
 @Injectable()
 export class ReportsService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private cloudinaryService: CloudinaryService,
+  ) {}
 
   async createReport(
     reporterId: number,
     dto: CreateUserReportDto,
+    files: UploadedFileType[],
   ): Promise<UserReportItem> {
-    // ... giữ nguyên phần validate
-    console.log('dto.targetType:', dto.targetType);
-    console.log('dto.targetUserId:', dto.targetUserId);
+    // 1. Xử lý upload files
+    const evidenceUrls = dto.evidenceUrls || [];
+    if (files?.length) {
+      for (const file of files) {
+        let uploadResult;
+        if (file.mimetype.startsWith('image/')) {
+          uploadResult = await this.cloudinaryService.uploadImage(
+            file,
+            'reports/evidence',
+          );
+        } else if (file.mimetype.startsWith('video/')) {
+          uploadResult = await this.cloudinaryService.uploadVideo(
+            file,
+            'reports/evidence_videos',
+          );
+        } else {
+          throw new BadRequestException(
+            'Only images and videos are allowed for evidence',
+          );
+        }
+        evidenceUrls.push(uploadResult.secure_url);
+      }
+    }
+    dto.evidenceUrls = evidenceUrls;
+
+    // 2. Validate theo targetType
     if (dto.targetType === ReportTargetType.USER) {
       if (!dto.targetUserId) {
         throw new BadRequestException(Messages.REPORTS.INVALID_TARGET_TYPE);
@@ -62,13 +97,14 @@ export class ReportsService {
       }
     }
 
+    // 3. Tạo report
     const report = await this.prisma.userReport.create({
       data: {
         reporterId,
         type: dto.type,
         targetType: dto.targetType,
         reason: dto.reason,
-        evidenceUrls: dto.evidenceUrls || [],
+        evidenceUrls: dto.evidenceUrls,
         status: ReportStatus.PENDING,
         targetUserId:
           dto.targetType === ReportTargetType.USER ? dto.targetUserId : null,
@@ -83,28 +119,16 @@ export class ReportsService {
         targetUser: { select: { id: true, name: true, email: true } },
       },
     });
-
     return this.mapToUserReportItem(report);
   }
 
-  async findAll(
-    query: QueryReportsDto,
-    isAdmin: boolean,
-  ): Promise<ReportsPaginatedResponse> {
-    // Fix: đảm bảo page, limit là number
+  async findAll(query: QueryReportsDto): Promise<ReportsPaginatedResponse> {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const skip = (page - 1) * limit;
-
     const where: any = {};
     if (query.status) where.status = query.status;
     if (query.targetType) where.targetType = query.targetType;
-
-    // Nếu không phải admin, chỉ lấy report của chính user đó
-    if (!isAdmin) {
-      // Bạn cần truyền reporterId vào, tạm thời comment
-      // where.reporterId = reporterId;
-    }
 
     const [reports, total] = await Promise.all([
       this.prisma.userReport.findMany({
@@ -121,7 +145,6 @@ export class ReportsService {
     ]);
 
     const items = reports.map((r) => this.mapToUserReportItem(r));
-
     return {
       items,
       meta: {
@@ -142,9 +165,40 @@ export class ReportsService {
       },
     });
     if (!report) {
-      throw new BadRequestException(Messages.REPORTS.REPORT_NOT_FOUND);
+      throw new NotFoundException(Messages.REPORTS.REPORT_NOT_FOUND);
     }
     return this.mapToUserReportItem(report);
+  }
+
+  async updateStatus(
+    reportId: number,
+    adminId: number,
+    dto: UpdateReportStatusDto,
+  ): Promise<UserReportItem> {
+    const report = await this.prisma.userReport.findUnique({
+      where: { id: reportId },
+    });
+    if (!report) {
+      throw new NotFoundException(Messages.REPORTS.REPORT_NOT_FOUND);
+    }
+    if (report.status !== ReportStatus.PENDING) {
+      throw new BadRequestException('Report này đã được xử lý trước đó');
+    }
+
+    const updated = await this.prisma.userReport.update({
+      where: { id: reportId },
+      data: {
+        status: dto.status,
+        adminNote: dto.adminNote || null,
+        resolvedAt: new Date(),
+        resolvedById: adminId,
+      },
+      include: {
+        reporter: { select: { id: true, name: true, email: true } },
+        targetUser: { select: { id: true, name: true, email: true } },
+      },
+    });
+    return this.mapToUserReportItem(updated);
   }
 
   private mapToUserReportItem(report: any): UserReportItem {

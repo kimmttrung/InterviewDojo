@@ -2,7 +2,7 @@ export const API_ENDPOINT = {
   AUTH: {
     REGISTER: '/auth/register',
     LOGIN: '/auth/login',
-    REFRESH: '/auth/refresh', // <<-- phải có dòng này
+    REFRESH: '/auth/refresh',
     ME: '/auth/me',
   },
   USER: {
@@ -58,6 +58,12 @@ export const API_ENDPOINT = {
     UPDATE: (id: number) => `/companies/${id}`,
     DELETE: (id: number) => `/companies/${id}`,
   },
+  JOB_ROLES: {
+    GET_ALL: '/job-roles',
+    CREATE: '/job-roles',
+    UPDATE: (id: number) => `/job-roles/${id}`,
+    DELETE: (id: number) => `/job-roles/${id}`,
+  },
   MATCHING: {
     JOIN: '/matching/join',
   },
@@ -76,7 +82,6 @@ export const API_ENDPOINT = {
   AI_ANALYSIS: {
     GET_SOLO_RECORDING: (sessionId: number | string) => `/ai-analysis/session/${sessionId}`,
   },
-
   SLOTS: {
     GET_ALL: '/slots',
     CREATE: '/slots',
@@ -93,6 +98,9 @@ export const API_ENDPOINT = {
   },
   COACHING_CATEGORIES: {
     GET_ALL: '/coaching-categories',
+    CREATE: '/coaching-categories',
+    UPDATE: (id: number) => `/coaching-categories/${id}`,
+    DELETE: (id: number) => `/coaching-categories/${id}`,
   },
   PLANS: {
     GET_BY_USER: (userId: number | string) => `/plans/users/${userId}`,
@@ -124,7 +132,6 @@ export const API_ENDPOINT = {
     MARK_READ: (id: number) => `/notifications/${id}/read`,
     MARK_ALL_READ: '/notifications/read-all',
   },
-
   SESSION: {
     GET_ALL: '/sessions',
     GET_ONE: (id: number | string) => `/sessions/${id}`,
@@ -133,11 +140,27 @@ export const API_ENDPOINT = {
     REJECT: (id: number | string) => `/sessions/${id}/reject`,
     CANCEL: (id: number | string) => `/sessions/${id}/cancel`,
   },
-
   BOOKMARK: {
     GET_ALL: '/users/me/bookmarks',
     BOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
     UNBOOKMARK: (questionId: number | string) => `/users/me/bookmarks/${questionId}`,
+  },
+  ADMIN: {
+    STATISTICS: '/admin/statistics',
+    STATISTICS_GROWTH_CHART: '/admin/statistics/growth-chart',
+    STATISTICS_TOP_MENTORS: '/admin/statistics/top-mentors',
+    MENTORS: '/admin/mentors',
+    MENTOR_DETAIL: (id: number) => `/admin/mentors/${id}`,
+    APPROVE_MENTOR: (id: number) => `/admin/mentors/${id}/approve`,
+    REJECT_MENTOR: (id: number) => `/admin/mentors/${id}/reject`,
+    USERS: '/admin/users',
+    USER_DETAIL: (id: number) => `/admin/users/${id}`,
+    REPORTED_USERS: '/admin/users/reported',
+    BAN_USER: (id: number) => `/admin/users/${id}/ban`,
+    UNBAN_USER: (id: number) => `/admin/users/${id}/unban`,
+    REPORTS: '/reports',
+    REPORT_DETAIL: (id: number) => `/reports/${id}`,
+    UPDATE_REPORT_STATUS: (id: number) => `/reports/${id}/status`,
   },
 
   RECOMMENDATIONS: {
@@ -146,8 +169,8 @@ export const API_ENDPOINT = {
   },
 
   REPORT: {
-    CREATE_USER: '/reports/user', // POST
-    GET_LIST: '/reports', // GET (admin)
+    CREATE_USER: '/reports/user',
+    GET_LIST: '/reports',
     GET_ONE: (id: number) => `/reports/${id}`,
   },
 };
