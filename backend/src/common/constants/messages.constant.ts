@@ -83,6 +83,14 @@ export const Messages = {
     RANDOM_FETCHED: 'Lấy câu hỏi ngẫu nhiên thành công',
   },
 
+  CATEGORY: {
+    FETCHED: 'Lấy danh sách danh mục thành công',
+    FETCH_ONE: 'Lấy thông tin danh mục thành công',
+    CREATED: 'Tạo danh mục thành công',
+    UPDATED: 'Cập nhật danh mục thành công',
+    DELETED: 'Xóa danh mục thành công',
+  },
+
   SLOT: {
     FETCHED: 'Lấy danh sách slot thành công',
     CREATED: 'Tạo mới slot thành công',
@@ -151,6 +159,17 @@ export const Messages = {
     UPDATED: 'Cập nhật công ty thành công',
     DELETED: 'Xóa công ty thành công',
     INDUSTRIES_FETCHED: 'Lấy danh sách ngành nghề thành công', // ← thêm
+  },
+
+  JOB_ROLE: {
+    FETCHED: 'Lấy danh sách vị trí công việc thành công',
+    FETCH_ONE: 'Lấy thông tin vị trí công việc thành công',
+    CREATED: 'Tạo vị trí công việc thành công',
+    UPDATED: 'Cập nhật vị trí công việc thành công',
+    DELETED: 'Xóa vị trí công việc thành công',
+
+    NOT_FOUND: 'Không tìm thấy vị trí công việc',
+    ALREADY_EXISTS: 'Vị trí công việc đã tồn tại',
   },
 
   WALLET: {

@@ -36,6 +36,7 @@ import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { JobRolesModule } from './modules/job-roles/job-roles.module';
 
 @Module({
   imports: [
@@ -52,9 +53,9 @@ import { ReportsModule } from './modules/reports/reports.module';
     // // đăng ký queue sẽ dùng
     BullModule.registerQueue(
       { name: 'code-execution' }, // cho submit code
-      { name: 'ai-analysis' }, // cho AI phân tích
-      { name: 'notification' }, // cho gửi thông báo sau này
-      { name: 'email' }, // cho gửi email
+      // { name: 'ai-analysis' }, // cho AI phân tích
+      // { name: 'notification' }, // cho gửi thông báo sau này
+      // { name: 'email' }, // cho gửi email
       { name: 'session' },
     ),
 
@@ -88,6 +89,7 @@ import { ReportsModule } from './modules/reports/reports.module';
     BookmarkModule,
     AdminModule,
     ReportsModule,
+    JobRolesModule,
   ],
   controllers: [AppController],
   providers: [

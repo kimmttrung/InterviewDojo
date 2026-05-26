@@ -19,7 +19,6 @@ import MentorDetailPage from '../features/candidate/mentor-booking/pages/MentorD
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfileManagement';
 
 import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard';
-import CategoriesPage from '../features/admin/category-management/pages/CategoriesPage';
 import CompaniesPage from '../features/admin/company-management/pages/CompaniesPage';
 import SelectTargetRole from '../features/candidate/target-role/pages/SelectTargetRole';
 import Login from '../features/auth/pages/Login';
@@ -48,6 +47,8 @@ import { CoachingCategoryList } from '@/features/admin/coaching-categories/pages
 import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 import { ReportList } from '@/features/admin/reports/pages/ReportList';
 import { ReportDetail } from '@/features/admin/reports/pages/ReportDetail';
+import { QuestionList } from '@/features/admin/questions/pages/QuestionList';
+import { QuestionForm } from '@/features/admin/questions/pages/QuestionForm';
 
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
@@ -326,11 +327,13 @@ export function App() {
               <Route path="mentors/:id" element={<MentorDetail />} />
               <Route path="users" element={<UserManagement />} />
               <Route path="users/:id" element={<UserDetail />} />
-              <Route path="categories" element={<CategoriesPage />} />
               <Route path="companies" element={<CompaniesPage />} />
               <Route path="coaching-categories" element={<CoachingCategoryList />} />
               <Route path="reports" element={<ReportList />} />
               <Route path="reports/:id" element={<ReportDetail />} />
+              <Route path="questions" element={<QuestionList />} />
+              <Route path="questions/new" element={<QuestionForm />} />
+              <Route path="questions/:id/edit" element={<QuestionForm />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 
