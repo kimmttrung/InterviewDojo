@@ -33,6 +33,11 @@ describe('CoachingCategoryService', () => {
     await expect(service.findAll()).resolves.toEqual([{ id: 1 }]);
     expect(prisma.coachingCategory.findMany).toHaveBeenCalledWith({
       orderBy: { name: 'asc' },
+      include: {
+        _count: {
+          select: { plans: true },
+        },
+      },
     });
   });
 

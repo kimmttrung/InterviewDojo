@@ -35,8 +35,10 @@ import { CandidateDashboardModule } from './modules/candidate-dashboard/candidat
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { MentorRecommendationModule } from './modules/mentor-recommendation/recommendation.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { JobRolesModule } from './modules/job-roles/job-roles.module';
 
 @Module({
   imports: [
@@ -55,6 +57,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 
     // Đăng ký toàn bộ queue hệ thống sẽ dùng
     BullModule.registerQueue(
+      { name: 'code-execution' }, // cho submit code
       { name: 'code-execution' },
       { name: 'ai-analysis' },
       { name: 'notification' },
@@ -92,7 +95,9 @@ import { ReportsModule } from './modules/reports/reports.module';
     NotificationsModule,
     SessionModule,
     BookmarkModule,
+    AdminModule,
     ReportsModule,
+    JobRolesModule,
   ],
   controllers: [AppController],
   providers: [

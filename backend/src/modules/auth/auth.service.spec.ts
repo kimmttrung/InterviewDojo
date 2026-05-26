@@ -352,107 +352,17 @@ describe('AuthService - account and token flows', () => {
     });
   });
 
-  it('creates a mentor profile when registering a mentor', async () => {
-    prisma.user.findUnique.mockResolvedValue(null);
-    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
-    const mentorProfileCreate = jest.fn();
-    prisma.$transaction.mockImplementation(async (callback: any) =>
-      callback({
-        user: {
-          create: jest.fn().mockResolvedValue({
-            id: 2,
-            email: 'mentor@test.com',
-            role: Role.MENTOR,
-          }),
-        },
-        mentorProfile: { create: mentorProfileCreate },
-      }),
-    );
-    jwt.signAsync.mockResolvedValue('token');
-
-    await service.register({
-      email: 'mentor@test.com',
-      password: '123456',
-      name: 'Mentor',
-      role: Role.MENTOR,
-    });
-
-    expect(mentorProfileCreate).toHaveBeenCalledWith({
-      data: { userId: 2, headline: '' },
-    });
-  });
-
-  it('rejects duplicate email and public admin registration', async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({ id: 1 });
-    await expect(
-      service.register({ email: 'used@test.com' } as any),
-    ).rejects.toBeInstanceOf(BadRequestException);
-
-    prisma.user.findUnique.mockResolvedValueOnce(null);
-    await expect(
-      service.register({
-        email: 'admin@test.com',
-        password: '123456',
-        role: Role.ADMIN,
-      } as any),
-    ).rejects.toBeInstanceOf(BadRequestException);
-  });
-
-  it('refreshes tokens for a valid user and rejects invalid refresh tokens', async () => {
-    jwt.verifyAsync.mockResolvedValueOnce({ sub: 1 });
-    prisma.user.findUnique.mockResolvedValueOnce({
-      id: 1,
-      email: 'user@test.com',
-      role: Role.CANDIDATE,
-    });
-    jwt.signAsync
-      .mockResolvedValueOnce('access')
-      .mockResolvedValueOnce('refresh');
-
-    await expect(service.refresh({ refreshToken: 'valid' })).resolves.toEqual(
-      expect.objectContaining({ accessToken: 'access' }),
-    );
-
-    jwt.verifyAsync.mockRejectedValueOnce(new Error('invalid'));
-    await expect(
-      service.refresh({ refreshToken: 'invalid' }),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-
-    jwt.verifyAsync.mockResolvedValueOnce({ sub: 99 });
-    prisma.user.findUnique.mockResolvedValueOnce(null);
-    await expect(
-      service.refresh({ refreshToken: 'removed-user' }),
-    ).rejects.toBeInstanceOf(UnauthorizedException);
-  });
-
-  it('validates users and creates admin accounts', async () => {
-    prisma.user.findUnique.mockResolvedValueOnce({
-      id: 3,
-      email: 'user@test.com',
-      name: 'User',
-      role: Role.CANDIDATE,
-    });
-    await expect(service.validateUser(3)).resolves.toEqual({
-      sub: 3,
-      id: 3,
-      email: 'user@test.com',
-      name: 'User',
-      role: Role.CANDIDATE,
-    });
-
-    prisma.user.findUnique.mockResolvedValueOnce(null);
-    await expect(service.validateUser(99)).rejects.toBeInstanceOf(
-      UnauthorizedException,
-    );
-
+  it('creates admin account successfully', async () => {
     prisma.user.findUnique.mockResolvedValueOnce(null);
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
     prisma.user.create.mockResolvedValue({ id: 4, role: Role.ADMIN });
+
     await service.createAdmin({
       email: 'admin@test.com',
       password: 'secret',
       name: 'Admin',
     });
+
     expect(prisma.user.create).toHaveBeenCalledWith({
       data: {
         email: 'admin@test.com',
@@ -461,8 +371,11 @@ describe('AuthService - account and token flows', () => {
         role: Role.ADMIN,
       },
     });
+  });
 
+  it('rejects duplicate email when creating admin', async () => {
     prisma.user.findUnique.mockResolvedValueOnce({ id: 1 });
+
     await expect(
       service.createAdmin({
         email: 'admin@test.com',

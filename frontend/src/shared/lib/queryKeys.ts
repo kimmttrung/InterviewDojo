@@ -36,4 +36,19 @@ export const queryKeys = {
     list: (filters: Record<string, any>) => ['sessions', filters] as const,
     detail: (id: string | number) => ['sessions', id] as const,
   },
+
+  admin: {
+    statistics: ['admin', 'statistics'] as const,
+    statisticsGrowthChart: ['admin', 'statistics', 'growth-chart'],
+    statisticsTopMentors: ['admin', 'statistics', 'top-mentors'],
+    mentors: (filters?: any) => ['admin', 'mentors', filters] as const,
+    mentorDetail: (id: number) => ['admin', 'mentors', id] as const,
+    users: (filters?: any) => ['admin', 'users', filters] as const,
+    reportedUsers: ['admin', 'users', 'reported'] as const,
+    reports: (filters?: any) => ['admin', 'reports', filters] as const,
+    reportDetail: (id: number) => ['admin', 'reports', id] as const,
+    questions: (filters?: any) => ['admin', 'questions', filters] as const,
+    questionDetail: (id: number) => ['admin', 'questions', id] as const,
+    coachingCategories: ['admin', 'coachingCategories'] as const,
+  },
 } as const;
