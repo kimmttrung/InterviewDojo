@@ -1,5 +1,6 @@
 // features/mentor/bookings/pages/MentorBookings.tsx
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, Eye, Loader2, User } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { MentorLayout } from '../../dashboard/components/MentorLayout';
@@ -63,12 +64,20 @@ const formatDateTime = (dateStr: string) => {
 };
 
 export default function MentorBookings() {
+  const [searchParams] = useSearchParams();
   const { data: mentorProfile } = useMentorProfile();
   const mentorStatus = mentorProfile?.approvalStatus;
 
   const [filterStatus, setFilterStatus] = useState<string | undefined>(undefined);
   const [search, setSearch] = useState('');
   const [selectedBookingId, setSelectedBookingId] = useState<number | null>(null);
+
+  useEffect(() => {
+    const bookingId = Number(searchParams.get('bookingId'));
+    if (Number.isInteger(bookingId) && bookingId > 0) {
+      setSelectedBookingId(bookingId);
+    }
+  }, [searchParams]);
 
   const {
     data: selectedBooking,
