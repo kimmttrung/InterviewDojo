@@ -147,6 +147,8 @@ export const API_ENDPOINT = {
   },
   ADMIN: {
     STATISTICS: '/admin/statistics',
+    STATISTICS_GROWTH_CHART: '/admin/statistics/growth-chart',
+    STATISTICS_TOP_MENTORS: '/admin/statistics/top-mentors',
     MENTORS: '/admin/mentors',
     MENTOR_DETAIL: (id: number) => `/admin/mentors/${id}`,
     APPROVE_MENTOR: (id: number) => `/admin/mentors/${id}/approve`,

@@ -39,6 +39,8 @@ export const queryKeys = {
 
   admin: {
     statistics: ['admin', 'statistics'] as const,
+    statisticsGrowthChart: ['admin', 'statistics', 'growth-chart'],
+    statisticsTopMentors: ['admin', 'statistics', 'top-mentors'],
     mentors: (filters?: any) => ['admin', 'mentors', filters] as const,
     mentorDetail: (id: number) => ['admin', 'mentors', id] as const,
     users: (filters?: any) => ['admin', 'users', filters] as const,

@@ -18,4 +18,16 @@ export class StatisticsController {
   async getStatistics() {
     return this.statisticsService.getStats();
   }
+
+  @Get('growth-chart')
+  @ResponseMessage(Messages.ADMIN.STATISTICS_FETCHED)
+  async getGrowthChart() {
+    return this.statisticsService.getGrowthChart();
+  }
+
+  @Get('top-mentors')
+  @ResponseMessage(Messages.ADMIN.STATISTICS_FETCHED)
+  async getTopMentors() {
+    return this.statisticsService.getTopMentors();
+  }
 }
