@@ -45,20 +45,6 @@ export class MeetingController {
       throw new ForbiddenException('You are not a participant of this meeting');
     }
 
-    // const diffMinutes = -1;
-
-    // Kiểm tra thời gian
-    // const now = new Date();
-    // const startTime = session.scheduledAt;
-    // const diffMinutes = (startTime.getTime() - now.getTime()) / 60000;
-
-    // Tạm thời comment hoặc xóa block này
-    // if (diffMinutes > 15) {
-    //   throw new BadRequestException(
-    //     `Meeting can be joined only 15 minutes before start. Please wait.`,
-    //   );
-    // }
-
     const token = this.streamService.createToken(userId.toString());
     return { token, userId, roomId, startTime: session.scheduledAt };
   }

@@ -1,11 +1,52 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 import { useMeeting } from '../hooks/useMeeting';
 import { VideoCallLayout } from '../components/VideoCallLayout';
+import { useEffect, useState } from 'react';
+import { useMyFeedback } from '@/features/shared-domain/feedback/hooks/useFeedback';
+import { useSessionEnded } from '../../peer-interview/hooks/useSessionEnded';
+import { FeedbackModal } from '@/features/shared-domain/feedback/components/FeedbackModal';
+import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
 
 export default function MeetingRoom() {
   const { client, call, isLoading, error } = useMeeting();
   const navigate = useNavigate();
+  const { roomId } = useParams();
+  const sessionIdNum = roomId ? Number(roomId) : NaN;
+
+  console.log('sessionIdNum', sessionIdNum);
+
+  const [showFeedback, setShowFeedback] = useState(false);
+  const [isLeaving, setIsLeaving] = useState(false);
+
+  // Kiểm tra xem đã gửi feedback chưa
+  const { data: myFeedback, isLoading: feedbackLoading } = useMyFeedback(Number(sessionIdNum));
+  const isSessionEnded = useSessionEnded(); // nếu có hook phát hiện call ended
+
+  // Khi người dùng bấm nút rời phòng (sẽ được truyền xuống VideoCallLayout)
+  const handleLeaveWithFeedback = () => {
+    if (window.confirm('Bạn có chắc muốn kết thúc buổi phỏng vấn?')) {
+      setIsLeaving(true);
+      setShowFeedback(true);
+    }
+  };
+
+  // Tự động hiện feedback nếu session kết thúc do đối phương rời
+  useEffect(() => {
+    if (isSessionEnded && !feedbackLoading && !myFeedback && !isLeaving) {
+      setShowFeedback(true);
+    }
+  }, [isSessionEnded, feedbackLoading, myFeedback, isLeaving]);
+
+  const handleFeedbackSuccess = () => {
+    setShowFeedback(false);
+    navigate('/sessions'); // hoặc route mong muốn
+  };
+
+  const handleFeedbackSkip = () => {
+    setShowFeedback(false);
+    navigate('/sessions');
+  };
 
   if (isLoading) {
     return (
@@ -16,27 +57,33 @@ export default function MeetingRoom() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="p-4 text-red-600 flex flex-col items-center justify-center h-screen">
-        <p>Lỗi: {error.message}</p>
-        <button
-          onClick={() => navigate('/sessions')}
-          className="mt-4 px-4 py-2 bg-primary text-white rounded"
-        >
-          Quay lại
-        </button>
-      </div>
-    );
+  if (error) return <div>Error: {error}</div>;
+
+  // Kiểm tra hợp lệ
+  if (isNaN(sessionIdNum)) {
+    return <div>Invalid session ID</div>;
   }
 
-  if (!client || !call) return null;
+  if (!client || !call) return <div>Loading...</div>;
 
   return (
-    <StreamVideo client={client}>
-      <StreamCall call={call}>
-        <VideoCallLayout onLeave={() => navigate('/sessions')} />
-      </StreamCall>
-    </StreamVideo>
+    <>
+      <StreamVideo client={client}>
+        <StreamCall call={call}>
+          <VideoCallLayout
+            onLeave={handleLeaveWithFeedback} // thay vì navigate trực tiếp
+          />
+        </StreamCall>
+      </StreamVideo>
+
+      <FeedbackModal open={showFeedback} onClose={handleFeedbackSkip}>
+        <FeedbackForm
+          mode="MENTOR_TO_CANDIDATE" // hoặc "MENTOR_INTERVIEW" - tuỳ backend của bạn
+          sessionId={Number(sessionIdNum)}
+          onSuccess={handleFeedbackSuccess}
+          onCancel={handleFeedbackSkip}
+        />
+      </FeedbackModal>
+    </>
   );
 }

@@ -22,31 +22,33 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
     suggestions: '',
     comment: '',
   });
+
   const { mutate, isPending } = useSubmitFeedback(sessionId);
 
   const handleRating = (rate: number) => setForm((prev) => ({ ...prev, overallScore: rate }));
 
   const handleSubmit = () => {
     if (form.overallScore === 0) {
-      toast.error('Vui lòng chọn số sao đánh giá');
+      toast.error('Please select a star rating');
       return;
     }
+
     if (mode === 'P2P' && !form.strengths && !form.weaknesses && !form.suggestions) {
-      toast.error('Vui lòng nhập ít nhất một nhận xét');
+      toast.error('Please enter at least one comment');
       return;
     }
+
     mutate(form, {
       onSuccess: () => {
-        toast.success('Gửi đánh giá thành công!');
+        toast.success('Feedback submitted successfully!');
         onSuccess?.();
       },
       onError: (err: any) => {
-        toast.error(err.response?.data?.message || 'Gửi thất bại');
+        toast.error(err.response?.data?.message || 'Submission failed');
       },
     });
   };
 
-  // Textarea nhỏ hơn: rows=2, padding nhẹ, font nhỏ
   const renderTextarea = (
     label: string,
     field: keyof Pick<FeedbackRequest, 'strengths' | 'weaknesses' | 'suggestions' | 'comment'>,
@@ -66,26 +68,27 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
 
   return (
     <div className="bg-white rounded-2xl">
-      <h2 className="text-xl font-bold text-gray-800 mb-4">📝 Đánh giá sau buổi</h2>
+      <h2 className="text-xl font-bold text-gray-800 mb-4">Session Feedback</h2>
 
-      {/* Rating ngang: dùng flex row */}
+      {/* Rating */}
       <div className="flex items-center gap-4 mb-4">
-        <span className="text-sm font-medium text-gray-700">Đánh giá tổng quan (1-5 sao):</span>
+        <span className="text-sm font-medium text-gray-700">Overall rating (1–5 stars):</span>
+
         <div style={{ display: 'inline-flex' }}>
           <StarRating
             rating={form.overallScore}
             onRatingChange={handleRating}
-            allowHalf={true} // 🔥 Đây mới là prop đúng
+            allowHalf={true}
             size={28}
           />
         </div>
       </div>
 
-      {/* Quick tags (chỉ cho Candidate → Mentor) */}
+      {/* Quick tags */}
       {mode === 'CANDIDATE_TO_MENTOR' && (
         <div className="mb-3">
           <label className="block text-sm font-medium text-gray-700 mb-1">
-            Chọn nhanh điểm mạnh của Mentor
+            Select mentor strengths quickly
           </label>
           <QuickTagsSelector
             selected={form.quickTags || []}
@@ -94,32 +97,33 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
         </div>
       )}
 
-      {/* 3 khung nhỏ cho P2P và Mentor → Candidate */}
+      {/* P2P & Mentor → Candidate */}
       {(mode === 'P2P' || mode === 'MENTOR_TO_CANDIDATE') && (
         <>
-          {renderTextarea('💪 Điểm mạnh', 'strengths', 'Đối tác đã làm tốt điều gì?')}
-          {renderTextarea('⚠️ Điểm cần cải thiện', 'weaknesses', 'Điều gì cần khắc phục?')}
-          {renderTextarea('🎯 Lời khuyên', 'suggestions', 'Lời khuyên cho lần sau?')}
+          {renderTextarea('Strengths', 'strengths', 'What did the partner do well?')}
+          {renderTextarea('Areas for improvement', 'weaknesses', 'What should be improved?')}
+          {renderTextarea('Suggestions', 'suggestions', 'Advice for next time?')}
         </>
       )}
 
-      {/* Comment cho Candidate → Mentor */}
+      {/* Candidate → Mentor */}
       {mode === 'CANDIDATE_TO_MENTOR' &&
-        renderTextarea('💬 Nhận xét chi tiết', 'comment', 'Chia sẻ thêm về buổi học...')}
+        renderTextarea('💬 Detailed comment', 'comment', 'Share more about the session...')}
 
       <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
         <button
           onClick={onCancel}
           className="px-4 py-1.5 border border-gray-300 rounded-lg text-sm text-gray-700 hover:bg-gray-50 transition"
         >
-          Để sau
+          Later
         </button>
+
         <button
           onClick={handleSubmit}
           disabled={isPending}
           className="px-4 py-1.5 bg-blue-600 text-white rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50 transition"
         >
-          {isPending ? 'Đang gửi...' : 'Gửi đánh giá'}
+          {isPending ? 'Submitting...' : 'Submit Feedback'}
         </button>
       </div>
     </div>

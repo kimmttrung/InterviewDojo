@@ -368,17 +368,6 @@ export class BookingService {
         include: { coachingPlan: true, candidate: true },
       });
 
-      // 4. Tạo phòng họp trên Stream (ngoài transaction? tốt nhất nên trong transaction, nhưng Stream không hỗ trợ rollback.
-      //    Nếu lỗi, ta throw exception, transaction sẽ rollback, không lưu booking thành ACCEPTED.
-      //    Tuy nhiên có thể tạo trước, nếu lỗi thì reject luôn.
-      const { roomId, meetingLink } =
-        await this.streamService.createMeetingRoom(
-          bookingId,
-          mentorId,
-          booking.candidateId,
-        );
-
-      console.log('✅ Created meeting:', { roomId, meetingLink });
       // 5. Tạo MockSession record
       const session = await tx.mockSession.create({
         data: {
@@ -390,12 +379,11 @@ export class BookingService {
           status: 'SCHEDULED',
           source: 'MENTOR_BOOKING',
           mode: 'MEET',
-          meetingLink: meetingLink,
+          meetingLink: null,
           // Có thể thêm trường roomId nếu muốn lưu riêng (cần thêm vào schema)
         },
       });
 
-      console.log('✅ MockSession created:', session.id, session.meetingLink);
       let mockSession = await tx.mockSession.findFirst({
         where: { bookingId: booking.id },
       });
@@ -432,15 +420,6 @@ export class BookingService {
         },
       });
 
-      await tx.notification.create({
-        data: {
-          userId: updated.candidateId,
-          type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Lịch phỏng vấn đã được xác nhận',
-          message: `Mentor đã xác nhận. Link meeting: ${meetingLink}`,
-          targetUrl: meetingLink,
-        },
-      });
       this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
       this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
         bookingId,
@@ -448,19 +427,16 @@ export class BookingService {
       // Nếu muốn emit thêm event riêng SESSION_ACCEPTED (frontend cũng đang lắng nghe)
       this.socketService.emitToUser(mentorId, 'SESSION_ACCEPTED', {
         bookingId,
-        meetingLink,
         sessionId: session.id,
         startTime: booking.startTime,
       });
       this.socketService.emitToUser(booking.candidateId, 'SESSION_ACCEPTED', {
         bookingId,
-        meetingLink,
         sessionId: session.id,
         startTime: booking.startTime,
       });
 
       const response = this.mapToBookingResponse(updated);
-      (response as any).meetingLink = meetingLink;
       return response;
     });
   }

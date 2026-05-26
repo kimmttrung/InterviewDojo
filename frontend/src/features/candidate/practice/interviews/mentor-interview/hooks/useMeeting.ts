@@ -20,7 +20,9 @@ export function useMeeting() {
 
     const init = async () => {
       try {
+        console.log('Fetching token for room:', roomId);
         const response = await api.get(`/meeting/token/${roomId}`);
+        console.log('Token response:', response);
         const { token: streamToken, userId } = response.data.data;
         const apiKey = import.meta.env.VITE_STREAM_API_KEY;
         const client = new StreamVideoClient({

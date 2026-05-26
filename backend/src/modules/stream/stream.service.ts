@@ -74,4 +74,16 @@ export class StreamService {
     const meetingLink = `/meeting/${roomId}`;
     return { roomId, meetingLink };
   }
+
+  async getOrCreateMeetingLink(
+    roomId: string,
+    creatorId: string,
+  ): Promise<string> {
+    const call = this.client.video.call('default', roomId);
+    await call.getOrCreate({
+      data: { created_by_id: creatorId },
+    });
+    // Trả về đường dẫn frontend (hoặc có thể trả về full URL nếu cần)
+    return `/meeting/${roomId}`;
+  }
 }

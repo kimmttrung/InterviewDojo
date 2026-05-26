@@ -1,4 +1,4 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,11 +13,13 @@ import {
   BookingStatus,
   SessionSource,
 } from '@prisma/client';
+import { StreamService } from '../stream/stream.service';
 @Injectable()
 export class SessionService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('session') private sessionQueue: Queue,
+    private streamService: StreamService,
   ) {}
 
   async onModuleInit() {
@@ -469,7 +471,6 @@ export class SessionService implements OnModuleInit {
       statuses,
     } = query;
     const skip = (page - 1) * limit;
-    console.log('🔍 [DEBUG] statuses received:', statuses);
     const where: Prisma.MockSessionWhereInput = {
       source: type,
       // ...(statuses?.length ? { status: { in: statuses } } : {}),
@@ -483,18 +484,12 @@ export class SessionService implements OnModuleInit {
       ...this.buildDateCondition('scheduledAt', startDate, endDate),
     };
 
-    // if (statuses && statuses.length > 0) {
-    //   where.status = { in: statuses };
-    // }
-
     if (statuses) {
       const statusArray = Array.isArray(statuses) ? statuses : [statuses];
       if (statusArray.length > 0) {
         where.status = { in: statusArray };
       }
     }
-
-    console.log('🔍 [DEBUG] Final where:', JSON.stringify(where, null, 2));
 
     const [data, total] = await Promise.all([
       this.prisma.mockSession.findMany({
@@ -669,5 +664,79 @@ export class SessionService implements OnModuleInit {
       condition[dateField] = { ...condition[dateField], lte: end };
     }
     return condition;
+  }
+
+  async getOrCreateMeetingLink(
+    sessionId: number,
+    userId: number,
+  ): Promise<string> {
+    // 1. Lấy session và kiểm tra quyền
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: { include: { mentor: true, candidate: true } },
+        match: { include: { candidateA: true, candidateB: true } },
+      },
+    });
+    if (!session) throw new Error('Session không tồn tại');
+
+    // const userId = Number(req.user.sub); // Ép sang number
+    if (isNaN(userId)) throw new BadRequestException('Invalid user');
+
+    // Kiểm tra user có tham gia session không
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    console.log(
+      'Found session:',
+      session.id,
+      'bookingId:',
+      session.bookingId,
+      'matchId:',
+      session.matchId,
+    );
+    console.log('Current userId:', userId);
+    console.log('Booking mentorId:', session.booking?.mentorId);
+    console.log('Booking candidateId:', session.booking?.candidateId);
+
+    if (!isParticipant)
+      throw new Error('Bạn không có quyền tham gia session này');
+
+    // 2. Kiểm tra thời gian cho phép (15 phút trước đến 2 giờ sau)
+    const now = new Date();
+    const start = session.scheduledAt;
+    const diffMinutes = (start.getTime() - now.getTime()) / 60000;
+    const canJoin = diffMinutes <= 15 && diffMinutes >= -120; // giống frontend
+    if (!canJoin) {
+      throw new Error(
+        `Chỉ có thể tham gia từ 15 phút trước đến 2 giờ sau giờ bắt đầu`,
+      );
+    }
+
+    // 3. Nếu đã có meetingLink thì trả về luôn
+    if (session.meetingLink) {
+      return session.meetingLink;
+    }
+
+    // 4. Tạo room mới (dùng bookingId hoặc sessionId làm roomId)
+    const roomId = `${sessionId}`;
+    const creatorId =
+      session.booking?.mentorId?.toString() || userId.toString();
+    const meetingLink = await this.streamService.getOrCreateMeetingLink(
+      roomId,
+      creatorId,
+    );
+
+    // 5. Cập nhật meetingLink vào session
+    await this.prisma.mockSession.update({
+      where: { id: sessionId },
+      data: { meetingLink },
+    });
+
+    return meetingLink;
   }
 }

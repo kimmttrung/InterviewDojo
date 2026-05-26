@@ -53,7 +53,7 @@ export function VideoCallLayout({ onLeave }: VideoCallLayoutProps) {
       onLeave();
     } catch (err) {
       console.error('Lỗi khi rời phòng:', err);
-      onLeave(); // vẫn chuyển hướng
+      onLeave();
     }
   };
 
