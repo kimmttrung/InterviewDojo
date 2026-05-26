@@ -45,7 +45,8 @@ export const QuestionFilterBar = ({
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Loại câu hỏi" />
         </SelectTrigger>
-        <SelectContent>
+        {/* FIX: bg-background replaces bg-popover to ensure opaque dropdown */}
+        <SelectContent className="bg-background border shadow-md">
           <SelectItem value="ALL">Tất cả</SelectItem>
           <SelectItem value="TECHNICAL">Technical</SelectItem>
           <SelectItem value="SYSTEM_DESIGN">System Design</SelectItem>
@@ -61,7 +62,8 @@ export const QuestionFilterBar = ({
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Độ khó" />
         </SelectTrigger>
-        <SelectContent>
+        {/* FIX: bg-background replaces bg-popover to ensure opaque dropdown */}
+        <SelectContent className="bg-background border shadow-md">
           <SelectItem value="ALL">Tất cả</SelectItem>
           <SelectItem value="EASY">Easy</SelectItem>
           <SelectItem value="MEDIUM">Medium</SelectItem>

@@ -1,8 +1,7 @@
 // src/features/admin/questions/pages/QuestionForm.tsx
-import { useEffect, useRef, useMemo, useCallback } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
+import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
 import {
   useCreateQuestion,
@@ -19,6 +18,7 @@ import { Button } from '@/shared/components/ui/button';
 import { Input } from '@/shared/components/ui/input';
 import { Label } from '@/shared/components/ui/label';
 import { Switch } from '@/shared/components/ui/switch';
+import { Badge } from '@/shared/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -30,13 +30,48 @@ import {
   Difficulty,
   QuestionType,
 } from '@/features/shared-domain/question-bank/types/question.types';
+import { CreateQuestionPayload } from '../types/question.types';
 import { showToast } from '@/shared/lib/toast';
 import { slugify } from '@/shared/lib/utils';
 import { categoryApi } from '../api/categoryApi';
 import { companyApi } from '../api/companyApi';
 import { jobRoleApi } from '../api/jobRoleApi';
+import { useQueryClient } from '@tanstack/react-query';
+import { ArrowLeft, Loader2 } from 'lucide-react';
 
-// ==================== SCHEMAS (giữ nguyên) ====================
+// Shape returned by questionAdminApi.getOne — loosely typed since the API
+// returns a flattened DTO (categories/companies/jobRoles as string name arrays)
+interface ExistingQuestion {
+  title: string;
+  slug: string;
+  difficulty: 'EASY' | 'MEDIUM' | 'HARD';
+  isPublished: boolean;
+  type: 'TECHNICAL' | 'SYSTEM_DESIGN' | 'BEHAVIORAL' | 'CODING';
+  categories?: string[];
+  companies?: string[];
+  jobRoles?: string[];
+  data?: { question: string; tips: string[]; followUps: string[]; keyPoints: string[] };
+  codingData?: {
+    description: string;
+    constraints?: string;
+    hints: string[];
+    tags: string[];
+    timeLimit: number;
+    memoryLimit: number;
+    codeforcesLink?: string;
+    testCases: Array<{
+      input: string;
+      expectedOutput: string;
+      isSample: boolean;
+      isHidden: boolean;
+      points: number;
+      order: number;
+      explanation?: string;
+    }>;
+  };
+}
+
+// ==================== SCHEMAS ====================
 const theoryDataSchema = z.object({
   question: z.string(),
   tips: z.array(z.string()),
@@ -44,40 +79,11 @@ const theoryDataSchema = z.object({
   keyPoints: z.array(z.string()),
 });
 
-const theorySchema = z.object({
-  title: z.string().min(1, 'Tiêu đề không được để trống'),
-  slug: z.string().min(1, 'Slug không được để trống'),
-  difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
-  isPublished: z.boolean(),
-  categoryIds: z.array(z.number()),
-  companyIds: z.array(z.number()),
-  jobRoleIds: z.array(z.number()),
-  type: z.enum(['TECHNICAL', 'SYSTEM_DESIGN', 'BEHAVIORAL']),
-  theoryData: theoryDataSchema,
-  codingData: z.any().optional(),
-});
-
 const codingDataSchema = z.object({
   description: z.string().min(1, 'Description không được để trống'),
   constraints: z.string().optional(),
-  tags: z.preprocess((val) => {
-    if (typeof val === 'string') {
-      return val
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return val;
-  }, z.array(z.string())),
-  hints: z.preprocess((val) => {
-    if (typeof val === 'string') {
-      return val
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-    }
-    return val;
-  }, z.array(z.string())),
+  tags: z.array(z.string()).default([]),
+  hints: z.array(z.string()).default([]),
   timeLimit: z.number(),
   memoryLimit: z.number(),
   codeforcesLink: z.string().optional(),
@@ -94,7 +100,7 @@ const codingDataSchema = z.object({
   ),
 });
 
-const codingSchema = z.object({
+const questionSchema = z.object({
   title: z.string().min(1, 'Tiêu đề không được để trống'),
   slug: z.string().min(1, 'Slug không được để trống'),
   difficulty: z.enum(['EASY', 'MEDIUM', 'HARD']),
@@ -102,36 +108,43 @@ const codingSchema = z.object({
   categoryIds: z.array(z.number()),
   companyIds: z.array(z.number()),
   jobRoleIds: z.array(z.number()),
-  type: z.literal('CODING'),
-  codingData: codingDataSchema,
-  theoryData: z.any().optional(),
+  type: z.enum(['TECHNICAL', 'SYSTEM_DESIGN', 'BEHAVIORAL', 'CODING']),
+  theoryData: theoryDataSchema.optional(),
+  codingData: codingDataSchema.optional(),
 });
 
-const questionSchema = z.discriminatedUnion('type', [theorySchema, codingSchema]);
 type FormValues = z.infer<typeof questionSchema>;
+
+// ==================== DIFFICULTY BADGE COLORS ====================
+const difficultyConfig = {
+  EASY: { label: 'Easy', className: 'bg-green-100 text-green-700 border-green-200' },
+  MEDIUM: { label: 'Medium', className: 'bg-yellow-100 text-yellow-700 border-yellow-200' },
+  HARD: { label: 'Hard', className: 'bg-red-100 text-red-700 border-red-200' },
+};
+
+// ==================== COMPONENT ====================
 
 export const QuestionForm = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const isEdit = !!id;
   const slugTouched = useRef(false);
-  const hasReset = useRef(false); // đánh dấu đã reset
+  const lastResetId = useRef<string | undefined>(undefined);
 
   const { data: existing, isLoading: loadingDetail } = useAdminQuestionDetail(Number(id));
   const createMutation = useCreateQuestion();
   const updateMutation = useUpdateQuestion();
 
   const categoriesQuery = useCategories();
-  console.log('🔍 Categories data:', categoriesQuery);
   const companiesQuery = useCompanies();
   const jobRolesQuery = useJobRoles();
 
-  // Lấy dữ liệu an toàn (mảng)
   const categories = Array.isArray(categoriesQuery.data) ? categoriesQuery.data : [];
   const companies = Array.isArray(companiesQuery.data) ? companiesQuery.data : [];
   const jobRoles = Array.isArray(jobRolesQuery.data) ? jobRolesQuery.data : [];
 
-  // Map name -> id (chỉ tạo khi có dữ liệu)
+  // name → id maps for resolving existing question relations
   const categoryNameToId = useMemo(() => {
     const map = new Map<string, number>();
     categories.forEach((c) => map.set(c.name, c.id));
@@ -150,8 +163,15 @@ export const QuestionForm = () => {
     return map;
   }, [jobRoles]);
 
-  const { register, control, handleSubmit, watch, setValue, reset } = useForm<FormValues>({
-    resolver: zodResolver(questionSchema),
+  const {
+    register,
+    control,
+    handleSubmit,
+    watch,
+    setValue,
+    reset,
+    formState: { errors },
+  } = useForm<FormValues>({
     defaultValues: {
       title: '',
       slug: '',
@@ -178,42 +198,46 @@ export const QuestionForm = () => {
   const titleValue = watch('title');
   const typeValue = watch('type');
 
-  // Auto generate slug
+  // Auto-generate slug from title (only when user hasn't manually edited slug)
   useEffect(() => {
     if (!slugTouched.current && titleValue) {
-      setValue('slug', slugify(titleValue));
+      setValue('slug', slugify(titleValue), { shouldValidate: false });
     }
   }, [titleValue, setValue]);
 
-  // Reset form khi có dữ liệu existing và các options đã sẵn sàng
-  useEffect(() => {
-    // Chỉ reset nếu chưa reset, có existing, và các options không rỗng? (hoặc đã có map)
-    if (hasReset.current) return;
-    if (!isEdit || !existing) return;
-    // Chờ categories, companies, jobRoles được load (không cần chờ hết vì có thể không có dữ liệu)
-    if (categoriesQuery.isLoading || companiesQuery.isLoading || jobRolesQuery.isLoading) return;
+  // ── FIX: Two-phase reset ──────────────────────────────────────────────────
+  // Phase 1: As soon as `existing` loads, reset the core fields (type, title,
+  // slug, difficulty, isPublished, codingData, theoryData). This ensures the
+  // correct section (CodingSection vs TheorySection) is shown immediately,
+  // even if the lookup queries (categories/companies/jobRoles) haven't resolved yet.
+  //
+  // Phase 2: Once all lookups are ready, resolve the name→id maps and update
+  // only the relation fields (categoryIds, companyIds, jobRoleIds).
+  //
+  // Previously, the single effect guarded on `lookups.isLoading`, so the entire
+  // reset (including `type`) was deferred until all lookups finished. If lookups
+  // were slow/uncached, the form stayed at defaultValues (type=TECHNICAL) and the
+  // user saw the wrong section.
 
-    const categoryIds = (existing.categories || [])
-      .map((name: string) => categoryNameToId.get(name))
-      .filter(Boolean) as number[];
-    const companyIds = (existing.companies || [])
-      .map((name: string) => companyNameToId.get(name))
-      .filter(Boolean) as number[];
-    const jobRoleIds = (existing.jobRoles || [])
-      .map((name: string) => jobRoleNameToId.get(name))
-      .filter(Boolean) as number[];
+  // Phase 1 — reset core fields as soon as `existing` is available
+  useEffect(() => {
+    if (lastResetId.current === id) return;
+    if (!isEdit || !existing) return;
+
+    const q = existing as ExistingQuestion;
 
     reset({
-      title: existing.title,
-      slug: existing.slug,
-      difficulty: existing.difficulty,
-      isPublished: existing.isPublished,
-      categoryIds,
-      companyIds,
-      jobRoleIds,
-      type: existing.type,
-      theoryData: existing.data || { question: '', tips: [], followUps: [], keyPoints: [] },
-      codingData: existing.codingData || {
+      title: q.title,
+      slug: q.slug,
+      difficulty: q.difficulty,
+      isPublished: q.isPublished,
+      type: q.type,
+      // Resolve relations to empty arrays for now — phase 2 will fill them in
+      categoryIds: [],
+      companyIds: [],
+      jobRoleIds: [],
+      theoryData: q.data || { question: '', tips: [], followUps: [], keyPoints: [] },
+      codingData: q.codingData || {
         description: '',
         constraints: '',
         hints: [],
@@ -224,141 +248,373 @@ export const QuestionForm = () => {
         testCases: [],
       },
     });
-    hasReset.current = true;
+
+    lastResetId.current = id;
+    slugTouched.current = true;
+  }, [isEdit, existing, id, reset]);
+
+  // Phase 2 — fill in relation IDs once lookups are ready
+  useEffect(() => {
+    if (!isEdit || !existing) return;
+    if (categoriesQuery.isLoading || companiesQuery.isLoading || jobRolesQuery.isLoading) return;
+    // Only run when maps are actually populated (avoids overwriting with empty arrays)
+    if (!categories.length && !companies.length && !jobRoles.length) return;
+
+    const q = existing as ExistingQuestion;
+    const categoryIds = (q.categories || [])
+      .map((name: string) => categoryNameToId.get(name))
+      .filter(Boolean) as number[];
+    const companyIds = (q.companies || [])
+      .map((name: string) => companyNameToId.get(name))
+      .filter(Boolean) as number[];
+    const jobRoleIds = (q.jobRoles || [])
+      .map((name: string) => jobRoleNameToId.get(name))
+      .filter(Boolean) as number[];
+
+    setValue('categoryIds', categoryIds);
+    setValue('companyIds', companyIds);
+    setValue('jobRoleIds', jobRoleIds);
   }, [
     isEdit,
     existing,
-    reset,
-    categoryNameToId,
-    companyNameToId,
-    jobRoleNameToId,
+    categories,
+    companies,
+    jobRoles,
     categoriesQuery.isLoading,
     companiesQuery.isLoading,
     jobRolesQuery.isLoading,
+    categoryNameToId,
+    companyNameToId,
+    jobRoleNameToId,
+    setValue,
   ]);
 
-  const onSubmit = (data: FormValues) => {
+  // validate + narrow raw form values → CreateQuestionPayload
+  const onSubmit = (rawData: FormValues) => {
+    // Normalize tags/hints: CodingSection uses comma-string inputs
+    const normalizedData: FormValues = {
+      ...rawData,
+      codingData: rawData.codingData
+        ? {
+            ...rawData.codingData,
+            tags: Array.isArray(rawData.codingData.tags)
+              ? rawData.codingData.tags
+              : String(rawData.codingData.tags ?? '')
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+            hints: Array.isArray(rawData.codingData.hints)
+              ? rawData.codingData.hints
+              : String(rawData.codingData.hints ?? '')
+                  .split(',')
+                  .map((s) => s.trim())
+                  .filter(Boolean),
+          }
+        : undefined,
+    };
+
+    const result = questionSchema.safeParse(normalizedData);
+    if (!result.success) {
+      const firstError = result.error.issues[0];
+      showToast.error(firstError?.message ?? 'Dữ liệu không hợp lệ');
+      return;
+    }
+
+    const data = result.data;
+    const base = {
+      title: data.title,
+      slug: data.slug,
+      difficulty: data.difficulty as Difficulty,
+      isPublished: data.isPublished,
+      categoryIds: data.categoryIds,
+      companyIds: data.companyIds,
+      jobRoleIds: data.jobRoleIds,
+    };
+
+    const payload: CreateQuestionPayload =
+      data.type === 'CODING'
+        ? { ...base, type: 'CODING' as const, codingData: data.codingData! }
+        : {
+            ...base,
+            type: data.type as Exclude<QuestionType, 'CODING'>,
+            theoryData: data.theoryData ?? {
+              question: '',
+              tips: [],
+              followUps: [],
+              keyPoints: [],
+            },
+          };
+
     if (isEdit) {
       updateMutation.mutate(
-        { id: Number(id), data },
+        { id: Number(id), data: payload },
         { onSuccess: () => navigate('/admin/questions') },
       );
     } else {
-      createMutation.mutate(data, { onSuccess: () => navigate('/admin/questions') });
+      createMutation.mutate(payload, { onSuccess: () => navigate('/admin/questions') });
     }
   };
 
-  const isLoadingOptions =
-    categoriesQuery.isLoading || companiesQuery.isLoading || jobRolesQuery.isLoading;
-  if (loadingDetail && isEdit) return <div className="p-6">Đang tải câu hỏi...</div>;
-  if (isLoadingOptions && isEdit) return <div className="p-6">Đang tải danh mục...</div>;
+  const isPending = createMutation.isPending || updateMutation.isPending;
+
+  // ── Loading state: only block render if we have no data yet ──────────────
+  if (loadingDetail && isEdit) {
+    return (
+      <div className="flex items-center justify-center h-64 gap-2 text-muted-foreground">
+        <Loader2 className="h-5 w-5 animate-spin" />
+        <span>Đang tải câu hỏi...</span>
+      </div>
+    );
+  }
 
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 max-w-5xl mx-auto pb-20">
-      {/* ... phần render giữ nguyên như cũ ... */}
-      <div className="flex justify-between items-center">
-        <h1 className="text-2xl font-bold">{isEdit ? 'Sửa câu hỏi' : 'Thêm câu hỏi mới'}</h1>
-        <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
-          {createMutation.isPending || updateMutation.isPending ? 'Đang lưu...' : 'Lưu câu hỏi'}
-        </Button>
-      </div>
+    <div className="bg-background min-h-screen">
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="space-y-8 max-w-4xl mx-auto px-4 py-8 pb-24"
+      >
+        {/* ── Header ───────────────────────────────────────────── */}
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => navigate('/admin/questions')}
+              className="shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4" />
+            </Button>
+            <div>
+              <h1 className="text-2xl font-bold">
+                {isEdit ? 'Chỉnh sửa câu hỏi' : 'Thêm câu hỏi mới'}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-0.5">
+                {isEdit ? `Đang sửa #${id}` : 'Điền thông tin bên dưới'}
+              </p>
+            </div>
+          </div>
+          <Button type="submit" disabled={isPending} className="shrink-0">
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending ? 'Đang lưu...' : isEdit ? 'Cập nhật' : 'Tạo câu hỏi'}
+          </Button>
+        </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="space-y-2">
-          <Label>Tiêu đề</Label>
-          <Input {...register('title')} />
-        </div>
-        <div className="space-y-2">
-          <Label>Slug</Label>
-          <Input
-            {...register('slug')}
-            onChange={(e) => {
-              slugTouched.current = true;
-              register('slug').onChange(e);
-            }}
-          />
-        </div>
-        <div className="space-y-2">
-          <Label>Độ khó</Label>
-          <Select
-            onValueChange={(val) => setValue('difficulty', val as any)}
-            value={watch('difficulty')}
+        {/* ── Section: Thông tin cơ bản ────────────────────────── */}
+        <section className="space-y-4 rounded-xl border bg-card p-6">
+          <h2 className="font-semibold text-base">Thông tin cơ bản</h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Title */}
+            <div className="space-y-1.5">
+              <Label htmlFor="title">Tiêu đề *</Label>
+              <Input id="title" {...register('title')} placeholder="Ví dụ: Two Sum" />
+              {(errors as any).title && (
+                <p className="text-xs text-destructive">{(errors as any).title.message}</p>
+              )}
+            </div>
+
+            {/* Slug */}
+            <div className="space-y-1.5">
+              <Label htmlFor="slug">Slug *</Label>
+              <Input
+                id="slug"
+                {...register('slug')}
+                placeholder="two-sum"
+                onChange={(e) => {
+                  slugTouched.current = true;
+                  register('slug').onChange(e);
+                }}
+              />
+              {(errors as any).slug && (
+                <p className="text-xs text-destructive">{(errors as any).slug.message}</p>
+              )}
+            </div>
+
+            {/* Difficulty */}
+            <div className="space-y-1.5">
+              <Label>Độ khó *</Label>
+              <Controller
+                control={control}
+                name="difficulty"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    {/* FIX: bg-background ensures dropdown is not transparent */}
+                    <SelectContent className="bg-background border shadow-md">
+                      {Object.entries(difficultyConfig).map(([val, cfg]) => (
+                        <SelectItem key={val} value={val}>
+                          <span
+                            className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs font-medium border ${cfg.className}`}
+                          >
+                            {cfg.label}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+
+            {/* Type */}
+            <div className="space-y-1.5">
+              <Label>Loại câu hỏi *</Label>
+              <Controller
+                control={control}
+                name="type"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    {/* FIX: bg-background ensures dropdown is not transparent */}
+                    <SelectContent className="bg-background border shadow-md">
+                      <SelectItem value="TECHNICAL">Technical</SelectItem>
+                      <SelectItem value="SYSTEM_DESIGN">System Design</SelectItem>
+                      <SelectItem value="BEHAVIORAL">Behavioral</SelectItem>
+                      <SelectItem value="CODING">Coding</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
+            </div>
+          </div>
+
+          {/* Published toggle */}
+          <div className="flex items-center gap-3 pt-1">
+            <Controller
+              control={control}
+              name="isPublished"
+              render={({ field }) => (
+                <Switch id="isPublished" checked={field.value} onCheckedChange={field.onChange} />
+              )}
+            />
+            <Label htmlFor="isPublished" className="cursor-pointer">
+              Xuất bản ngay
+              <span className="ml-2 text-xs text-muted-foreground font-normal">
+                (tắt = lưu nháp)
+              </span>
+            </Label>
+          </div>
+        </section>
+
+        {/* ── Section: Quan hệ ─────────────────────────────────── */}
+        <section className="space-y-4 rounded-xl border bg-card p-6">
+          <h2 className="font-semibold text-base">Phân loại & Quan hệ</h2>
+
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Danh mục</Label>
+              <Controller
+                control={control}
+                name="categoryIds"
+                render={({ field }) => (
+                  <RelationSelector
+                    options={categories}
+                    selectedIds={field.value}
+                    onChange={field.onChange}
+                    entityName="danh mục"
+                    onQuickAdd={async (name) => {
+                      const res = await categoryApi.create({ name });
+                      queryClient.setQueryData(['admin', 'categories'], (old: any[]) => [
+                        ...(old || []),
+                        res,
+                      ]);
+                      showToast.success('Thêm danh mục thành công');
+                      return res;
+                    }}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Công ty</Label>
+              <Controller
+                control={control}
+                name="companyIds"
+                render={({ field }) => (
+                  <RelationSelector
+                    options={companies}
+                    selectedIds={field.value}
+                    onChange={field.onChange}
+                    entityName="công ty"
+                    onQuickAdd={async (name) => {
+                      const res = await companyApi.create({ name });
+                      queryClient.setQueryData(['admin', 'companies'], (old: any[]) => [
+                        ...(old || []),
+                        res,
+                      ]);
+                      showToast.success('Thêm công ty thành công');
+                      return res;
+                    }}
+                  />
+                )}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Vai trò công việc</Label>
+              <Controller
+                control={control}
+                name="jobRoleIds"
+                render={({ field }) => (
+                  <RelationSelector
+                    options={jobRoles}
+                    selectedIds={field.value}
+                    onChange={field.onChange}
+                    entityName="vai trò"
+                    onQuickAdd={async (name) => {
+                      const res = await jobRoleApi.create({ name });
+                      queryClient.setQueryData(['admin', 'jobRoles'], (old: any[]) => [
+                        ...(old || []),
+                        res,
+                      ]);
+                      showToast.success('Thêm vai trò thành công');
+                      return res;
+                    }}
+                  />
+                )}
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ── Section: Nội dung câu hỏi ────────────────────────── */}
+        <section className="space-y-4 rounded-xl border bg-card p-6">
+          <div className="flex items-center gap-2">
+            <h2 className="font-semibold text-base">Nội dung câu hỏi</h2>
+            <Badge variant="outline" className="text-xs">
+              {typeValue}
+            </Badge>
+          </div>
+
+          {typeValue !== 'CODING' ? (
+            <TheorySection register={register as any} control={control} />
+          ) : (
+            <CodingSection register={register as any} control={control} />
+          )}
+        </section>
+
+        {/* ── Sticky bottom save bar ───────────────────────────── */}
+        <div className="fixed bottom-0 left-0 right-0 border-t bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 px-4 py-3 flex justify-end gap-3 z-10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => navigate('/admin/questions')}
+            disabled={isPending}
           >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="EASY">Easy</SelectItem>
-              <SelectItem value="MEDIUM">Medium</SelectItem>
-              <SelectItem value="HARD">Hard</SelectItem>
-            </SelectContent>
-          </Select>
+            Hủy
+          </Button>
+          <Button type="submit" disabled={isPending}>
+            {isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            {isPending ? 'Đang lưu...' : isEdit ? 'Cập nhật câu hỏi' : 'Tạo câu hỏi'}
+          </Button>
         </div>
-        <div className="space-y-2">
-          <Label>Loại</Label>
-          <Select onValueChange={(val) => setValue('type', val as any)} value={watch('type')}>
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="TECHNICAL">Technical</SelectItem>
-              <SelectItem value="SYSTEM_DESIGN">System Design</SelectItem>
-              <SelectItem value="BEHAVIORAL">Behavioral</SelectItem>
-              <SelectItem value="CODING">Coding</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="flex items-center gap-4">
-        <Label>Xuất bản</Label>
-        <Switch
-          checked={watch('isPublished')}
-          onCheckedChange={(val) => setValue('isPublished', val)}
-        />
-      </div>
-
-      <div className="space-y-4">
-        <Label>Danh mục</Label>
-        <RelationSelector
-          options={categories}
-          selectedIds={watch('categoryIds')}
-          onChange={(ids) => setValue('categoryIds', ids)}
-          entityName="danh mục"
-          onQuickAdd={async (name) => {
-            const res = await categoryApi.create({ name });
-            showToast.success('Thêm danh mục thành công');
-            return res;
-          }}
-        />
-        <Label>Công ty</Label>
-        <RelationSelector
-          options={companies}
-          selectedIds={watch('companyIds')}
-          onChange={(ids) => setValue('companyIds', ids)}
-          entityName="công ty"
-          onQuickAdd={async (name) => {
-            const res = await companyApi.create({ name });
-            showToast.success('Thêm công ty thành công');
-            return res;
-          }}
-        />
-        <Label>Vai trò công việc</Label>
-        <RelationSelector
-          options={jobRoles}
-          selectedIds={watch('jobRoleIds')}
-          onChange={(ids) => setValue('jobRoleIds', ids)}
-          entityName="vai trò"
-          onQuickAdd={async (name) => {
-            const res = await jobRoleApi.create({ name });
-            showToast.success('Thêm vai trò thành công');
-            return res;
-          }}
-        />
-      </div>
-
-      {typeValue !== 'CODING' && <TheorySection register={register as any} control={control} />}
-      {typeValue === 'CODING' && <CodingSection register={register as any} control={control} />}
-    </form>
+      </form>
+    </div>
   );
 };

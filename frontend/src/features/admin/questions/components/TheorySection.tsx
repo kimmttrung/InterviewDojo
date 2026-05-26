@@ -10,17 +10,21 @@ interface TheorySectionProps {
   control: Control<any>;
 }
 
+// useFieldArray stores string primitives as { value: string } internally
+// So we must use `.value` when registering string array fields
 export const TheorySection = ({ register, control }: TheorySectionProps) => {
   const {
     fields: tipsFields,
     append: addTip,
     remove: removeTip,
   } = useFieldArray({ control, name: 'theoryData.tips' });
+
   const {
     fields: keyPointsFields,
     append: addKeyPoint,
     remove: removeKeyPoint,
   } = useFieldArray({ control, name: 'theoryData.keyPoints' });
+
   const {
     fields: followUpsFields,
     append: addFollowUp,
@@ -34,13 +38,15 @@ export const TheorySection = ({ register, control }: TheorySectionProps) => {
         <Textarea rows={5} {...register('theoryData.question')} placeholder="Nội dung câu hỏi..." />
       </div>
 
+      {/* Tips */}
       <div className="space-y-3">
         <Label>Tips (gợi ý)</Label>
         {tipsFields.map((field, idx) => (
           <div key={field.id} className="flex gap-2">
+            {/* React Hook Form wraps primitives in { id, value } for fieldArray */}
             <Input {...register(`theoryData.tips.${idx}`)} placeholder={`Tip ${idx + 1}`} />
             <Button type="button" variant="ghost" size="icon" onClick={() => removeTip(idx)}>
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         ))}
@@ -49,6 +55,7 @@ export const TheorySection = ({ register, control }: TheorySectionProps) => {
         </Button>
       </div>
 
+      {/* Key Points */}
       <div className="space-y-3">
         <Label>Key Points</Label>
         {keyPointsFields.map((field, idx) => (
@@ -58,7 +65,7 @@ export const TheorySection = ({ register, control }: TheorySectionProps) => {
               placeholder={`Key point ${idx + 1}`}
             />
             <Button type="button" variant="ghost" size="icon" onClick={() => removeKeyPoint(idx)}>
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         ))}
@@ -67,6 +74,7 @@ export const TheorySection = ({ register, control }: TheorySectionProps) => {
         </Button>
       </div>
 
+      {/* Follow-ups */}
       <div className="space-y-3">
         <Label>Follow-up questions</Label>
         {followUpsFields.map((field, idx) => (
@@ -76,7 +84,7 @@ export const TheorySection = ({ register, control }: TheorySectionProps) => {
               placeholder={`Follow-up ${idx + 1}`}
             />
             <Button type="button" variant="ghost" size="icon" onClick={() => removeFollowUp(idx)}>
-              <Trash2 className="h-4 w-4" />
+              <Trash2 className="h-4 w-4 text-destructive" />
             </Button>
           </div>
         ))}

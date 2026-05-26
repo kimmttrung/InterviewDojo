@@ -1,9 +1,31 @@
 // src/features/admin/questions/hooks/useAdminQuestions.ts
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { questionAdminApi } from '../api/questionAdminApi';
-import { queryKeys } from '@/shared/lib/queryKeys';
 import { showToast } from '@/shared/lib/toast';
 import { CreateQuestionPayload } from '../types/question.types';
+
+// ── Response shape from GET /questions ──────────────────────────
+interface QuestionListItem {
+  id: number;
+  title: string;
+  questionType: string;
+  difficulty: string;
+  isPublished: boolean;
+  categories: string[];
+  createdAt: string;
+}
+
+interface PaginatedQuestions {
+  items: QuestionListItem[];
+  meta: {
+    totalPages: number;
+    totalItems: number;
+    currentPage: number;
+    itemsPerPage: number;
+  };
+}
+
+// ── Hooks ────────────────────────────────────────────────────────
 
 export const useAdminQuestions = (filters: {
   page: number;
@@ -12,9 +34,9 @@ export const useAdminQuestions = (filters: {
   type?: string;
   difficulty?: string;
 }) => {
-  return useQuery({
+  return useQuery<PaginatedQuestions>({
     queryKey: ['admin', 'questions', filters],
-    queryFn: () => questionAdminApi.getAll(filters),
+    queryFn: () => questionAdminApi.getAll<PaginatedQuestions>(filters),
   });
 };
 

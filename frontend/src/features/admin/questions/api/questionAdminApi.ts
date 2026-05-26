@@ -7,8 +7,10 @@ function unwrap<T>(res: any): T {
 }
 
 export const questionAdminApi = {
-  getAll: (params: any) => api.get(API_ENDPOINT.QUESTIONS.GET_ALL, { params }).then(unwrap),
-  getOne: (id: number) => api.get(API_ENDPOINT.QUESTIONS.GET_ONE(id.toString())).then(unwrap),
+  getAll: <T = unknown>(params: any) =>
+    api.get(API_ENDPOINT.QUESTIONS.GET_ALL, { params }).then(unwrap<T>),
+  getOne: <T = unknown>(id: number) =>
+    api.get(API_ENDPOINT.QUESTIONS.GET_ONE(id.toString())).then(unwrap<T>),
   create: (data: CreateQuestionPayload) =>
     api.post(API_ENDPOINT.QUESTIONS.CREATE, data).then(unwrap),
   update: (id: number, data: CreateQuestionPayload) =>
