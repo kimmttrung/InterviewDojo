@@ -4,13 +4,13 @@ import { API_ENDPOINT } from '../../../../shared/lib/endpoints';
 export const companyService = {
   getAll: async () => {
     const res = await api.get(API_ENDPOINT.COMPANIES.GET_ALL);
-    return res.data;
+    return res.data.data;
   },
-  create: async (data: { name: string; logoUrl?: string }) => {
+  create: async (data: { name: string; logoUrl?: string; industry?: string }) => {
     const res = await api.post(API_ENDPOINT.COMPANIES.CREATE, data);
     return res.data;
   },
-  update: async (id: number, data: { name?: string; logoUrl?: string }) => {
+  update: async (id: number, data: { name?: string; logoUrl?: string; industry?: string }) => {
     const res = await api.put(API_ENDPOINT.COMPANIES.UPDATE(id), data);
     return res.data;
   },

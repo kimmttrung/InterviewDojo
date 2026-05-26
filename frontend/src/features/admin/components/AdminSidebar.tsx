@@ -1,5 +1,14 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, UserCheck, Users, Flag, BookOpen, Layers } from 'lucide-react';
+import {
+  LayoutDashboard,
+  UserCheck,
+  Users,
+  Flag,
+  BookOpen,
+  Layers,
+  Building2,
+  Briefcase,
+} from 'lucide-react';
 
 const menuItems = [
   { path: '/admin/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -8,6 +17,8 @@ const menuItems = [
   { path: '/admin/reports', label: 'Reports', icon: Flag },
   { path: '/admin/questions', label: 'Questions', icon: BookOpen },
   { path: '/admin/coaching-categories', label: 'Coaching Categories', icon: Layers },
+  { path: '/admin/companies', label: 'Companies', icon: Building2 }, // mới
+  { path: '/admin/job-roles', label: 'Job Roles', icon: Briefcase },
 ];
 
 export default function AdminSidebar() {
