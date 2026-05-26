@@ -7,11 +7,11 @@ interface Props {
 }
 
 const LEVEL_COLORS: Record<string, string> = {
-  LEARNING: 'bg-gray-100 text-gray-700',
-  PRACTICED: 'bg-blue-100 text-blue-700',
-  PERSONAL_PROJECT: 'bg-green-100 text-green-700',
-  PRODUCTION_READY: 'bg-purple-100 text-purple-700',
-  EXPERT: 'bg-amber-100 text-amber-700',
+  AWARENESS: 'bg-gray-100 text-gray-700',
+  FOUNDATION: 'bg-blue-100 text-blue-700',
+  AUTONOMOUS: 'bg-green-100 text-green-700',
+  FLUENT: 'bg-purple-100 text-purple-700',
+  LEADERSHIP: 'bg-amber-100 text-amber-700',
 };
 
 export function MentorSkillsSection({ skills }: Props) {

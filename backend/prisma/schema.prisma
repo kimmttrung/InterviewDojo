@@ -1,10 +1,11 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres"]
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector] 
 }
 
 // ==================== ENUMS ====================
@@ -54,11 +55,11 @@ enum SkillType {
 }
 
 enum SkillLevel {
-  LEARNING
-  PRACTICED
-  PERSONAL_PROJECT
-  PRODUCTION_READY
-  EXPERT
+  AWARENESS       // Mới biết / Đang tìm hiểu
+  FOUNDATION      // Có nền tảng / Có thể làm khi có hướng dẫn
+  AUTONOMOUS      // Tự chủ / Làm việc độc lập tốt
+  FLUENT          // Thuần thục / Có thể tối ưu hoặc ứng biến linh hoạt
+  LEADERSHIP      // Chuyên gia / Có thể dẫn dắt, dạy lại người khác
 }
 
 enum SessionStatus {
@@ -164,10 +165,58 @@ enum NotificationType {
 }
 
 enum FeedbackStatus {
-  PENDING   // Chưa feedback
-  SUBMITTED // Đã feedback đúng hạn
-  LATE      // Đã feedback nhưng trễ hạn
-  SKIPPED   // Không feedback (bị cảnh báo)
+  PENDING
+  SUBMITTED
+  LATE
+  SKIPPED
+}
+
+// ==================== ENUMS (REPORT & MODERATION) ====================
+
+enum ReportTargetType {
+  USER
+  SYSTEM
+  QUESTION
+}
+
+enum ReportType {
+  // USER
+  HARASSMENT
+  SCAM
+  FAKE_PROFILE
+  NO_SHOW
+  CHEATING
+  PAYMENT_OUTSIDE
+
+  // SYSTEM
+  ROOM_CREATION_FAILED
+  PAYMENT_ERROR
+  MATCHING_ERROR
+  OTHER_SYSTEM
+
+  // QUESTION
+  WRONG_ANSWER
+  INAPPROPRIATE_CONTENT
+  DUPLICATE
+  OTHER_QUESTION
+}
+
+enum ReportStatus {
+  PENDING
+  UNDER_REVIEW
+  RESOLVED
+  REJECTED
+}
+
+enum ModerationActionType {
+  WARNING
+  TEMP_BAN
+  PERMANENT_BAN
+  UNBAN
+  SUSPEND_MENTOR
+  RESTORE_MENTOR
+  REJECT_REPORT
+  REMOVE_QUESTION
 }
 
 // ==================== USER & PROFILE ====================
@@ -185,9 +234,12 @@ model User {
   creditBalance   Float      @default(0.0) @map("credit_balance")
   role            Role       @default(CANDIDATE)
   status          UserStatus @default(ACTIVE)
+  banReason       String?    @map("ban_reason")
+  bannedUntil     DateTime?  @map("banned_until")
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   targetRoleId    Int?       @map("target_role_id")
+  embeddingVector Unsupported("vector(1024)")? @map("embedding_vector")
 
   targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
   mentorProfile       MentorProfile?
@@ -208,23 +260,71 @@ model User {
   bookingActionLogs   BookingActionLog[]
   notifications       Notification[]
 
+  // Report relations
+  reportsCreated         UserReport[]    @relation("UserReportsCreated")
+  reportsReceived        UserReport[]    @relation("UserReportsReceived")
+  resolvedReports        UserReport[]    @relation("ResolvedReports")
+
+  // Moderation relations
+  moderationLogsReceived ModerationLog[] @relation("ModeratedUsers")
+  moderationLogsCreated  ModerationLog[] @relation("ModeratorActions")
+
   @@map("users")
 }
 
-model MentorProfile {
-  id                   Int                 @id @default(autoincrement())
-  userId               Int                 @unique @map("user_id")
-  headline             String
-  introductionVideoUrl String?             @map("introdcution_video_url")
-  createdAt            DateTime            @default(now()) @map("created_at")
-  updatedAt            DateTime            @updatedAt @map("updated_at")
-  approvalStatus       ApprovalStatus      @default(INCOMPLETE) @map("approval_status")
-  user                 User                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  experiences          Experience[]
-  coachingPlans        CoachingPlan[]
-  approvalLogs         MentorApprovalLog[]
+model UserReport {
+  id           Int              @id @default(autoincrement())
+  reporterId   Int              @map("reporter_id")
+  type         ReportType
+  targetType   ReportTargetType @map("target_type")
+  reason       String
+  evidenceUrls String[]         @default([]) @map("evidence_urls")
+  status       ReportStatus     @default(PENDING)
+  adminNote    String?          @map("admin_note")
+  resolvedAt   DateTime?        @map("resolved_at")
+  resolvedById Int?             @map("resolved_by_id")
+  createdAt    DateTime         @default(now()) @map("created_at")
+  updatedAt    DateTime         @updatedAt @map("updated_at")
 
-  @@map("mentor_profiles")
+  // Context — chỉ 1 field có giá trị tương ứng targetType
+  // targetType = USER     → targetUserId
+  // targetType = QUESTION → targetQuestionId + snapshotQuestionTitle
+  // targetType = SYSTEM   → tất cả null, reason mô tả lỗi
+  targetUserId          Int?    @map("target_user_id")
+  targetQuestionId      Int?    @map("target_question_id")
+  snapshotQuestionTitle String? @map("snapshot_question_title") // giữ lại khi question bị xóa
+
+  reporter       User      @relation("UserReportsCreated", fields: [reporterId], references: [id])
+  targetUser     User?     @relation("UserReportsReceived", fields: [targetUserId], references: [id])
+  targetQuestion Question? @relation("QuestionReports", fields: [targetQuestionId], references: [id], onDelete: SetNull)
+  resolvedBy     User?     @relation("ResolvedReports", fields: [resolvedById], references: [id])
+
+  moderationLogs ModerationLog[]
+
+  @@index([status])
+  @@index([targetType])
+  @@index([targetUserId])
+  @@index([createdAt])
+  @@map("user_reports")
+}
+
+model ModerationLog {
+  id           Int                  @id @default(autoincrement())
+  reportId     Int?                 @map("report_id")
+  adminId      Int                  @map("admin_id")
+  targetUserId Int?                 @map("target_user_id")
+  action       ModerationActionType
+  reason       String?
+  bannedUntil  DateTime?            @map("banned_until")
+  createdAt    DateTime             @default(now()) @map("created_at")
+
+  report     UserReport? @relation(fields: [reportId], references: [id])
+  targetUser User?       @relation("ModeratedUsers", fields: [targetUserId], references: [id])
+  admin      User        @relation("ModeratorActions", fields: [adminId], references: [id])
+
+  @@index([targetUserId])
+  @@index([adminId])
+  @@map("moderation_logs")
 }
 
 model Notification {
@@ -242,8 +342,24 @@ model Notification {
 
   @@index([userId])
   @@index([isRead])
-
   @@map("notifications")
+}
+
+model MentorProfile {
+  id                   Int            @id @default(autoincrement())
+  userId               Int            @unique @map("user_id")
+  headline             String
+  introductionVideoUrl String?        @map("introduction_video_url")
+  createdAt            DateTime       @default(now()) @map("created_at")
+  updatedAt            DateTime       @updatedAt @map("updated_at")
+  approvalStatus       ApprovalStatus @default(INCOMPLETE) @map("approval_status")
+
+  user          User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  experiences   Experience[]
+  coachingPlans CoachingPlan[]
+  approvalLogs  MentorApprovalLog[]
+
+  @@map("mentor_profiles")
 }
 
 model MentorApprovalLog {
@@ -297,7 +413,7 @@ model JobRole {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
-
+  
   experiences Experience[]
   questions   QuestionJobRole[]
   candidates  User[]            @relation("CandidateTargetRole")
@@ -490,6 +606,7 @@ model Question {
   jobRoles     QuestionJobRole[]
   bookmarks    UserBookmark[]
   mockSessions MockSessionQuestion[]
+  reports      UserReport[]          @relation("QuestionReports")
 
   theoryQuestion TheoryQuestion?
   codingQuestion CodingQuestion?

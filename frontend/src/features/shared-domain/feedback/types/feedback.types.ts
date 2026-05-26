@@ -39,6 +39,8 @@ export interface PartnerFeedbackResponse {
   strengths: string[] | null;
   weaknesses: string[] | null;
   suggestions: string[] | null;
+  reviewerName: string; // thêm
+  createdAt: string;
 }
 
 export type FeedbackMode = 'P2P' | 'CANDIDATE_TO_MENTOR' | 'MENTOR_TO_CANDIDATE';

@@ -34,6 +34,8 @@ export function mapStoreToPayload(state: MentorProfileFormState): SaveMentorProf
       ? state.profile.introductionVideoUrl.trim()
       : undefined,
 
+    experienceYears: state.profile.experienceYears,
+
     // =========================
     // EXPERIENCES
     // =========================

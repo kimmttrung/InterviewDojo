@@ -27,8 +27,7 @@ export default function QuestionDetailContainer() {
     );
   }
 
-  // Sửa: dùng question.questionType thay vì question.type
-  if (question.questionType === QuestionType.CODING) {
+  if (question.type === QuestionType.CODING) {
     return <CodingView question={question} />;
   }
 

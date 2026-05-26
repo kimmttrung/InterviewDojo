@@ -1,9 +1,12 @@
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, PlusCircle, ChevronDown } from 'lucide-react';
+import { MessageCircle, PlusCircle, ChevronDown, Flag } from 'lucide-react';
 import { Question } from '../types/question.types';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
 import { BookmarkButton } from '@/features/bookmark/components/BookmarkButton';
+import { useState } from 'react';
+import { ReportQuestionModal } from '@/features/reports/components/ReportQuestionModal';
+import { useAuthStore } from '@/stores/useAuthStore';
 
 interface QuestionCardProps {
   question: Question;
@@ -24,6 +27,9 @@ export function QuestionCard({ question }: QuestionCardProps) {
     isBookmarked = false,
   } = question;
 
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const { isAuthenticated } = useAuthStore();
+
   const renderSnippet = () => {
     if (!description) return 'No description available';
     if (typeof description === 'string') return description;
@@ -41,6 +47,21 @@ export function QuestionCard({ question }: QuestionCardProps) {
       onClick={() => navigate(`/questions/${id}/${slug}`)}
       className="p-6 border-slate-100 shadow-sm hover:shadow-xl hover:border-indigo-100 transition-all rounded-2xl group cursor-pointer relative overflow-hidden bg-white"
     >
+      {/* Report button - top right corner with text */}
+      {isAuthenticated && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setReportModalOpen(true);
+          }}
+          className="absolute top-4 right-4 z-10 flex items-center gap-1.5 px-2.5 py-1.5 rounded-full bg-white/90 hover:bg-red-50 text-red-500 hover:text-red-700 text-sm font-medium transition-colors shadow-sm border border-slate-200"
+          aria-label="Report question"
+        >
+          <Flag className="w-3.5 h-3.5" />
+          <span>Report</span>
+        </button>
+      )}
+
       <div className="flex justify-between gap-6">
         <div className="space-y-4 flex-1">
           <div className="flex items-center gap-2 text-xs font-semibold text-slate-400 uppercase tracking-widest">
@@ -83,6 +104,12 @@ export function QuestionCard({ question }: QuestionCardProps) {
               <PlusCircle className="w-4 h-4" /> I was asked this
             </button>
           </div>
+          <ReportQuestionModal
+            open={reportModalOpen}
+            onOpenChange={setReportModalOpen}
+            questionId={id}
+            questionTitle={title}
+          />
         </div>
       </div>
 

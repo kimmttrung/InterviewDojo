@@ -14,6 +14,7 @@ type MentorProfileState = {
     linkedInLink: string;
     githubLink: string;
     introductionVideoUrl: string;
+    experienceYears?: number;
   };
 
   experiences: Array<{
@@ -140,7 +141,7 @@ export const useMentorProfileStore = create<MentorProfileState>((set) => ({
           skillId: 0,
           type: 'HARDSKILL',
           experienceMonths: 0,
-          level: 'LEARNING',
+          level: 'AWARENESS',
         },
       ],
     })),
@@ -200,3 +201,5 @@ export const useMentorProfileStore = create<MentorProfileState>((set) => ({
       ...data,
     })),
 }));
+
+export const useCandidateProfileStore = useMentorProfileStore;

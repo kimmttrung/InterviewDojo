@@ -13,6 +13,7 @@ jest.mock('uuid', () => ({
 
 describe('MatchingService', () => {
   let service: MatchingService;
+  let consoleLogSpy: jest.SpyInstance;
   let redis: DeepMocked<Redis>;
   let socketService: DeepMocked<SocketService>;
   let streamService: DeepMocked<StreamService>;
@@ -20,6 +21,7 @@ describe('MatchingService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -36,6 +38,10 @@ describe('MatchingService', () => {
     socketService = module.get(SocketService);
     streamService = module.get(StreamService);
     prisma = module.get(PrismaService);
+  });
+
+  afterEach(() => {
+    consoleLogSpy.mockRestore();
   });
 
   it('should be defined', () => {
@@ -61,6 +67,18 @@ describe('MatchingService', () => {
         status: 'in_queue',
         message: 'Đang tìm đối thủ phù hợp...',
       });
+    });
+
+    it('should discard offline candidates before placing the user in queue', async () => {
+      redis.zpopmin
+        .mockResolvedValueOnce(['2', '123'] as any)
+        .mockResolvedValueOnce([] as any);
+      socketService.isUserOnline.mockReturnValue(false);
+
+      const result = await service.handleJoinQueue(userId, level);
+
+      expect(socketService.isUserOnline).toHaveBeenCalledWith('2');
+      expect(result.status).toBe('in_queue');
     });
 
     it('should match with a valid opponent', async () => {

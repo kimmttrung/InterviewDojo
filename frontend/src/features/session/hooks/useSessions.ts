@@ -6,8 +6,8 @@ export const useSessions = () => {
   const filters = useSessionStore((state) => state.filters);
 
   return useQuery({
-    queryKey: ['sessions', filters], // Query key thay đổi -> tự động fetch lại
+    queryKey: ['sessions', filters],
     queryFn: () => getSessions(filters),
-    placeholderData: (previousData) => previousData, // Giữ data cũ khi đang fetch trang mới (tránh giật UI)
+    placeholderData: (previousData) => previousData,
   });
 };

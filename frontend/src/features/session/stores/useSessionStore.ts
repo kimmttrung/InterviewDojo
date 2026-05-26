@@ -21,13 +21,14 @@ interface SessionState {
   rejectModalData: { isOpen: boolean; reason: string | null };
   openRejectModal: (reason: string | null) => void;
   closeRejectModal: () => void;
+
+  // --- 5. (Tùy chọn) Quản lý Modal Feedback đã nhận (Received Feedback) ---
+  feedbackModalData: { isOpen: boolean; sessionId: number | null };
+  openFeedbackModal: (sessionId: number) => void;
+  closeFeedbackModal: () => void;
 }
 
 export const useSessionStore = create<SessionState>((set) => ({
-  // ==========================================
-  // KHỞI TẠO GIÁ TRỊ VÀ LOGIC CHO TỪNG STATE
-  // ==========================================
-
   // 1. Khởi tạo Filters
   filters: {
     // SỬA Ở ĐÂY: Chuyển tab mặc định thành UPCOMING để khi vừa vào trang
@@ -40,7 +41,7 @@ export const useSessionStore = create<SessionState>((set) => ({
   },
   setFilters: (newFilters) =>
     set((state) => ({
-      filters: { ...state.filters, ...newFilters, page: 1 },
+      filters: { ...state.filters, page: 1, ...newFilters },
     })), // Tự động reset page về 1 mỗi khi đổi filter
 
   // 2. Khởi tạo Cancel Modal
@@ -57,4 +58,9 @@ export const useSessionStore = create<SessionState>((set) => ({
   rejectModalData: { isOpen: false, reason: null },
   openRejectModal: (reason) => set({ rejectModalData: { isOpen: true, reason } }),
   closeRejectModal: () => set({ rejectModalData: { isOpen: false, reason: null } }),
+
+  // 5. Khởi tạo Feedback Modal
+  feedbackModalData: { isOpen: false, sessionId: null },
+  openFeedbackModal: (sessionId) => set({ feedbackModalData: { isOpen: true, sessionId } }),
+  closeFeedbackModal: () => set({ feedbackModalData: { isOpen: false, sessionId: null } }),
 }));

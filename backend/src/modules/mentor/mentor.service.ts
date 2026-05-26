@@ -17,6 +17,7 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { UploadedFileType } from '@/common/types/uploaded-file.type';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
 import { SkillLevel } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 // ==================== REUSABLE INCLUDES ====================
 const mentorListInclude = {
@@ -72,6 +73,7 @@ export class MentorService {
   constructor(
     private prisma: PrismaService,
     private cloudinaryService: CloudinaryService,
+    private eventEmitter: EventEmitter2,
   ) {}
 
   /**
@@ -388,9 +390,10 @@ export class MentorService {
               name: data.name,
               bio: data.bio,
               avatarUrl: data.avatarUrl,
-              experienceYears: data.experienceYears,
               linkedInLink: data.linkedInLink,
               githubLink: data.githubLink,
+              // ĐÃ THÊM VÀ SỬA LỖI CHÍNH TẢ: Cập nhật chính xác số năm kinh nghiệm vào bảng User
+              experienceYears: data.experienceYears,
             },
           });
 
@@ -503,7 +506,7 @@ export class MentorService {
                   userId,
                   skillId: sk.skillId,
                   experienceMonths: sk.experienceMonths,
-                  level: sk.level ?? SkillLevel.LEARNING,
+                  level: sk.level ?? SkillLevel.AWARENESS,
                   proofUrl: sk.proofUrl,
                 },
               });
@@ -597,9 +600,7 @@ export class MentorService {
             }
           }
 
-          // ==============================================================
           // 7. TRUY VẤN TRẢ VỀ TOÀN BỘ DATA MỚI NHẤT
-          // ==============================================================
           return tx.user.findUnique({
             where: { id: userId },
             include: {
@@ -639,6 +640,11 @@ export class MentorService {
       if (!result) {
         throw new NotFoundException(Messages.MENTOR.NOT_FOUND);
       }
+
+      this.eventEmitter.emit('user.profile.updated', {
+        userId: result.id,
+        role: result.role,
+      });
 
       // 8. Mapping data sang Interface MentorResponse
       return this.mapToMentorResponse(result);

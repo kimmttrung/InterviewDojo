@@ -22,15 +22,19 @@ import {
   WalletTransactionType,
   Prisma,
   NotificationType,
+  SessionStatus,
+  SessionSource,
+  SessionMode,
 } from '@prisma/client';
 import { StreamService } from '../stream/stream.service';
-
+import { SessionService } from '../session/session.service';
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketService: SocketService,
     private readonly streamService: StreamService,
+    private readonly sessionService: SessionService,
   ) {}
 
   private mapToBookingResponse(
@@ -392,6 +396,31 @@ export class BookingService {
       });
 
       console.log('✅ MockSession created:', session.id, session.meetingLink);
+      let mockSession = await tx.mockSession.findFirst({
+        where: { bookingId: booking.id },
+      });
+      if (!mockSession) {
+        mockSession = await tx.mockSession.create({
+          data: {
+            bookingId: booking.id,
+            intervieweeId: booking.candidateId,
+            scheduledAt: booking.startTime,
+            durationMinutes: booking.snapshotPlanDuration || 60,
+            status: SessionStatus.SCHEDULED,
+            source: SessionSource.MENTOR_BOOKING,
+            mode: SessionMode.MEET,
+            meetingLink: null,
+          },
+        });
+      }
+
+      const userIds = [updated.mentorId, updated.candidateId];
+      await this.sessionService.scheduleSessionEnd(
+        mockSession.id,
+        userIds,
+        mockSession.scheduledAt,
+        mockSession.durationMinutes,
+      );
 
       await tx.bookingActionLog.create({
         data: {

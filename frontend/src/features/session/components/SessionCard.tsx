@@ -1,9 +1,10 @@
-// SessionCard.tsx (loại bỏ handleViewRejectReason)
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
+import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
+import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
 
 dayjs.extend(relativeTime);
 
@@ -12,7 +13,8 @@ interface Props {
 }
 
 export const SessionCard = ({ session }: Props) => {
-  const { openCancelModal, openProfileModal, openRejectModal } = useSessionStore();
+  const { openCancelModal, openRejectModal } = useSessionStore();
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
   const [isJoinable, setIsJoinable] = useState(false);
 
@@ -58,19 +60,21 @@ export const SessionCard = ({ session }: Props) => {
   return (
     <div className="border rounded-lg p-4 shadow-sm flex flex-col gap-3 bg-white">
       <div className="flex justify-between items-center">
-        <div
-          className="flex items-center gap-3 cursor-pointer"
-          onClick={() => session.opponentId && openProfileModal(session.opponentId)}
-        >
-          <img
-            src={session.opponentAvatar || '/default-avatar.png'}
-            alt="avatar"
-            className="w-10 h-10 rounded-full"
+        <div className="flex items-center gap-3">
+          <UserAvatar
+            userId={session.opponentId ?? 0} // Nếu null thì truyền 0
+            avatarUrl={session.opponentAvatar}
+            name={session.opponentName ?? undefined} // Biến null thành undefined
+            className="h-10 w-10"
           />
           <div>
             <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
-            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full">
-              {session.type}
+            <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full inline-block mt-1">
+              {session.type === 'MENTOR'
+                ? 'Mentor Session'
+                : session.type === 'P2P'
+                  ? 'P2P Session'
+                  : 'Solo Session'}
             </span>
           </div>
         </div>
@@ -90,7 +94,7 @@ export const SessionCard = ({ session }: Props) => {
         <p className="font-medium">Plan: {session.coachingPlan || 'N/A'}</p>
         {session.candidateAnswers && (
           <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-            Câu trả lời: {session.candidateAnswers}
+            Answers: {session.candidateAnswers}
           </p>
         )}
       </div>
@@ -107,7 +111,7 @@ export const SessionCard = ({ session }: Props) => {
                 onClick={() => openCancelModal(session.id.toString())}
                 className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
               >
-                Hủy lịch
+                Cancel session
               </button>
               <a
                 href={isJoinable ? (session.meetingLink ?? undefined) : '#'}
@@ -118,17 +122,17 @@ export const SessionCard = ({ session }: Props) => {
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {timeLeft === 'Đang diễn ra' ? 'In-progress (Join)' : 'Tham gia'}
+                {timeLeft === 'On live' ? 'In-progress ' : 'Join'}
               </a>
             </>
           )}
 
-          {session.status === 'REJECTED' && (
+          {(session.status === 'REJECTED' || session.status === 'CANCELLED') && (
             <button
               onClick={() => openRejectModal(session.rejectedReason)}
               className="px-4 py-2 border border-primary text-primary rounded-md hover:bg-primary/10"
             >
-              Xem lý do từ chối
+              Cancel reason
             </button>
           )}
 
@@ -141,15 +145,21 @@ export const SessionCard = ({ session }: Props) => {
                   rel="noopener noreferrer"
                   className="px-4 py-2 border border-blue-600 text-blue-600 rounded-md hover:bg-blue-50"
                 >
-                  Xem Record
+                  Record session
                 </a>
               )}
-              <button className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700">
+              <button
+                onClick={() => setIsFeedbackModalOpen(true)}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+              >
                 Feedback
               </button>
-              <button className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50">
-                Report
-              </button>
+              <SessionFeedbackModal
+                open={isFeedbackModalOpen}
+                onClose={() => setIsFeedbackModalOpen(false)}
+                sessionId={Number(session.id)}
+                sessionType={session.type as 'MENTOR' | 'P2P' | 'SOLO'}
+              />
             </>
           )}
         </div>

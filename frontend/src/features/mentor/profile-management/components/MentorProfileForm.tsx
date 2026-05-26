@@ -14,11 +14,10 @@ import { useUploadAvatar } from '@/hooks/mutations/useUploadAvatar';
 
 import { mentorProfileService } from '../services/mentorProfile.service';
 
-import { useMentorProfileStore } from '@/stores/mentorProfile.store';
+import { useMentorProfileStore } from '@/stores/userProfile.store';
 
 export const MentorProfileForm = () => {
   const avatarInputRef = useRef<HTMLInputElement | null>(null);
-
   const videoInputRef = useRef<HTMLInputElement | null>(null);
 
   const uploadAvatarMutation = useUploadAvatar();
@@ -26,16 +25,17 @@ export const MentorProfileForm = () => {
 
   const { profile, setProfileField } = useMentorProfileStore();
 
+  const [headlineError, setHeadlineError] = useState<string | null>(null);
+
+  // Biểu thức chính quy (Regex) bắt buộc định dạng: Vị trí @ Tên công ty
+  const headlineRegex = /^[^@]+\s*@\s*[^@]+$/;
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     try {
       const updatedUser = await uploadAvatarMutation.mutateAsync(file);
-
       setProfileField('avatarUrl', updatedUser.avatarUrl);
     } catch (error) {
       console.error(error);
@@ -44,22 +44,15 @@ export const MentorProfileForm = () => {
 
   const handleVideoUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-
-    if (!file) {
-      return;
-    }
+    if (!file) return;
 
     try {
       setIsUploadingVideo(true);
-
-      // clear old preview immediately
       setProfileField('introductionVideoUrl', '');
 
       const uploadedVideo = await mentorProfileService.uploadIntroductionVideo(file);
-
       setProfileField('introductionVideoUrl', uploadedVideo.videoUrl);
 
-      // reset input
       event.target.value = '';
     } catch (error) {
       console.error(error);
@@ -68,11 +61,33 @@ export const MentorProfileForm = () => {
     }
   };
 
+  const handleHeadlineChange = (value: string) => {
+    setProfileField('headline', value);
+
+    if (!value.trim()) {
+      setHeadlineError('Headline là bắt buộc để ứng viên dễ nhận diện.');
+      return;
+    }
+
+    const countAtSymbol = (value.match(/@/g) || []).length;
+    if (countAtSymbol > 1) {
+      setHeadlineError('Headline chỉ được chứa duy nhất một ký tự @ phân tách.');
+      return;
+    }
+
+    if (!headlineRegex.test(value)) {
+      setHeadlineError(
+        'Định dạng chuẩn phải là: Vị trí @ Tên công ty. Ví dụ: Senior Backend Engineer @ Google',
+      );
+    } else {
+      setHeadlineError(null);
+    }
+  };
+
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
       <div className="mb-8 border-b pb-5">
         <h2 className="text-2xl font-bold text-slate-900">Basic Information</h2>
-
         <p className="mt-2 text-sm text-slate-500">
           Update your public mentor profile information.
         </p>
@@ -84,7 +99,6 @@ export const MentorProfileForm = () => {
           <div className="relative group">
             <Avatar className="h-32 w-32 border-4 border-white shadow-xl">
               <AvatarImage src={profile.avatarUrl} />
-
               <AvatarFallback className="bg-slate-100 text-3xl font-bold text-slate-500">
                 {profile.name?.charAt(0) || 'M'}
               </AvatarFallback>
@@ -113,20 +127,18 @@ export const MentorProfileForm = () => {
 
           <div className="mt-4 space-y-1">
             <h3 className="text-xl font-bold text-slate-900">{profile.name || 'Your Name'}</h3>
-
             <p className="text-sm text-slate-500">
               {profile.headline || 'Your professional headline'}
             </p>
           </div>
         </div>
 
-        {/* Name + Headline */}
-        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+        {/* Name + Headline + Experience Years */}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
           <div className="space-y-2">
             <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
               Full Name
             </Label>
-
             <Input
               placeholder="e.g. John Doe"
               value={profile.name}
@@ -139,11 +151,34 @@ export const MentorProfileForm = () => {
             <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
               Headline
             </Label>
-
             <Input
               placeholder="e.g. Senior Backend Engineer @ Google"
               value={profile.headline}
-              onChange={(event) => setProfileField('headline', event.target.value)}
+              onChange={(event) => handleHeadlineChange(event.target.value)}
+              // Đổi màu viền sang đỏ nếu dữ liệu gõ vào không đúng định dạng mong muốn
+              className={`border-slate-200 bg-slate-50 transition-colors ${
+                headlineError ? 'border-red-400 focus-visible:ring-red-400' : ''
+              }`}
+            />
+            {headlineError && (
+              <p className="text-xs font-medium text-red-500 mt-1 animate-pulse">{headlineError}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
+              Years of Experience
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              max={50}
+              placeholder="e.g. 5"
+              value={profile.experienceYears ?? ''}
+              onChange={(event) => {
+                const val = event.target.value;
+                setProfileField('experienceYears', val);
+              }}
               className="border-slate-200 bg-slate-50"
             />
           </div>
@@ -152,7 +187,6 @@ export const MentorProfileForm = () => {
         {/* Bio */}
         <div className="space-y-2">
           <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">Bio</Label>
-
           <Textarea
             rows={5}
             placeholder="Tell candidates about your experience, mentoring style, and expertise..."
@@ -168,7 +202,6 @@ export const MentorProfileForm = () => {
             <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
               LinkedIn
             </Label>
-
             <Input
               placeholder="https://linkedin.com/in/yourprofile"
               value={profile.linkedInLink}
@@ -181,7 +214,6 @@ export const MentorProfileForm = () => {
             <Label className="text-xs font-bold uppercase tracking-wide text-slate-500">
               GitHub
             </Label>
-
             <Input
               placeholder="https://github.com/yourusername"
               value={profile.githubLink}
@@ -199,10 +231,8 @@ export const MentorProfileForm = () => {
                 <div className="rounded-xl bg-white p-3 shadow-sm">
                   <Video className="h-5 w-5 text-slate-700" />
                 </div>
-
                 <div>
                   <h3 className="font-semibold text-slate-900">Introduction Video</h3>
-
                   <p className="mt-1 text-sm text-slate-500">
                     Upload a short introduction video to build trust with candidates.
                   </p>
@@ -233,15 +263,6 @@ export const MentorProfileForm = () => {
                     'Upload Video'
                   )}
                 </Button>
-
-                {isUploadingVideo && (
-                  <div className="flex h-[250px] items-center justify-center rounded-2xl border bg-slate-100">
-                    {/* <div className="flex items-center gap-3 text-slate-500">
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                      Uploading video...
-                    </div> */}
-                  </div>
-                )}
               </div>
             </div>
 
