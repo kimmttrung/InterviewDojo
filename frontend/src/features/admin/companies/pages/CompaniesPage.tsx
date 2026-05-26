@@ -1,4 +1,3 @@
-// features/admin/companies/pages/CompaniesPage.tsx
 import { useState } from 'react';
 import {
   Table,
@@ -35,7 +34,7 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<any>(null);
-  const [formData, setFormData] = useState({ name: '', logoUrl: '', industry: '' }); // ✅ thêm industry
+  const [formData, setFormData] = useState({ name: '', logoUrl: '', industry: '' });
 
   const handleOpenCreate = () => {
     setEditingCompany(null);
@@ -48,7 +47,7 @@ export default function CompaniesPage() {
     setFormData({
       name: company.name,
       logoUrl: company.logoUrl || '',
-      industry: company.industry || '', // ✅ thêm industry
+      industry: company.industry || '',
     });
     setIsDialogOpen(true);
   };
@@ -159,11 +158,11 @@ export default function CompaniesPage() {
               />
             </div>
             <div>
-              <label className="text-sm font-semibold">Ngành (Industry)</label>
+              <label className="text-sm font-semibold">Ngành</label>
               <Input
                 value={formData.industry}
                 onChange={(e) => setFormData({ ...formData, industry: e.target.value })}
-                placeholder="VD: Technology, E-commerce..."
+                placeholder="VD: Technology, Finance..."
               />
             </div>
             <div>

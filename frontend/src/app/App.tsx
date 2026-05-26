@@ -19,7 +19,7 @@ import MentorDetailPage from '../features/candidate/mentor-booking/pages/MentorD
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfileManagement';
 
 import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard';
-import CompaniesPage from '../features/admin/company-management/pages/CompaniesPage';
+import CompaniesPage from '../features/admin/companies/pages/CompaniesPage';
 import SelectTargetRole from '../features/candidate/target-role/pages/SelectTargetRole';
 import Login from '../features/auth/pages/Login';
 import Register from '../features/auth/pages/Register';
