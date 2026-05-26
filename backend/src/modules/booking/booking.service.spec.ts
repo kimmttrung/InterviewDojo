@@ -18,6 +18,7 @@ import { BookingService } from './booking.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SocketService } from '../socket/socket.service';
 import { SessionService } from '../session/session.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -48,6 +49,12 @@ describe('BookingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: SocketService, useValue: socketService },
         { provide: SessionService, useValue: sessionService },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
       ],
     }).compile();
 

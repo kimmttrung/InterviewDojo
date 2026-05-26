@@ -366,7 +366,6 @@ export class MentorService {
     data: UpdateMentorDto,
   ): Promise<MentorResponse> {
     try {
-      // 1. Kiểm tra sự tồn tại và quyền hạn
       const existingUser = await this.prisma.user.findUnique({
         where: { id: userId },
         include: { mentorProfile: true },
@@ -380,10 +379,8 @@ export class MentorService {
         throw new BadRequestException(Messages.MENTOR.NOT_MENTOR);
       }
 
-      // THÊM CẤU HÌNH TIMEOUT CHO TRANSACTION Ở ĐÂY
       const result = await this.prisma.$transaction(
         async (tx) => {
-          // 2. Cập nhật thông tin cơ bản của User
           await tx.user.update({
             where: { id: userId },
             data: {
@@ -392,18 +389,16 @@ export class MentorService {
               avatarUrl: data.avatarUrl,
               linkedInLink: data.linkedInLink,
               githubLink: data.githubLink,
-              // ĐÃ THÊM VÀ SỬA LỖI CHÍNH TẢ: Cập nhật chính xác số năm kinh nghiệm vào bảng User
               experienceYears: data.experienceYears,
             },
           });
 
-          // 3. Upsert Mentor Profile
           const mentorProfile = await tx.mentorProfile.upsert({
             where: { userId },
             update: {
               headline: data.headline,
               introductionVideoUrl: data.introductionVideoUrl,
-              approvalStatus: ApprovalStatus.PENDING, // Mỗi lần cập nhật, đưa về PENDING để admin xét duyệt lại
+              approvalStatus: ApprovalStatus.PENDING, // Mỗi lần sửa, trả về PENDING để Admin duyệt lại
             },
             create: {
               userId,
@@ -413,7 +408,6 @@ export class MentorService {
             },
           });
 
-          // 4. Xử lý Experiences (Đồng bộ hóa)
           if (data.experiences) {
             const incomingExpIds = data.experiences
               .map((e) => e.id)
@@ -479,7 +473,6 @@ export class MentorService {
             }
           }
 
-          // 5. Xử lý Skills (Đồng bộ hóa)
           if (data.skills) {
             const incomingSkillIds = data.skills.map((s) => s.skillId);
             await tx.userSkill.deleteMany({
@@ -513,9 +506,6 @@ export class MentorService {
             }
           }
 
-          // ==============================================================
-          // 6. XỬ LÝ COACHING PLANS VÀ QUESTIONS (TỐI ƯU VỚI NESTED WRITES)
-          // ==============================================================
           if (data.coachingPlans) {
             const incomingPlanIds = data.coachingPlans
               .map((p) => p.id)
@@ -540,11 +530,8 @@ export class MentorService {
                   ?.map((q) => q.id)
                   .filter((id): id is number => !!id) || [];
 
-              // Sử dụng tính năng Ghi lồng nhau (Nested Writes) của Prisma
               await tx.coachingPlan.upsert({
                 where: { id: plan.id ?? 0 },
-
-                // TRƯỜNG HỢP UPDATE: Đã có Plan, chỉ cập nhật Plan và danh sách câu hỏi
                 update: {
                   title: plan.title,
                   description: plan.description,
@@ -553,11 +540,9 @@ export class MentorService {
                   categoryId: plan.categoryId,
                   isActive: plan.isActive ?? true,
                   questions: {
-                    // Xóa các câu hỏi không còn tồn tại trên Frontend
                     deleteMany: {
                       id: { notIn: incomingQuestionIds },
                     },
-                    // Upsert trực tiếp các câu hỏi bên trong (Prisma tự lo khóa ngoại)
                     upsert:
                       plan.questions?.map((q, i) => ({
                         where: { id: q.id ?? 0 },
@@ -576,8 +561,6 @@ export class MentorService {
                       })) || [],
                   },
                 },
-
-                // TRƯỜNG HỢP CREATE: Plan hoàn toàn mới
                 create: {
                   mentorId: mentorProfile.id,
                   title: plan.title,
@@ -600,37 +583,26 @@ export class MentorService {
             }
           }
 
-          // 7. TRUY VẤN TRẢ VỀ TOÀN BỘ DATA MỚI NHẤT
           return tx.user.findUnique({
             where: { id: userId },
             include: {
               mentorProfile: {
                 include: {
                   experiences: {
-                    include: {
-                      company: true,
-                      jobRole: true,
-                    },
+                    include: { company: true, jobRole: true },
                   },
                   coachingPlans: {
                     include: {
                       category: true,
-                      questions: {
-                        orderBy: { orderIndex: 'asc' },
-                      },
+                      questions: { orderBy: { orderIndex: 'asc' } },
                     },
                   },
                 },
               },
-              skills: {
-                include: {
-                  skill: true,
-                },
-              },
+              skills: { include: { skill: true } },
             },
           });
         },
-        // THIẾT LẬP TIMEOUT CHO TRANSACTION LÊN 15 GIÂY (15000ms)
         {
           maxWait: 10000,
           timeout: 15000,
@@ -641,12 +613,6 @@ export class MentorService {
         throw new NotFoundException(Messages.MENTOR.NOT_FOUND);
       }
 
-      this.eventEmitter.emit('user.profile.updated', {
-        userId: result.id,
-        role: result.role,
-      });
-
-      // 8. Mapping data sang Interface MentorResponse
       return this.mapToMentorResponse(result);
     } catch (error) {
       console.error('Error in updateMe:', error);
@@ -654,6 +620,9 @@ export class MentorService {
     }
   }
 
+  /**
+   * Admin duyệt hồ sơ Mentor chính thức hoạt động
+   */
   async approveMentor(userId: number, adminId: number) {
     const mentor = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -666,14 +635,11 @@ export class MentorService {
 
     const beforeStatus = mentor.mentorProfile.approvalStatus;
 
+    // Thực thi cập nhật DB trạng thái sang ACTIVE
     await this.prisma.$transaction([
       this.prisma.mentorProfile.update({
-        where: {
-          id: mentor.mentorProfile.id,
-        },
-        data: {
-          approvalStatus: ApprovalStatus.ACTIVE,
-        },
+        where: { id: mentor.mentorProfile.id },
+        data: { approvalStatus: ApprovalStatus.ACTIVE },
       }),
 
       this.prisma.mentorApprovalLog.create({
@@ -685,6 +651,11 @@ export class MentorService {
         },
       }),
     ]);
+
+    this.eventEmitter.emit('user.profile.updated', {
+      userId: mentor.id,
+      role: mentor.role,
+    });
 
     return null;
   }
@@ -703,12 +674,8 @@ export class MentorService {
 
     await this.prisma.$transaction([
       this.prisma.mentorProfile.update({
-        where: {
-          id: mentor.mentorProfile.id,
-        },
-        data: {
-          approvalStatus: ApprovalStatus.REJECTED,
-        },
+        where: { id: mentor.mentorProfile.id },
+        data: { approvalStatus: ApprovalStatus.REJECTED },
       }),
 
       this.prisma.mentorApprovalLog.create({
@@ -724,6 +691,7 @@ export class MentorService {
 
     return null;
   }
+
   async uploadIntroductionVideo(file: UploadedFileType) {
     const uploaded = await this.cloudinaryService.uploadVideo(
       file,
@@ -734,17 +702,15 @@ export class MentorService {
       videoUrl: uploaded.secure_url,
     };
   }
+
   async getMyMentorProfile(userId: number) {
     const mentorProfile = await this.prisma.mentorProfile.findUnique({
-      where: {
-        userId,
-      },
+      where: { userId },
       select: {
         id: true,
         approvalStatus: true,
         headline: true,
         introductionVideoUrl: true,
-
         user: {
           select: {
             name: true,
@@ -754,41 +720,18 @@ export class MentorService {
             linkedInLink: true,
           },
         },
-
         experiences: {
           include: {
-            company: {
-              select: {
-                id: true,
-                name: true,
-                logoUrl: true,
-              },
-            },
-            jobRole: {
-              select: {
-                id: true,
-                name: true,
-              },
-            },
+            company: { select: { id: true, name: true, logoUrl: true } },
+            jobRole: { select: { id: true, name: true } },
           },
-          orderBy: {
-            startDate: 'desc',
-          },
+          orderBy: { startDate: 'desc' },
         },
-
         coachingPlans: {
           include: {
-            category: {
-              select: {
-                id: true,
-                name: true,
-                slug: true,
-              },
-            },
+            category: { select: { id: true, name: true, slug: true } },
             questions: {
-              orderBy: {
-                orderIndex: 'asc',
-              },
+              orderBy: { orderIndex: 'asc' },
               select: {
                 id: true,
                 question: true,
@@ -797,9 +740,7 @@ export class MentorService {
               },
             },
           },
-          orderBy: {
-            createdAt: 'desc',
-          },
+          orderBy: { createdAt: 'desc' },
         },
       },
     });
@@ -811,32 +752,21 @@ export class MentorService {
     const userSkills = await this.prisma.userSkill.findMany({
       where: { userId },
       include: {
-        skill: {
-          select: {
-            id: true,
-            name: true,
-            type: true,
-          },
-        },
+        skill: { select: { id: true, name: true, type: true } },
       },
-      orderBy: {
-        experienceMonths: 'desc',
-      },
+      orderBy: { experienceMonths: 'desc' },
     });
 
     return {
       id: mentorProfile.id,
       approvalStatus: mentorProfile.approvalStatus,
-
       name: mentorProfile.user.name,
       bio: mentorProfile.user.bio,
       avatarUrl: mentorProfile.user.avatarUrl,
       githubLink: mentorProfile.user.githubLink,
       linkedInLink: mentorProfile.user.linkedInLink,
-
       headline: mentorProfile.headline,
       introductionVideoUrl: mentorProfile.introductionVideoUrl,
-
       experiences: mentorProfile.experiences.map((experience) => ({
         id: experience.id,
         startDate: experience.startDate,
@@ -854,7 +784,6 @@ export class MentorService {
           name: experience.jobRole?.name,
         },
       })),
-
       skills: userSkills.map((skill) => ({
         skill: skill.skill.name,
         skillId: skill.skill.id,
@@ -863,7 +792,6 @@ export class MentorService {
         level: skill.level,
         proofUrl: skill.proofUrl,
       })),
-
       coachingPlans: mentorProfile.coachingPlans.map((plan) => ({
         id: plan.id,
         title: plan.title,

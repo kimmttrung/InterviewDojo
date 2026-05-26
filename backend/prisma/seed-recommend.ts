@@ -19,7 +19,7 @@ const prisma = new PrismaClient({ adapter: new PrismaPg(pool) });
 const redisOptions = {
   url: process.env.REDIS_URL || 'redis://localhost:6379',
 };
-const embeddingQueue = new Queue('embedding-queue', {
+const embeddingQueue = new Queue('recommendation-queue', {
   connection: redisOptions,
 });
 

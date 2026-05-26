@@ -27,6 +27,10 @@ export class HardFilterService {
         (slot) => slot.isActive && slot.startTime > now,
       );
 
+      console.log(
+        `Đánh giá Mentor ID ${mentor.id} - Approved: ${approved}, Enough Experience: ${enoughExperience}, Language Matched: ${languageMatched}, Has Available Slot: ${hasAvailableSlot}`,
+      );
+
       return (
         approved && enoughExperience && languageMatched && hasAvailableSlot
       );

@@ -59,7 +59,7 @@ import { ReportsModule } from './modules/reports/reports.module';
       { name: 'ai-analysis' },
       { name: 'notification' },
       { name: 'email' },
-      { name: 'embedding-queue' },
+      { name: 'recommendation-queue' },
       { name: 'session' },
     ),
 

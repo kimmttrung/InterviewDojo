@@ -3,7 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 
 import { EmbeddingService } from './services/embedding.service';
 import { FeatureBuilderService } from './services/feature-builder.service';
-import { ProfileEmbeddingListener } from './profile-embedding.listener';
+import { RecommendationListener } from './profile-embedding.listener';
 import { EmbeddingProcessor } from './jobs/embedding.processor';
 import { RecommendationController } from './recommendation.controller';
 import { RecommendationService } from './recommendation.service';
@@ -21,7 +21,7 @@ import { TargetRoleScoreService } from './services/target-role-score.service';
 @Module({
   imports: [
     BullModule.registerQueue({
-      name: 'embedding-queue',
+      name: 'recommendation-queue',
     }),
     PrismaModule,
     JinaModule,
@@ -32,7 +32,7 @@ import { TargetRoleScoreService } from './services/target-role-score.service';
     EmbeddingService,
     EmbeddingProcessor,
     FeatureBuilderService,
-    ProfileEmbeddingListener,
+    RecommendationListener,
     RecommendationService,
 
     HardFilterService,
