@@ -18,6 +18,7 @@ import { QuestionType } from '../../../../../shared-domain/question-bank/types/q
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useCurrentUser } from '@/features/auth';
 import { useRandomQuestion } from '@/features/shared-domain/question-bank/hooks/useQuestions';
+import { api } from '@/shared/lib/api';
 import { useSessionEnded } from '../hooks/useSessionEnded';
 import {
   useMyFeedback,
@@ -31,6 +32,7 @@ export default function InterviewRoom() {
   const { roomId } = useParams();
   const [searchParams] = useSearchParams();
   const sessionId = Number(searchParams.get('sessionId'));
+  const [streamToken, setStreamToken] = useState<string | null>(searchParams.get('token'));
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false); // đánh dấu đã rời phòng
 
@@ -74,7 +76,14 @@ export default function InterviewRoom() {
     isAuthenticated && currentUser?.id
       ? String(currentUser.id)
       : searchParams.get('userId') || 'guest';
-  const token = searchParams.get('token');
+
+  useEffect(() => {
+    if (streamToken || !isAuthenticated || !currentUser?.id) return;
+
+    api.post('/stream/token').then((response) => {
+      setStreamToken(response.data.data?.token ?? response.data.token);
+    });
+  }, [streamToken, isAuthenticated, currentUser?.id]);
 
   // Filter state (client state) – có thể sync qua socket
   const [selectedType, setSelectedType] = useState<QuestionType | undefined>();
@@ -103,7 +112,7 @@ export default function InterviewRoom() {
   const isLoading = isFetching;
 
   // Lấy các hàm từ Zustand Socket Store
-  const { client, call } = useVideoCall(roomId, token, userId, currentUser);
+  const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
   const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
   const { emit, socket } = useSocketStore();
 

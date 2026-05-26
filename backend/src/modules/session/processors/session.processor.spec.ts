@@ -3,15 +3,22 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { SocketService } from '../../socket/socket.service';
 import { SessionProcessor } from './session.processor';
 import { Job } from 'bullmq';
+import { NotificationType } from '@prisma/client';
 
 describe('SessionProcessor', () => {
   let processor: SessionProcessor;
-  let prisma: { mockSession: { update: jest.Mock } };
+  let prisma: {
+    mockSession: { update: jest.Mock };
+    notification: { createMany: jest.Mock };
+  };
   let socketService: { emitToUser: jest.Mock };
   let moduleRef: TestingModule;
 
   beforeEach(async () => {
-    prisma = { mockSession: { update: jest.fn() } };
+    prisma = {
+      mockSession: { update: jest.fn() },
+      notification: { createMany: jest.fn() },
+    };
     socketService = { emitToUser: jest.fn() };
 
     moduleRef = await Test.createTestingModule({
@@ -57,5 +64,34 @@ describe('SessionProcessor', () => {
       'SESSION_ENDED',
       { sessionId: 3 },
     );
+  });
+
+  it('creates meeting-room notifications when a session starts', async () => {
+    const job = {
+      name: 'start-session-notification',
+      data: {
+        sessionId: 3,
+        userIds: [1, 2],
+        meetingLink: '/interview/mentor-booking-3?sessionId=3',
+      },
+    } as Job<any>;
+
+    await processor.process(job);
+
+    expect(prisma.notification.createMany).toHaveBeenCalledWith({
+      data: [
+        expect.objectContaining({
+          userId: 1,
+          type: NotificationType.INTERVIEW_UPCOMING,
+          targetUrl: '/interview/mentor-booking-3?sessionId=3',
+        }),
+        expect.objectContaining({
+          userId: 2,
+          type: NotificationType.INTERVIEW_UPCOMING,
+          targetUrl: '/interview/mentor-booking-3?sessionId=3',
+        }),
+      ],
+    });
+    expect(prisma.mockSession.update).not.toHaveBeenCalled();
   });
 });

@@ -18,8 +18,9 @@ interface CalendarSlotPickerProps {
 export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: CalendarSlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSession, setSelectedSession] = useState<AvailableSession | null>(null);
+  const [displayedMonth, setDisplayedMonth] = useState(new Date());
 
-  const currentMonth = formatDateForInput(new Date()).slice(0, 7);
+  const currentMonth = formatDateForInput(displayedMonth).slice(0, 7);
   const { data: availableDays = [] } = useAvailableDays(mentorId, planId, currentMonth);
   const dateStr = selectedDate ? formatDateForInput(selectedDate) : '';
   const { data: sessions = [] } = useAvailableSessions(mentorId, planId, dateStr);
@@ -46,6 +47,8 @@ export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: Calend
         </div>
         <Calendar
           mode="single"
+          month={displayedMonth}
+          onMonthChange={setDisplayedMonth}
           selected={selectedDate}
           onSelect={setSelectedDate}
           disabled={disabledDays}
