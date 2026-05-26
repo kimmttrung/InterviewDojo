@@ -33,8 +33,8 @@ export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
   const handleLeave = async () => {
     const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
     if (confirmed && call) {
-      await call.leave(); // rời khỏi cuộc gọi Stream
-      onLeave?.(); // 🔥 báo cho parent biết để hiện feedback
+      await call.leave();
+      onLeave?.();
     }
   };
 

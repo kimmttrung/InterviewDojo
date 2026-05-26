@@ -1,6 +1,6 @@
 // features/questions/components/QuestionDetail/AnswerSection.tsx
 import { useState } from 'react';
-import { MessageCircle, ChevronDown, MoreHorizontal, Star, PlusCircle, Share } from 'lucide-react';
+import { MessageCircle, ChevronDown, MoreHorizontal, PlusCircle, Share } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
@@ -29,12 +29,12 @@ export function AnswerSection({ answersCount }: { answersCount: number }) {
     <div className="space-y-8 mt-10">
       {/* Action Buttons */}
       <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-6">
-        <Button
+        {/* <Button
           variant="outline"
           className="rounded-xl border-slate-200 font-semibold hover:bg-indigo-50 hover:text-indigo-700 transition-all"
         >
           <Star className="w-4 h-4 mr-2" /> Save
-        </Button>
+        </Button> */}
         <Button
           variant="outline"
           className="rounded-xl border-slate-200 font-semibold hover:bg-indigo-50 hover:text-indigo-700 transition-all"

@@ -1,10 +1,11 @@
 generator client {
   provider        = "prisma-client-js"
-  previewFeatures = ["fullTextSearchPostgres"]
+  previewFeatures = ["fullTextSearchPostgres", "postgresqlExtensions"]
 }
 
 datasource db {
-  provider = "postgresql"
+  provider   = "postgresql"
+  extensions = [vector] 
 }
 
 // ==================== ENUMS ====================
@@ -54,11 +55,11 @@ enum SkillType {
 }
 
 enum SkillLevel {
-  LEARNING
-  PRACTICED
-  PERSONAL_PROJECT
-  PRODUCTION_READY
-  EXPERT
+  AWARENESS       // Mới biết / Đang tìm hiểu
+  FOUNDATION      // Có nền tảng / Có thể làm khi có hướng dẫn
+  AUTONOMOUS      // Tự chủ / Làm việc độc lập tốt
+  FLUENT          // Thuần thục / Có thể tối ưu hoặc ứng biến linh hoạt
+  LEADERSHIP      // Chuyên gia / Có thể dẫn dắt, dạy lại người khác
 }
 
 enum SessionStatus {
@@ -238,6 +239,7 @@ model User {
   createdAt       DateTime   @default(now()) @map("created_at")
   updatedAt       DateTime   @updatedAt @map("updated_at")
   targetRoleId    Int?       @map("target_role_id")
+  embeddingVector Unsupported("vector(1024)")? @map("embedding_vector")
 
   targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
   mentorProfile       MentorProfile?
@@ -267,7 +269,26 @@ model User {
   moderationLogsReceived ModerationLog[] @relation("ModeratedUsers")
   moderationLogsCreated  ModerationLog[] @relation("ModeratorActions")
 
+  // cache recommendation 
+  recommendationsAsCandidate CandidateRecommendation[] @relation("CandidateRecommendations")
+  recommendationsAsMentor    CandidateRecommendation[] @relation("RecommendedMentors")
+
   @@map("users")
+}
+
+model CandidateRecommendation {
+  candidateId Int   @map("candidate_id")
+  mentorId    Int   @map("mentor_id")
+  score       Float
+  rank        Int   // Thứ hạng (1, 2, 3...) để sort nhanh hơn
+  updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
+
+  candidate   User  @relation("CandidateRecommendations", fields: [candidateId], references: [id], onDelete: Cascade)
+  mentor      User  @relation("RecommendedMentors", fields: [mentorId], references: [id], onDelete: Cascade)
+
+  @@id([candidateId, mentorId])
+  @@index([candidateId, rank]) // Đánh index để query tốc độ bàn thờ
+  @@map("candidate_recommendations")
 }
 
 model UserReport {
@@ -347,7 +368,7 @@ model MentorProfile {
   id                   Int            @id @default(autoincrement())
   userId               Int            @unique @map("user_id")
   headline             String
-  introductionVideoUrl String?        @map("introdcution_video_url")
+  introductionVideoUrl String?        @map("introduction_video_url")
   createdAt            DateTime       @default(now()) @map("created_at")
   updatedAt            DateTime       @updatedAt @map("updated_at")
   approvalStatus       ApprovalStatus @default(INCOMPLETE) @map("approval_status")
@@ -411,7 +432,7 @@ model JobRole {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
-
+  
   experiences Experience[]
   questions   QuestionJobRole[]
   candidates  User[]            @relation("CandidateTargetRole")

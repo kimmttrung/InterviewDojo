@@ -18,6 +18,7 @@ import { BookingService } from './booking.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { SocketService } from '../socket/socket.service';
 import { SessionService } from '../session/session.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -38,6 +39,7 @@ describe('BookingService', () => {
 
   const sessionService = {
     scheduleSessionEnd: jest.fn(),
+    scheduleSessionStartNotification: jest.fn(),
   };
 
   beforeEach(async () => {
@@ -47,6 +49,12 @@ describe('BookingService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: SocketService, useValue: socketService },
         { provide: SessionService, useValue: sessionService },
+        {
+          provide: EventEmitter2,
+          useValue: {
+            emit: jest.fn(),
+          },
+        },
       ],
     }).compile();
 
@@ -298,7 +306,10 @@ describe('BookingService', () => {
     });
     expect(tx.notification.createMany).toHaveBeenCalledWith({
       data: expect.arrayContaining([
-        expect.objectContaining({ type: NotificationType.BOOKING_CREATED }),
+        expect.objectContaining({
+          type: NotificationType.BOOKING_CREATED,
+          targetUrl: '/mentor/bookings?bookingId=20',
+        }),
         expect.objectContaining({ type: NotificationType.TRANSACTION_SUCCESS }),
       ]),
     });
@@ -349,6 +360,7 @@ describe('BookingService', () => {
       id: 80,
       scheduledAt: pending.startTime,
       durationMinutes: 60,
+      meetingLink: null,
     };
     const tx = {
       booking: {
@@ -361,6 +373,10 @@ describe('BookingService', () => {
       mockSession: {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(mockSession),
+        update: jest.fn().mockResolvedValue({
+          ...mockSession,
+          meetingLink: '/interview/mentor-booking-80?sessionId=80',
+        }),
       },
       bookingActionLog: { create: jest.fn() },
       notification: { create: jest.fn() },
@@ -382,6 +398,32 @@ describe('BookingService', () => {
       pending.startTime,
       60,
     );
+    expect(tx.mockSession.update).toHaveBeenCalledWith({
+      where: { id: 80 },
+      data: { meetingLink: '/interview/mentor-booking-80?sessionId=80' },
+    });
+    expect(
+      sessionService.scheduleSessionStartNotification,
+    ).toHaveBeenCalledWith(
+      80,
+      [2, 1],
+      pending.startTime,
+      '/interview/mentor-booking-80?sessionId=80',
+    );
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 1,
+        type: NotificationType.INTERVIEW_UPCOMING,
+        targetUrl: '/sessions',
+      }),
+    });
+    expect(tx.notification.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 2,
+        type: NotificationType.INTERVIEW_UPCOMING,
+        targetUrl: '/mentor/sessions',
+      }),
+    });
     expect(socketService.emitToUser).toHaveBeenCalledWith(
       1,
       'SESSION_ACCEPTED',
@@ -426,6 +468,7 @@ describe('BookingService', () => {
       id: 81,
       scheduledAt: pending.startTime,
       durationMinutes: 30,
+      meetingLink: '/interview/mentor-booking-81?sessionId=81',
     };
     const tx = {
       booking: {
@@ -438,6 +481,7 @@ describe('BookingService', () => {
       mockSession: {
         findFirst: jest.fn().mockResolvedValue(existingSession),
         create: jest.fn(),
+        update: jest.fn(),
       },
       bookingActionLog: { create: jest.fn() },
       notification: { create: jest.fn() },
@@ -609,6 +653,12 @@ describe('BookingService', () => {
         findFirst: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockImplementation(async ({ data }) => ({
           id: 82,
+          ...data,
+        })),
+        update: jest.fn().mockImplementation(async ({ data }) => ({
+          id: 82,
+          scheduledAt: pending.startTime,
+          durationMinutes: 60,
           ...data,
         })),
       },

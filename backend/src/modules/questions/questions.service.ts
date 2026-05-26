@@ -104,6 +104,7 @@ export class QuestionsService {
       type,
       category,
       jobRole,
+      bookmarked,
     } = query;
 
     const skip = (page - 1) * limit;
@@ -135,6 +136,9 @@ export class QuestionsService {
           },
         },
       };
+    }
+    if (bookmarked && userId) {
+      where.bookmarks = { some: { userId } };
     }
 
     const [questions, total] = await Promise.all([

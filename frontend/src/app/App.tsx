@@ -35,9 +35,6 @@ import QuestionDetailContainer from '../features/shared-domain/question-bank/pag
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
 import WalletPage from '@/features/wallet/pages/WalletPage';
-import SessionPage from '@/features/session/page/SessionPage';
-import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
-import { Navbar } from '@/shared/components/layout/Navbar';
 import AdminLayout from '@/features/admin/components/AdminLayout';
 import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprovalList';
 import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
@@ -51,6 +48,10 @@ import { QuestionList } from '@/features/admin/questions/pages/QuestionList';
 import { QuestionForm } from '@/features/admin/questions/pages/QuestionForm';
 import JobRolesPage from '@/features/admin/job-roles/pages/JobRolesPage';
 
+import CandidateSessionsPage from '@/features/session/page/CandidateSessionPage';
+import MentorSessionsPage from '@/features/session/page/MentorSessionPage';
+// import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
+// import { Navbar } from '@/shared/components/layout/Navbar';
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -76,27 +77,27 @@ const SelectRoleGuard = () => {
   return <Navigate to="/" replace />;
 };
 
-const SessionLayout = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <main>
-        <Outlet />
-      </main>
-    </div>
-  );
-};
+// const SessionLayout = () => {
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <Navbar />
+//       <main>
+//         <Outlet />
+//       </main>
+//     </div>
+//   );
+// };
 
 // Layout cho Candidate (Không chứa Navbar để các trang Home, Practice tự render layout của nó)
-const CandidateLayout = () => {
-  return (
-    <div className="min-h-screen bg-background">
-      <main>
-        <Outlet />
-      </main>
-    </div>
-  );
-};
+// const CandidateLayout = () => {
+//   return (
+//     <div className="min-h-screen bg-background">
+//       <main>
+//         <Outlet />
+//       </main>
+//     </div>
+//   );
+// };
 
 // ──────────────────────────────────────────
 // App component chính
@@ -117,97 +118,95 @@ export function App() {
             {/* ========================================== */}
             {/* NHÓM 1: CÁC TRANG TỰ QUẢN LÝ LAYOUT/NAVBAR */}
             {/* ========================================== */}
-            <Route element={<CandidateLayout />}>
-              <Route
-                path="/home"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <Home />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/wallet"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <WalletPage />
-                  </ProtectedRoute>
-                }
-              />
+            {/* <Route element={<CandidateLayout />}> */}
+            <Route
+              path="/home"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <Home />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/wallet"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <WalletPage />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Target Role Setup */}
-              <Route path="/candidate/setup" element={<SelectRoleGuard />} />
-              <Route
-                path="/mentor/setup"
-                element={
-                  <ProtectedRoute roles={['MENTOR']}>
-                    <MentorSetup />
-                  </ProtectedRoute>
-                }
-              />
+            {/* Target Role Setup */}
+            <Route path="/candidate/setup" element={<SelectRoleGuard />} />
+            <Route
+              path="/mentor/setup"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorSetup />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Interview Room */}
-              <Route
-                path="/interview/:roomId"
-                element={
-                  <ProtectedRoute>
-                    <InterviewRoom />
-                  </ProtectedRoute>
-                }
-              />
+            {/* Interview Room */}
+            <Route
+              path="/interview/:roomId"
+              element={
+                <ProtectedRoute>
+                  <InterviewRoom />
+                </ProtectedRoute>
+              }
+            />
 
-              {/* Dashboard & Home */}
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <CandidateDashboardPage />
-                  </ProtectedRoute>
-                }
-              />
-              <Route path="/" element={<RootRedirect />} />
+            {/* Dashboard & Home */}
+            <Route
+              path="/dashboard"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <CandidateDashboardPage />
+                </ProtectedRoute>
+              }
+            />
+            <Route path="/" element={<RootRedirect />} />
 
-              {/* Practice – chỉ candidate */}
-              <Route
-                path="/practice"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <Practice />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice/solo-recording"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <SoloRecording />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/practice/matching"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <PeerMatchingPage />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
+            {/* Practice – chỉ candidate */}
+            <Route
+              path="/practice"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <Practice />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/practice/solo-recording"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <SoloRecording />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/practice/matching"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <PeerMatchingPage />
+                </ProtectedRoute>
+              }
+            />
+            {/* </Route> */}
 
             {/* ========================================== */}
             {/* NHÓM 2: CHỈ THÊM NAVBAR KHI VÀO SESSIONS   */}
             {/* ========================================== */}
 
-            <Route element={<SessionLayout />}>
-              <Route
-                path="/sessions"
-                element={
-                  <ProtectedRoute roles={['CANDIDATE']}>
-                    <SessionPage />
-                  </ProtectedRoute>
-                }
-              />
-            </Route>
+            <Route
+              path="/sessions"
+              element={
+                <ProtectedRoute roles={['CANDIDATE']}>
+                  <CandidateSessionsPage />
+                </ProtectedRoute>
+              }
+            />
 
             {/* ========================================== */}
             {/* NHÓM 3: COMPONENT CHUNG (KHÔNG BỌC NAVBAR) */}
@@ -290,9 +289,7 @@ export function App() {
               path="/mentor/sessions"
               element={
                 <ProtectedRoute roles={['MENTOR']}>
-                  <MentorLayout>
-                    <SessionPage />
-                  </MentorLayout>
+                  <MentorSessionsPage />
                 </ProtectedRoute>
               }
             />
@@ -349,7 +346,6 @@ export function App() {
               }
             />
           </Routes>
-          <UserProfileModal />
         </TooltipProvider>
       </ThemeProvider>
     </I18nextProvider>

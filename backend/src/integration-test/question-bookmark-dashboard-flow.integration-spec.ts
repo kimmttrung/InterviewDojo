@@ -4,6 +4,7 @@ import { AiService } from '../modules/ai-summary/ai-summary.service';
 import { BookmarkService } from '../modules/bookmark/bookmark.service';
 import { DashboardService } from '../modules/candidate-dashboard/candidate-dashboard.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 describe('Question bookmark dashboard flow integration', () => {
   let bookmarkService: BookmarkService;
@@ -69,6 +70,7 @@ describe('Question bookmark dashboard flow integration', () => {
     };
 
     const module: TestingModule = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         BookmarkService,
         DashboardService,

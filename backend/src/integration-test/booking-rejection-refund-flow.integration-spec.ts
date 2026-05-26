@@ -9,6 +9,7 @@ import { SessionService } from '../modules/session/session.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 describe('Booking Rejection Refund Integration', () => {
   let bookingService: BookingService;
@@ -72,6 +73,7 @@ describe('Booking Rejection Refund Integration', () => {
     jest.clearAllMocks();
 
     const moduleRef = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         BookingService,
         WalletService,

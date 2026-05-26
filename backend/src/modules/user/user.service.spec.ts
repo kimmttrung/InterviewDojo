@@ -4,6 +4,7 @@ import { Role, SessionMode } from '@prisma/client';
 import { UserService } from './user.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
 
 describe('UserService', () => {
   let service: UserService;
@@ -58,6 +59,7 @@ describe('UserService', () => {
         UserService,
         { provide: PrismaService, useValue: prisma },
         { provide: CloudinaryService, useValue: cloudinaryService },
+        { provide: EventEmitter2, useValue: { emit: jest.fn() } },
       ],
     }).compile();
 

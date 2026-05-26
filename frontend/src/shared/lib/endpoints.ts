@@ -162,6 +162,12 @@ export const API_ENDPOINT = {
     REPORT_DETAIL: (id: number) => `/reports/${id}`,
     UPDATE_REPORT_STATUS: (id: number) => `/reports/${id}/status`,
   },
+
+  RECOMMENDATIONS: {
+    GET_FOR_CANDIDATE: (candidateUserId: number | string) =>
+      `/recommendations/candidate/${candidateUserId}`,
+  },
+
   REPORT: {
     CREATE_USER: '/reports/user',
     GET_LIST: '/reports',

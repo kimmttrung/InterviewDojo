@@ -27,12 +27,15 @@ import {
   SessionMode,
 } from '@prisma/client';
 import { SessionService } from '../session/session.service';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketService: SocketService,
     private readonly sessionService: SessionService,
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   private mapToBookingResponse(
@@ -316,7 +319,7 @@ export class BookingService {
             type: NotificationType.BOOKING_CREATED,
             title: 'Có lịch hẹn mới',
             message: 'Một candidate vừa đặt lịch hẹn với bạn.',
-            targetUrl: '/mentor/bookings',
+            targetUrl: `/mentor/bookings?bookingId=${bookingId}`,
           },
           {
             userId: updatedBooking.candidateId,
@@ -384,12 +387,26 @@ export class BookingService {
         });
       }
 
+      const meetingLink = `/interview/mentor-booking-${mockSession.id}?sessionId=${mockSession.id}`;
+      if (mockSession.meetingLink !== meetingLink) {
+        mockSession = await tx.mockSession.update({
+          where: { id: mockSession.id },
+          data: { meetingLink },
+        });
+      }
+
       const userIds = [updated.mentorId, updated.candidateId];
       await this.sessionService.scheduleSessionEnd(
         mockSession.id,
         userIds,
         mockSession.scheduledAt,
         mockSession.durationMinutes,
+      );
+      await this.sessionService.scheduleSessionStartNotification(
+        mockSession.id,
+        userIds,
+        mockSession.scheduledAt,
+        meetingLink,
       );
 
       await tx.bookingActionLog.create({
@@ -408,7 +425,16 @@ export class BookingService {
           type: NotificationType.INTERVIEW_UPCOMING,
           title: 'Lịch phỏng vấn đã được xác nhận',
           message: 'Mentor đã xác nhận lịch phỏng vấn của bạn.',
-          targetUrl: '/dashboard',
+          targetUrl: '/sessions',
+        },
+      });
+      await tx.notification.create({
+        data: {
+          userId: updated.mentorId,
+          type: NotificationType.INTERVIEW_UPCOMING,
+          title: 'Lịch phỏng vấn sắp tới',
+          message: 'Bạn có một lịch phỏng vấn đã được xác nhận.',
+          targetUrl: '/mentor/sessions',
         },
       });
       this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
@@ -423,6 +449,9 @@ export class BookingService {
         bookingId,
       });
 
+      this.eventEmitter.emit('booking.completed', {
+        candidateId: booking.candidateId,
+      });
       return this.mapToBookingResponse(updated);
     });
   }

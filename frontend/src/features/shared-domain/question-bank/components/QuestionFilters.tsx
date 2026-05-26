@@ -19,7 +19,8 @@ const typeLabels: Record<QuestionType, { label: string; icon: any }> = {
 };
 
 export function QuestionFilters() {
-  const { type, difficulty, setType, setDifficulty } = useQuestionsFilters();
+  const { type, difficulty, setType, setDifficulty, setBookmarked, bookmarked } =
+    useQuestionsFilters();
   const ActiveIcon = type ? typeLabels[type].icon : Layers;
 
   return (
@@ -74,6 +75,14 @@ export function QuestionFilters() {
           <DropdownMenuItem onClick={() => setDifficulty(Difficulty.HARD)}>Hard</DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+
+      <Button
+        variant={bookmarked ? 'default' : 'outline'}
+        className={`rounded-lg ${bookmarked ? 'bg-indigo-600 text-white' : 'border-indigo-600 text-indigo-600'}`}
+        onClick={() => setBookmarked(!bookmarked)}
+      >
+        Saved
+      </Button>
     </div>
   );
 }

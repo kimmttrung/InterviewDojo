@@ -1,4 +1,4 @@
-import { getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test } from '@nestjs/testing';
 import {
   BookingStatus,
@@ -13,6 +13,7 @@ import { SessionService } from '../modules/session/session.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 
 describe('Booking Wallet Session Integration', () => {
   let bookingService: BookingService;
@@ -54,6 +55,7 @@ describe('Booking Wallet Session Integration', () => {
   };
 
   const socketService = { emitToUser: jest.fn() };
+  // Mock API cơ bản vẫn tương thích tốt giữa Bull và BullMQ trong unit test
   const queue = { getJob: jest.fn(), add: jest.fn(), removeJobs: jest.fn() };
 
   const prisma: any = {
@@ -129,6 +131,10 @@ describe('Booking Wallet Session Integration', () => {
         state.session = { id: 30, ...data };
         return state.session;
       }),
+      update: jest.fn(async ({ data }: any) => {
+        Object.assign(state.session, data);
+        return state.session;
+      }),
       findMany: jest.fn(async ({ where }: any) => {
         if (!state.session || state.session.status !== where.status) return [];
         return [
@@ -161,6 +167,7 @@ describe('Booking Wallet Session Integration', () => {
     queue.getJob.mockResolvedValue(null);
 
     const moduleRef = await Test.createTestingModule({
+      imports: [EventEmitterModule.forRoot()],
       providers: [
         BookingService,
         WalletService,
@@ -218,6 +225,15 @@ describe('Booking Wallet Session Integration', () => {
       { sessionId: 30, userIds: [mentor.id, candidate.id] },
       expect.objectContaining({ jobId: 'session-30' }),
     );
+    expect(queue.add).toHaveBeenCalledWith(
+      'start-session-notification',
+      {
+        sessionId: 30,
+        userIds: [mentor.id, candidate.id],
+        meetingLink: '/interview/mentor-booking-30?sessionId=30',
+      },
+      expect.objectContaining({ jobId: 'session-start-30' }),
+    );
 
     const sessions = await sessionService.getSessions(candidate.id, {
       tab: SessionTab.UPCOMING,
@@ -230,6 +246,26 @@ describe('Booking Wallet Session Integration', () => {
         coachingPlan: 'Backend Interview',
       }),
     );
-    expect(state.notifications).toHaveLength(3);
+    expect(state.notifications).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          userId: mentor.id,
+          targetUrl: `/mentor/bookings?bookingId=${created.id}`,
+        }),
+        expect.objectContaining({
+          userId: candidate.id,
+          targetUrl: '/wallet',
+        }),
+        expect.objectContaining({
+          userId: candidate.id,
+          targetUrl: '/sessions',
+        }),
+        expect.objectContaining({
+          userId: mentor.id,
+          targetUrl: '/mentor/sessions',
+        }),
+      ]),
+    );
+    expect(state.notifications).toHaveLength(4);
   });
 });

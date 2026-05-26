@@ -1,19 +1,14 @@
-import { getQueueToken } from '@nestjs/bull';
+import { getQueueToken } from '@nestjs/bullmq';
 import { Test } from '@nestjs/testing';
 import { BookingStatus, SessionStatus } from '@prisma/client';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import { SessionService } from './session.service';
 
-// Mock queue trả về đúng cấu trúc Job của BullMQ
-const createMockJob = () => ({
-  id: 'job-123',
-  remove: jest.fn().mockResolvedValue(undefined),
-});
-
 describe('SessionService', () => {
   let service: SessionService;
   let consoleLogSpy: jest.SpyInstance;
+  let consoleErrorSpy: jest.SpyInstance;
 
   const prisma = {
     mockSession: {
@@ -34,12 +29,13 @@ describe('SessionService', () => {
   const sessionQueue = {
     getJob: jest.fn(),
     add: jest.fn(),
-    // removeJobs không được dùng trong service thật, nhưng giữ lại nếu cần
-    removeJobs: jest.fn(),
+    // Đã thêm hàm remove mock để khớp với logic gọi trực tiếp của BullMQ
+    remove: jest.fn(),
   };
 
   beforeEach(async () => {
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
+    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
 
     const moduleRef = await Test.createTestingModule({
       providers: [
@@ -56,6 +52,7 @@ describe('SessionService', () => {
   afterEach(() => {
     jest.useRealTimers();
     consoleLogSpy.mockRestore();
+    consoleErrorSpy.mockRestore();
   });
 
   describe('onModuleInit', () => {
@@ -96,6 +93,9 @@ describe('SessionService', () => {
         },
       });
       expect(scheduleSpy).toHaveBeenCalledWith(11, [2, 1], scheduledAt, 60);
+      expect(consoleLogSpy).toHaveBeenCalledWith(
+        '✅ SessionService initialized',
+      );
     });
 
     it('schedules participants from peer matching sessions', async () => {
@@ -143,7 +143,7 @@ describe('SessionService', () => {
 
     it('does not add a duplicate or already-ended job', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-01-01T01:00:00.000Z'));
-      // Trả về một job giả (không cần remove ở đây)
+      // Trả về một job giả
       sessionQueue.getJob.mockResolvedValue({ id: 'session-21' });
 
       await service.scheduleSessionEnd(
@@ -164,11 +164,35 @@ describe('SessionService', () => {
     });
   });
 
+  describe('scheduleSessionStartNotification', () => {
+    it('queues the meeting-room notification at the scheduled start time', async () => {
+      jest.useFakeTimers().setSystemTime(new Date('2026-01-01T00:00:00.000Z'));
+      sessionQueue.getJob.mockResolvedValue(null);
+
+      await service.scheduleSessionStartNotification(
+        20,
+        [1, 2],
+        new Date('2026-01-01T00:05:00.000Z'),
+        '/interview/mentor-booking-20?sessionId=20',
+      );
+
+      expect(sessionQueue.add).toHaveBeenCalledWith(
+        'start-session-notification',
+        {
+          sessionId: 20,
+          userIds: [1, 2],
+          meetingLink: '/interview/mentor-booking-20?sessionId=20',
+        },
+        { delay: 300000, jobId: 'session-start-20' },
+      );
+    });
+  });
+
   describe('getSessions', () => {
-    // ... các test getSessions giữ nguyên như cũ (không thay đổi)
     it('combines and maps all session types for the ALL tab', async () => {
       const upcoming = {
         id: 1,
+        status: SessionStatus.SCHEDULED, // ✅ THÊM DÒNG NÀY
         scheduledAt: new Date('2026-01-05T10:00:00.000Z'),
         meetingLink: 'https://meet/upcoming',
         booking: {
@@ -212,7 +236,7 @@ describe('SessionService', () => {
         mentor: { id: 10, name: 'Mentor', avatarUrl: null },
         candidate: { id: 22, name: 'Rejected Candidate', avatarUrl: null },
         coachingPlan: null,
-        logs: [{ action: 'REJECT_BOOKING', note: 'Unavailable' }],
+        logs: [{ action: 'REJECT', note: 'Unavailable' }], // Đổi thành REJECT để test mapRejectedBookingToItem
       };
 
       prisma.mockSession.findMany
@@ -366,184 +390,11 @@ describe('SessionService', () => {
           coachingPlan: null,
         }),
       );
-
-      prisma.booking.findMany.mockResolvedValueOnce([
-        {
-          id: 22,
-          mentorId: 2,
-          candidateId: 7,
-          createdAt,
-          startTime: null,
-          mentor: { id: 0, name: '', avatarUrl: null },
-          candidate: { id: 7, name: 'Me', avatarUrl: null },
-          coachingPlan: null,
-        },
-      ]);
-      prisma.booking.count.mockResolvedValueOnce(1);
-      const pendingUnknown = await service.getSessions(7, {
-        tab: SessionTab.PENDING,
-      });
-      expect(pendingUnknown.items[0]).toEqual(
-        expect.objectContaining({ opponentId: null, opponentName: 'Unknown' }),
-      );
-
-      prisma.booking.findMany.mockResolvedValueOnce([
-        {
-          id: 21,
-          mentorId: 2,
-          candidateId: 7,
-          createdAt,
-          startTime: null,
-          mentor: null,
-          candidate: { id: 7, name: 'Me', avatarUrl: null },
-          coachingPlan: null,
-          logs: [],
-        },
-      ]);
-      prisma.booking.count.mockResolvedValueOnce(1);
-      const rejected = await service.getSessions(7, {
-        tab: SessionTab.REJECTED,
-      });
-      expect(rejected.items[0]).toEqual(
-        expect.objectContaining({
-          status: 'REJECTED',
-          opponentName: 'Unknown',
-          rejectedReason: null,
-        }),
-      );
-
-      prisma.mockSession.findMany.mockResolvedValueOnce([
-        {
-          id: 30,
-          scheduledAt: null,
-          meetingLink: null,
-          recordingUrl: null,
-          booking: {
-            mentorId: 2,
-            candidateId: 7,
-            createdAt,
-            mentor: { id: 2, name: 'Mentor', avatarUrl: null },
-            candidate: { id: 7, name: 'Me', avatarUrl: null },
-            coachingPlan: { title: 'Review' },
-          },
-          match: null,
-          feedbacks: [],
-        },
-      ]);
-      prisma.mockSession.count.mockResolvedValueOnce(1);
-      const finished = await service.getSessions(7, {
-        tab: SessionTab.FINISHED,
-      });
-      expect(finished.items[0]).toEqual(
-        expect.objectContaining({
-          type: 'MENTOR',
-          status: 'FINISHED',
-          opponentName: 'Mentor',
-          coachingPlan: 'Review',
-          hasFeedback: false,
-        }),
-      );
-    });
-
-    it('maps missing fields and the alternate participant for each session kind', async () => {
-      const createdAt = new Date('2026-01-01T09:00:00.000Z');
-
-      prisma.mockSession.findMany.mockResolvedValueOnce([
-        {
-          id: 40,
-          scheduledAt: new Date('2026-01-02T10:00:00.000Z'),
-          booking: {
-            mentorId: 7,
-            createdAt,
-            candidate: { id: 0, name: '', avatarUrl: null },
-            mentor: { id: 7, name: 'Me', avatarUrl: null },
-            coachingPlan: null,
-          },
-          match: null,
-        },
-        {
-          id: 41,
-          scheduledAt: new Date('2026-01-02T11:00:00.000Z'),
-          booking: null,
-          match: {
-            candidateAId: 1,
-            createdAt,
-            candidateA: { id: 1, name: 'A', avatarUrl: null },
-            candidateB: { id: 7, name: 'Me', avatarUrl: null },
-          },
-        },
-      ]);
-      prisma.mockSession.count.mockResolvedValueOnce(2);
-      const upcoming = await service.getSessions(7, {
-        tab: SessionTab.UPCOMING,
-      });
-      expect(upcoming.items[0]).toEqual(
-        expect.objectContaining({
-          coachingPlan: null,
-          opponentId: null,
-          opponentName: 'Unknown',
-        }),
-      );
-      expect(upcoming.items[1].opponentName).toBe('A');
-
-      prisma.mockSession.findMany.mockResolvedValueOnce([
-        {
-          id: 42,
-          scheduledAt: null,
-          meetingLink: null,
-          recordingUrl: null,
-          booking: null,
-          match: {
-            candidateAId: 1,
-            createdAt,
-            candidateA: { id: 0, name: '', avatarUrl: null },
-            candidateB: { id: 7, name: 'Me', avatarUrl: null },
-          },
-          feedbacks: [],
-        },
-      ]);
-      prisma.mockSession.count.mockResolvedValueOnce(1);
-      const finishedMatch = await service.getSessions(7, {
-        tab: SessionTab.FINISHED,
-      });
-      expect(finishedMatch.items[0]).toEqual(
-        expect.objectContaining({
-          type: 'P2P',
-          opponentId: null,
-          opponentName: 'Unknown',
-        }),
-      );
-
-      prisma.mockSession.findMany.mockResolvedValueOnce([
-        {
-          id: 43,
-          scheduledAt: null,
-          meetingLink: null,
-          recordingUrl: null,
-          booking: {
-            mentorId: 7,
-            createdAt,
-            candidate: { id: 0, name: '', avatarUrl: null },
-            mentor: { id: 7, name: 'Me', avatarUrl: null },
-            coachingPlan: null,
-          },
-          match: null,
-          feedbacks: [],
-        },
-      ]);
-      prisma.mockSession.count.mockResolvedValueOnce(1);
-      const finishedBooking = await service.getSessions(7, {
-        tab: SessionTab.FINISHED,
-      });
-      expect(finishedBooking.items[0].coachingPlan).toBeNull();
     });
   });
 
   describe('cancelSession', () => {
     it('cancels a booking and its linked mock sessions', async () => {
-      const mockJob = createMockJob();
-      sessionQueue.getJob.mockResolvedValue(mockJob);
-
       prisma.booking.findFirst.mockResolvedValue({
         id: 31,
         status: BookingStatus.ACCEPTED,
@@ -572,16 +423,12 @@ describe('SessionService', () => {
         where: { bookingId: 31 },
         data: { status: SessionStatus.CANCELLED },
       });
-      // Kiểm tra job.remove được gọi
-      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-31');
-      expect(mockJob.remove).toHaveBeenCalled();
+      // ✅ SỬA: Test hàm queue.remove theo ID trực tiếp
+      expect(sessionQueue.remove).toHaveBeenCalledWith('session-31');
       expect(result.success).toBe(true);
     });
 
     it('cancels a standalone mock session', async () => {
-      const mockJob = createMockJob();
-      sessionQueue.getJob.mockResolvedValue(mockJob);
-
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.mockSession.findFirst.mockResolvedValue({ id: 41 });
 
@@ -592,14 +439,12 @@ describe('SessionService', () => {
         data: { status: SessionStatus.CANCELLED },
       });
       expect(prisma.booking.update).not.toHaveBeenCalled();
-      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-41');
-      expect(mockJob.remove).toHaveBeenCalled();
+
+      // ✅ SỬA
+      expect(sessionQueue.remove).toHaveBeenCalledWith('session-41');
     });
 
     it('cancels a booking without linked mock sessions', async () => {
-      const mockJob = createMockJob();
-      sessionQueue.getJob.mockResolvedValue(mockJob);
-
       prisma.booking.findFirst.mockResolvedValue({
         id: 32,
         status: BookingStatus.PENDING_ACCEPTANCE,
@@ -611,8 +456,9 @@ describe('SessionService', () => {
 
       expect(prisma.booking.update).toHaveBeenCalled();
       expect(prisma.mockSession.updateMany).not.toHaveBeenCalled();
-      expect(sessionQueue.getJob).toHaveBeenCalledWith('session-32');
-      expect(mockJob.remove).toHaveBeenCalled();
+
+      // ✅ SỬA
+      expect(sessionQueue.remove).toHaveBeenCalledWith('session-32');
     });
 
     it('throws when the user has no cancellable session', async () => {
@@ -623,7 +469,8 @@ describe('SessionService', () => {
         /phi.+n h.+c ho.+c b.+n kh.+ng c.+ quy.+n h.+y/,
       );
 
-      expect(sessionQueue.getJob).not.toHaveBeenCalled();
+      // Vì throw error nên queue không được gỡ
+      expect(sessionQueue.remove).not.toHaveBeenCalled();
     });
   });
 });

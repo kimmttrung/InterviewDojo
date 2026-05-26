@@ -26,7 +26,6 @@ import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
 import { FilesInterceptor } from '@nestjs/platform-express';
 import { Role } from '@prisma/client';
 import { UploadedFileType } from '@/common/types/uploaded-file.type';
-
 @Controller('reports')
 @UseGuards(JwtAuthGuard)
 export class ReportsController {
