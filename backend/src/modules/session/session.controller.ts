@@ -59,4 +59,11 @@ export class SessionController {
     );
     return { meetingLink: link };
   }
+
+  @Get(':id')
+  @ResponseMessage(Messages.SESSION.SESSION_FETCHED)
+  async getSessionDetail(@CurrentUser() user: any, @Param('id') id: string) {
+    const userId = Number(user.sub || user.id);
+    return this.sessionService.getSessionDetail(+id, userId);
+  }
 }

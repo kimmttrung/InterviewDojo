@@ -1,16 +1,14 @@
 // features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
-import { useCallback, useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
-
 import { InterviewHeader } from '../components/InterviewHeader';
 import { QuestionPanel } from '../components/QuestionPanel';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { VideoCallSection } from '../components/VideoCallSection';
 import { ChatAndNotes } from '../components/ChatAndNotes';
 import { useVideoCall } from '../../../../../../hooks/useVideoCall';
-import { useQuestions } from '../../../../../../hooks/useQuestions';
 import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
 import { useSocketStore } from '../../../../../../stores/useSocketStore';
 import { WorkMode } from '../../../../../../shared/types/interview';
@@ -20,12 +18,11 @@ import { useCurrentUser } from '@/features/auth';
 import { useRandomQuestion } from '@/features/shared-domain/question-bank/hooks/useQuestions';
 import { api } from '@/shared/lib/api';
 import { useSessionEnded } from '../hooks/useSessionEnded';
-import {
-  useMyFeedback,
-  usePartnerFeedback,
-} from '@/features/shared-domain/feedback/hooks/useFeedback';
+import { useMyFeedback } from '@/features/shared-domain/feedback/hooks/useFeedback';
 import { FeedbackModal } from '@/features/shared-domain/feedback/components/FeedbackModal';
 import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
+import { useCursorSync } from '../hooks/useCursorSync';
+import { CursorOverlay } from '../components/CursorOverlay';
 
 export default function InterviewRoom() {
   const navigate = useNavigate();
@@ -35,6 +32,27 @@ export default function InterviewRoom() {
   const [streamToken, setStreamToken] = useState<string | null>(searchParams.get('token'));
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false); // đánh dấu đã rời phòng
+
+  const mainContainerRef = useRef<HTMLDivElement>(null);
+  const { cursors, sendMouseMove } = useCursorSync(roomId!, true);
+
+  // Lắng nghe mousemove trên toàn bộ main
+  useEffect(() => {
+    const container = mainContainerRef.current;
+    if (!container) return;
+
+    const onMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      if (x >= 0 && x <= rect.width && y >= 0 && y <= rect.height) {
+        sendMouseMove(x, y);
+      }
+    };
+
+    container.addEventListener('mousemove', onMouseMove);
+    return () => container.removeEventListener('mousemove', onMouseMove);
+  }, [sendMouseMove]); // ✅ bỏ mainContainerRef.current
 
   // Hook lắng nghe call ended (phòng tự kết thúc do đối phương rời)
   const isSessionEnded = useSessionEnded();
@@ -108,8 +126,8 @@ export default function InterviewRoom() {
   }, [randomQuestion]);
 
   // currentQuestion sẽ lấy từ randomQuestion hoặc null
-  const currentQuestion = randomQuestion || null;
-  const isLoading = isFetching;
+  // const currentQuestion = randomQuestion || null;
+  // const isLoading = isFetching;
 
   // Lấy các hàm từ Zustand Socket Store
   const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
@@ -179,7 +197,7 @@ export default function InterviewRoom() {
         <StreamCall call={call}>
           <div className="h-screen flex flex-col bg-white overflow-hidden">
             <InterviewHeader roomId={roomId!} />
-            <main className="flex-1 flex overflow-hidden">
+            <main ref={mainContainerRef} className="flex-1 flex overflow-hidden">
               <QuestionPanel
                 question={displayedQuestion}
                 onRandom={handleRandom}
@@ -196,10 +214,12 @@ export default function InterviewRoom() {
                 roomId={roomId!}
                 userId={userId}
               />
+
               <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
                 <VideoCallSection onLeave={handleLeaveRoom} />
                 <ChatAndNotes />
               </aside>
+              <CursorOverlay cursors={cursors} containerRef={mainContainerRef} />
             </main>
           </div>
         </StreamCall>

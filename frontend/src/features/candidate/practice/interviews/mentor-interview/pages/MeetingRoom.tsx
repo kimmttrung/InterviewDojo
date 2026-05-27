@@ -7,14 +7,27 @@ import { useMyFeedback } from '@/features/shared-domain/feedback/hooks/useFeedba
 import { useSessionEnded } from '../../peer-interview/hooks/useSessionEnded';
 import { FeedbackModal } from '@/features/shared-domain/feedback/components/FeedbackModal';
 import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
+import { useSessionDetail } from '@/features/session/hooks/useSessionDetail';
+import { useCurrentUser } from '@/features/auth';
 
 export default function MeetingRoom() {
   const { client, call, isLoading, error } = useMeeting();
   const navigate = useNavigate();
   const { roomId } = useParams();
-  const sessionIdNum = roomId ? Number(roomId) : NaN;
+  const sessionIdNum = roomId ? parseInt(roomId.split('-').pop() || '', 10) : NaN;
 
-  console.log('sessionIdNum', sessionIdNum);
+  const { data: user } = useCurrentUser();
+  const { data: session, isLoading: sessionLoading } = useSessionDetail(sessionIdNum);
+
+  // Xác định mode dựa vào user.id và session.mentorId / candidateId
+  const getFeedbackMode = () => {
+    if (!session || !user) return null;
+    if (user.id === session.mentorId) return 'MENTOR_TO_CANDIDATE';
+    if (user.id === session.candidateId) return 'CANDIDATE_TO_MENTOR';
+    return null;
+  };
+
+  const mode = getFeedbackMode();
 
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
@@ -76,14 +89,16 @@ export default function MeetingRoom() {
         </StreamCall>
       </StreamVideo>
 
-      <FeedbackModal open={showFeedback} onClose={handleFeedbackSkip}>
-        <FeedbackForm
-          mode="MENTOR_TO_CANDIDATE" // hoặc "MENTOR_INTERVIEW" - tuỳ backend của bạn
-          sessionId={Number(sessionIdNum)}
-          onSuccess={handleFeedbackSuccess}
-          onCancel={handleFeedbackSkip}
-        />
-      </FeedbackModal>
+      {mode && (
+        <FeedbackModal open={showFeedback} onClose={handleFeedbackSkip}>
+          <FeedbackForm
+            mode={mode}
+            sessionId={sessionIdNum}
+            onSuccess={handleFeedbackSuccess}
+            onCancel={handleFeedbackSkip}
+          />
+        </FeedbackModal>
+      )}
     </>
   );
 }

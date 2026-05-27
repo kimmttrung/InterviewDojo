@@ -149,4 +149,26 @@ export class SocketGateway
       `🔄 Filters updated in room ${payload.roomId}: Type=${payload.type}, Diff=${payload.difficulty}`,
     );
   }
+
+  @SubscribeMessage('mouse_move')
+  handleMouseMove(
+    client: Socket,
+    payload: {
+      roomId: string;
+      x: number;
+      y: number;
+      userId: string;
+      displayName?: string;
+      color?: string;
+    },
+  ) {
+    // Gửi lại cho tất cả mọi người trong phòng (trừ người gửi)
+    client.to(payload.roomId).emit('mouse_move', {
+      x: payload.x,
+      y: payload.y,
+      userId: payload.userId,
+      displayName: payload.displayName,
+      color: payload.color,
+    });
+  }
 }

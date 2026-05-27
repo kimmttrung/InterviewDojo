@@ -1,4 +1,10 @@
-import { BadRequestException, Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  OnModuleInit,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -433,6 +439,43 @@ export class SessionService implements OnModuleInit {
     // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
     await this.sessionQueue.remove(`session-${sessionId}`);
     return { success: true, message: 'Đã hủy phiên học' };
+  }
+
+  async getSessionDetail(sessionId: number, userId: number) {
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: {
+          select: { mentorId: true, candidateId: true },
+        },
+        match: {
+          select: { candidateAId: true, candidateBId: true },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    // Kiểm tra quyền: user phải tham gia session
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    if (!isParticipant) throw new ForbiddenException('Not participant');
+
+    return {
+      id: session.id,
+      source: session.source,
+      scheduledAt: session.scheduledAt,
+      durationMinutes: session.durationMinutes,
+      status: session.status,
+      mentorId: session.booking?.mentorId || null,
+      candidateId: session.booking?.candidateId || null,
+      intervieweeId: session.intervieweeId,
+      // thêm các field cần thiết
+    };
   }
 
   // ==================== MAPPERS ====================

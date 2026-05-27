@@ -5,7 +5,7 @@ import { QuickTagsSelector } from './QuickTagsSelector';
 import { useSubmitFeedback } from '../hooks/useFeedback';
 import { toast } from 'sonner';
 import { FeedbackMode, FeedbackRequest } from '../types/feedback.types';
-
+import { Rating } from 'react-simple-star-rating';
 interface Props {
   mode: FeedbackMode;
   sessionId: number;
@@ -72,14 +72,16 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
 
       {/* Rating */}
       <div className="flex items-center gap-4 mb-4">
-        <span className="text-sm font-medium text-gray-700">Overall rating (1–5 stars):</span>
+        <span className="text-sm font-medium text-gray-700">Overall rating (1–10 stars):</span>
 
-        <div style={{ display: 'inline-flex' }}>
-          <StarRating
-            rating={form.overallScore}
-            onRatingChange={handleRating}
-            allowHalf={true}
-            size={28}
+        <div className="flex flex-row items-center [font-size:0] [&_span]:inline-block [&_svg]:inline">
+          <Rating
+            initialValue={form.overallScore}
+            onClick={handleRating}
+            allowFraction={true}
+            iconsCount={10}
+            size={24}
+            className="flex flex-row items-center gap-0.5"
           />
         </div>
       </div>
@@ -106,9 +108,7 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
         </>
       )}
 
-      {/* Candidate → Mentor */}
-      {mode === 'CANDIDATE_TO_MENTOR' &&
-        renderTextarea('💬 Detailed comment', 'comment', 'Share more about the session...')}
+      {renderTextarea('Additional comments', 'comment', 'Any other feedback or comments?')}
 
       <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
         <button
