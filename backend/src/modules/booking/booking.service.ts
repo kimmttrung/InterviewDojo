@@ -28,6 +28,7 @@ import {
 } from '@prisma/client';
 import { SessionService } from '../session/session.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { randomUUID } from 'crypto';
 
 @Injectable()
 export class BookingService {
@@ -285,15 +286,19 @@ export class BookingService {
         data: {
           userId: candidateId,
           type: WalletTransactionType.PAYMENT,
-          amount: -price,
+          amount: price,
           balanceBefore: user.creditBalance,
           balanceAfter: newBalance,
           referenceId: `booking:${bookingId}`,
         },
       });
 
+      const generateOrderCode = (prefix: string) =>
+        `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
+
       await tx.payment.create({
         data: {
+          orderCode: generateOrderCode('BOOK'),
           bookingId,
           amount: price,
           currency: 'VND',

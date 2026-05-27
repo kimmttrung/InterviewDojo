@@ -175,7 +175,26 @@ export const Messages = {
   WALLET: {
     FETCHED: 'Lấy số dư ví thành công',
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
+
+    ADMIN_ADJUSTED: 'Admin cập nhật số dư thành công',
   },
+
+  PAYMENT: {
+    DEPOSIT_CREATED: 'Tạo yêu cầu nạp tiền thành công',
+    MOCK_SUCCESS: 'Mock thanh toán thành công',
+
+    PAYMENT_SUCCESS: 'Thanh toán thành công',
+    PAYMENT_FAILED: 'Thanh toán thất bại',
+
+    WEBHOOK_RECEIVED: 'Đã nhận webhook thanh toán',
+
+    INVALID_SIGNATURE: 'Chữ ký webhook không hợp lệ',
+    PAYMENT_NOT_FOUND: 'Không tìm thấy giao dịch',
+    PAYMENT_ALREADY_PROCESSED: 'Giao dịch đã được xử lý trước đó',
+
+    INVALID_AMOUNT: 'Số tiền không hợp lệ',
+  },
+
   FEEDBACK: {
     SUBMITTED: 'Đánh giá đã được gửi thành công',
     FETCHED_MY: 'Lấy đánh giá của bạn thành công',
