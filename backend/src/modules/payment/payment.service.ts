@@ -22,18 +22,17 @@ export class PaymentService {
     private readonly walletService: WalletService,
   ) {}
 
-  // ==================== PUBLIC ====================
-
   /**
    * Tạo đơn nạp tiền (PENDING).
-   * Trả raw data — TransformInterceptor sẽ bọc thành { success, data, message }.
+   * Sinh orderCode dạng DEP + 15 ký tự chữ/số, KHÔNG có dấu gạch dưới.
    */
   async createDeposit(userId: number, amount: number) {
     if (amount <= 0) throw new BadRequestException('Số tiền không hợp lệ');
     if (amount < 10000)
       throw new BadRequestException('Số tiền tối thiểu là 10,000 VNĐ');
 
-    const orderCode = `DEP_${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
+    // Loại bỏ dấu gạch dưới để tránh bị ngân hàng xóa
+    const orderCode = `DEP${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
     const expiredAt = new Date(Date.now() + 15 * 60 * 1000);
 
     const payment = await this.prisma.payment.create({
@@ -58,14 +57,13 @@ export class PaymentService {
 
   /**
    * Xử lý webhook từ SePay.
-   * Trả raw object — SePay chỉ cần HTTP 200, không quan tâm body format.
+   * Cho phép orderCode có hoặc không có dấu _ (để tương thích với cả payment cũ).
    */
   async handleSePayWebhook(
     payload: any,
     rawBody: string,
     signatureHeader?: string,
   ) {
-    // 1. Log ngay để phục vụ debug và đối soát
     const log = await this.prisma.paymentWebhookLog.create({
       data: {
         provider: 'SEPAY',
@@ -75,7 +73,7 @@ export class PaymentService {
       },
     });
 
-    // 2. Verify HMAC-SHA256 signature
+    // Verify signature
     if (sepayConfig.webhookSecret) {
       if (!this.verifySignature(rawBody, signatureHeader ?? '')) {
         await this.updateWebhookLog(log.id, 'FAILED', 'Invalid signature');
@@ -87,7 +85,7 @@ export class PaymentService {
       );
     }
 
-    // 3. Chỉ xử lý giao dịch tiền vào
+    // Chỉ xử lý giao dịch tiền vào
     if (payload.transferType && payload.transferType !== 'in') {
       await this.updateWebhookLog(
         log.id,
@@ -97,9 +95,10 @@ export class PaymentService {
       return { message: 'Skipped: not an incoming transfer' };
     }
 
-    // 4. Trích xuất orderCode từ content/description
+    // Trích xuất orderCode: có thể có hoặc không dấu _
     const content: string = payload.content ?? payload.description ?? '';
-    const match = content.match(/DEP_[A-Z0-9]+/);
+    // Pattern: DEP theo sau bởi chữ hoa/số, có thể có _ (nhưng không bắt buộc)
+    const match = content.match(/DEP_?[A-Z0-9]+/);
     if (!match) {
       await this.updateWebhookLog(
         log.id,
@@ -110,7 +109,6 @@ export class PaymentService {
     }
     const orderCode = match[0];
 
-    // 5. Tìm payment
     const payment = await this.prisma.payment.findUnique({
       where: { orderCode },
     });
@@ -119,7 +117,6 @@ export class PaymentService {
       throw new NotFoundException('Payment not found');
     }
 
-    // 6. Idempotency — SePay có thể retry nhiều lần
     if (payment.status !== PaymentStatus.PENDING) {
       await this.updateWebhookLog(
         log.id,
@@ -129,7 +126,6 @@ export class PaymentService {
       return { message: 'Payment already processed' };
     }
 
-    // 7. Kiểm tra hết hạn
     if (payment.expiredAt && payment.expiredAt < new Date()) {
       await this.prisma.payment.update({
         where: { id: payment.id },
@@ -139,7 +135,6 @@ export class PaymentService {
       throw new BadRequestException('Payment expired');
     }
 
-    // 8. So khớp số tiền — SePay dùng field `transferAmount`
     const webhookAmount = payload.transferAmount ?? payload.amount;
     if (webhookAmount !== payment.amount) {
       await this.updateWebhookLog(
@@ -150,7 +145,6 @@ export class PaymentService {
       throw new BadRequestException('Amount mismatch');
     }
 
-    // 9. Cập nhật Payment + cộng tiền trong 1 transaction
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.payment.update({
@@ -172,7 +166,6 @@ export class PaymentService {
           tx,
         );
       });
-
       await this.updateWebhookLog(log.id, 'VERIFIED', 'Success');
       return { message: 'Payment successful' };
     } catch (error) {
@@ -184,7 +177,6 @@ export class PaymentService {
 
   /**
    * Mock thanh toán thành công — chỉ dùng trong dev.
-   * Trả raw data — TransformInterceptor bọc lại.
    */
   async mockPaymentSuccess(paymentId: number) {
     if (process.env.NODE_ENV === 'production') {
@@ -223,9 +215,6 @@ export class PaymentService {
     return { paymentId, orderCode: payment.orderCode, amount: payment.amount };
   }
 
-  /**
-   * Cron: auto-expire payment PENDING quá hạn (mỗi 5 phút).
-   */
   @Cron(CronExpression.EVERY_5_MINUTES)
   async autoExpirePayments() {
     const result = await this.prisma.payment.updateMany({
@@ -242,19 +231,13 @@ export class PaymentService {
 
   // ==================== PRIVATE ====================
 
-  /**
-   * Verify HMAC-SHA256 signature của SePay.
-   * Dùng timingSafeEqual để tránh timing attack.
-   */
   private verifySignature(rawBody: string, signature: string): boolean {
     try {
       const expected = createHmac('sha256', sepayConfig.webhookSecret)
         .update(rawBody, 'utf8')
         .digest('hex');
-
       const expectedBuf = Buffer.from(expected, 'hex');
       const receivedBuf = Buffer.from(signature, 'hex');
-
       if (expectedBuf.length !== receivedBuf.length) return false;
       return timingSafeEqual(expectedBuf, receivedBuf);
     } catch {

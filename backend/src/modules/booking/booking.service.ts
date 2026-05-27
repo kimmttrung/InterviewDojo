@@ -293,8 +293,9 @@ export class BookingService {
         },
       });
 
-      const generateOrderCode = (prefix: string) =>
-        `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
+      const generateOrderCode = (prefix: string) => {
+        return `${prefix}${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
+      };
 
       await tx.payment.create({
         data: {
