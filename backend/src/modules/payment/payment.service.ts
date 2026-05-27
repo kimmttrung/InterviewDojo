@@ -22,16 +22,13 @@ export class PaymentService {
     private readonly walletService: WalletService,
   ) {}
 
-  /**
-   * Tạo đơn nạp tiền (PENDING).
-   * Sinh orderCode dạng DEP + 15 ký tự chữ/số, KHÔNG có dấu gạch dưới.
-   */
+  // ==================== PUBLIC ====================
+
   async createDeposit(userId: number, amount: number) {
     if (amount <= 0) throw new BadRequestException('Số tiền không hợp lệ');
     if (amount < 10000)
       throw new BadRequestException('Số tiền tối thiểu là 10,000 VNĐ');
 
-    // Loại bỏ dấu gạch dưới để tránh bị ngân hàng xóa
     const orderCode = `DEP${randomUUID().replace(/-/g, '').slice(0, 15).toUpperCase()}`;
     const expiredAt = new Date(Date.now() + 15 * 60 * 1000);
 
@@ -47,33 +44,72 @@ export class PaymentService {
       },
     });
 
-    return {
-      paymentId: payment.id,
-      orderCode,
-      amount,
-      expiredAt,
-    };
+    return { paymentId: payment.id, orderCode, amount, expiredAt };
   }
 
   /**
-   * Xử lý webhook từ SePay.
-   * Cho phép orderCode có hoặc không có dấu _ (để tương thích với cả payment cũ).
+   * Polling endpoint: trả status của payment.
+   * Frontend gọi mỗi 3 giây khi đang hiển thị QR.
+   * Kiểm tra userId để tránh user A xem payment của user B.
    */
+  async getPaymentStatus(paymentId: number, userId: number) {
+    const payment = await this.prisma.payment.findUnique({
+      where: { id: paymentId },
+      select: {
+        id: true,
+        status: true,
+        expiredAt: true,
+        userId: true,
+        amount: true,
+        orderCode: true,
+      },
+    });
+
+    if (!payment) throw new NotFoundException('Payment not found');
+    if (payment.userId !== userId)
+      throw new ForbiddenException('Access denied');
+
+    return {
+      paymentId: payment.id,
+      status: payment.status, // PENDING | PAID | EXPIRED | FAILED
+      expiredAt: payment.expiredAt,
+      amount: payment.amount,
+      orderCode: payment.orderCode,
+    };
+  }
+
   async handleSePayWebhook(
     payload: any,
     rawBody: string,
     signatureHeader?: string,
+    timestampHeader?: string,
   ) {
+    // 1. Log ngay để debug/đối soát
     const log = await this.prisma.paymentWebhookLog.create({
       data: {
         provider: 'SEPAY',
         payload,
+        // Lưu signature đầy đủ gồm cả prefix "sha256=..."
         signature: signatureHeader ?? null,
         status: 'RECEIVED',
       },
     });
 
-    // Verify signature
+    // 2. Chống replay attack: timestamp không được lệch quá 5 phút
+    if (timestampHeader) {
+      const ts = parseInt(timestampHeader, 10);
+      const diffSeconds = Math.abs(Date.now() / 1000 - ts);
+      if (diffSeconds > 300) {
+        await this.updateWebhookLog(
+          log.id,
+          'FAILED',
+          `Timestamp too old: ${diffSeconds}s`,
+        );
+        throw new ForbiddenException('Request timestamp too old');
+      }
+    }
+
+    // 3. Verify HMAC-SHA256 signature (khi đã cấu hình secret)
     if (sepayConfig.webhookSecret) {
       if (!this.verifySignature(rawBody, signatureHeader ?? '')) {
         await this.updateWebhookLog(log.id, 'FAILED', 'Invalid signature');
@@ -85,7 +121,6 @@ export class PaymentService {
       );
     }
 
-    // Chỉ xử lý giao dịch tiền vào
     if (payload.transferType && payload.transferType !== 'in') {
       await this.updateWebhookLog(
         log.id,
@@ -95,9 +130,7 @@ export class PaymentService {
       return { message: 'Skipped: not an incoming transfer' };
     }
 
-    // Trích xuất orderCode: có thể có hoặc không dấu _
     const content: string = payload.content ?? payload.description ?? '';
-    // Pattern: DEP theo sau bởi chữ hoa/số, có thể có _ (nhưng không bắt buộc)
     const match = content.match(/DEP_?[A-Z0-9]+/);
     if (!match) {
       await this.updateWebhookLog(
@@ -157,7 +190,6 @@ export class PaymentService {
             ),
           },
         });
-
         await this.walletService.depositAtomic(
           payment.userId!,
           payment.amount,
@@ -175,14 +207,10 @@ export class PaymentService {
     }
   }
 
-  /**
-   * Mock thanh toán thành công — chỉ dùng trong dev.
-   */
   async mockPaymentSuccess(paymentId: number) {
     if (process.env.NODE_ENV === 'production') {
       throw new ForbiddenException('Mock only available in non-production');
     }
-
     const payment = await this.prisma.payment.findUnique({
       where: { id: paymentId },
     });
@@ -218,10 +246,7 @@ export class PaymentService {
   @Cron(CronExpression.EVERY_5_MINUTES)
   async autoExpirePayments() {
     const result = await this.prisma.payment.updateMany({
-      where: {
-        status: PaymentStatus.PENDING,
-        expiredAt: { lt: new Date() },
-      },
+      where: { status: PaymentStatus.PENDING, expiredAt: { lt: new Date() } },
       data: { status: PaymentStatus.EXPIRED },
     });
     if (result.count > 0) {
@@ -231,13 +256,30 @@ export class PaymentService {
 
   // ==================== PRIVATE ====================
 
+  /**
+   * Verify HMAC-SHA256 signature của SePay.
+   *
+   * SePay gửi header:
+   *   X-SePay-Signature: sha256=<hex>
+   *   X-SePay-Timestamp: <unix_timestamp>
+   *
+   * Cần strip prefix "sha256=" trước khi so sánh.
+   * Dùng timingSafeEqual để tránh timing attack.
+   */
   private verifySignature(rawBody: string, signature: string): boolean {
     try {
+      // Strip prefix "sha256=" nếu có
+      const hexSignature = signature.startsWith('sha256=')
+        ? signature.slice(7)
+        : signature;
+
       const expected = createHmac('sha256', sepayConfig.webhookSecret)
         .update(rawBody, 'utf8')
         .digest('hex');
+
       const expectedBuf = Buffer.from(expected, 'hex');
-      const receivedBuf = Buffer.from(signature, 'hex');
+      const receivedBuf = Buffer.from(hexSignature, 'hex');
+
       if (expectedBuf.length !== receivedBuf.length) return false;
       return timingSafeEqual(expectedBuf, receivedBuf);
     } catch {

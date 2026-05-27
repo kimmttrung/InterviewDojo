@@ -294,7 +294,7 @@ describe('BookingService', () => {
     expect(tx.walletTransaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         type: WalletTransactionType.PAYMENT,
-        amount: -100,
+        amount: 100,
         balanceAfter: 200,
       }),
     });

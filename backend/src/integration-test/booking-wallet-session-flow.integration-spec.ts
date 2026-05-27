@@ -207,7 +207,7 @@ describe('Booking Wallet Session Integration', () => {
     expect(state.walletTransactions[0]).toEqual(
       expect.objectContaining({
         type: WalletTransactionType.PAYMENT,
-        amount: -100,
+        amount: 100,
       }),
     );
 

@@ -183,6 +183,8 @@ export const Messages = {
     DEPOSIT_CREATED: 'Tạo yêu cầu nạp tiền thành công',
     MOCK_SUCCESS: 'Mock thanh toán thành công',
 
+    STATUS_FETCHED: 'Lấy trạng thái thanh toán thành công',
+
     PAYMENT_SUCCESS: 'Thanh toán thành công',
     PAYMENT_FAILED: 'Thanh toán thất bại',
 
