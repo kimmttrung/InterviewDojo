@@ -173,4 +173,14 @@ export const API_ENDPOINT = {
     GET_LIST: '/reports',
     GET_ONE: (id: number) => `/reports/${id}`,
   },
+  WALLET: {
+    GET_ME: '/wallet/me',
+    GET_TRANSACTIONS: '/wallet/transactions',
+  },
+  PAYMENT: {
+    DEPOSIT: '/payment/deposit',
+    WEBHOOK_SEPAY: '/payment/webhook/sepay',
+    STATUS: (paymentId: number) => `/payment/status/${paymentId}`,
+    MOCK_SUCCESS: (paymentId: number) => `/payment/mock/${paymentId}`,
+  },
 };

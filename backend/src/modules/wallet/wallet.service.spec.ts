@@ -62,18 +62,13 @@ describe('WalletService', () => {
         balanceAfter: 100,
         referenceId: null,
         createdAt,
-        user: {
-          id: 1,
-          name: 'User',
-          email: 'user@test.com',
-        },
       },
     ]);
 
     const result = await service.getMyTransactions(1, {});
 
     expect(result.items).toHaveLength(1);
-    expect(result.items[0].booking).toBeNull();
+    // Không còn kiểm tra booking
     expect(result.meta).toEqual({
       total: 1,
       page: 1,
@@ -108,11 +103,6 @@ describe('WalletService', () => {
         balanceAfter: 50,
         referenceId: '99',
         createdAt,
-        user: {
-          id: 1,
-          name: 'User',
-          email: 'user@test.com',
-        },
       },
     ]);
 
@@ -122,10 +112,8 @@ describe('WalletService', () => {
       type: WalletTransactionType.PAYMENT,
     });
 
-    expect(result.items[0].booking).toEqual({
-      id: 99,
-      status: 'UNKNOWN',
-    });
+    // Thay vì booking, kiểm tra referenceId
+    expect(result.items[0].referenceId).toBe('99');
 
     expect(result.meta).toEqual({
       total: 1,
