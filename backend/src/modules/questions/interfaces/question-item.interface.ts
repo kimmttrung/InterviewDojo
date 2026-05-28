@@ -6,6 +6,7 @@ export interface QuestionItem {
   questionType: string;
   isPublished: boolean;
   createdAt: Date;
+  data?: any;
   description: string;
   categories: string[];
   companies: string[];
