@@ -56,7 +56,13 @@ describe('Booking Wallet Session Integration', () => {
 
   const socketService = { emitToUser: jest.fn() };
   // Mock API cơ bản vẫn tương thích tốt giữa Bull và BullMQ trong unit test
-  const queue = { getJob: jest.fn(), add: jest.fn(), removeJobs: jest.fn() };
+  const queue = {
+    getJob: jest.fn(),
+    add: jest.fn(),
+    removeJobs: jest.fn(),
+    addBulk: jest.fn(),
+    remove: jest.fn(),
+  };
 
   const prisma: any = {
     $transaction: jest.fn(async (callback: any) => callback(prisma)),
@@ -207,7 +213,7 @@ describe('Booking Wallet Session Integration', () => {
     expect(state.walletTransactions[0]).toEqual(
       expect.objectContaining({
         type: WalletTransactionType.PAYMENT,
-        amount: -100,
+        amount: 100,
       }),
     );
 

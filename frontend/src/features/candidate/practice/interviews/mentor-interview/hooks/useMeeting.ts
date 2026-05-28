@@ -7,7 +7,7 @@ import { api } from '@/shared/lib/api';
 
 export function useMeeting() {
   const { roomId } = useParams();
-  const { data: user } = useCurrentUser();
+  const { data: user } = useCurrentUser(); // User hiện tại đang đăng nhập hệ thống
   const [client, setClient] = useState<StreamVideoClient | null>(null);
   const [call, setCall] = useState<Call | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -22,16 +22,25 @@ export function useMeeting() {
       try {
         console.log('Fetching token for room:', roomId);
         const response = await api.get(`/meeting/token/${roomId}`);
-        console.log('Token response:', response);
-        const { token: streamToken, userId } = response.data.data;
+
+        // Lấy token từ API, bỏ qua biến userId từ backend trả về
+        const { token: streamToken } = response.data.data;
         const apiKey = import.meta.env.VITE_STREAM_API_KEY;
+
+        // Khởi tạo Client: Đảm bảo luồng Mentor dùng ID của Mentor, Candidate dùng ID của Candidate
         const client = new StreamVideoClient({
           apiKey,
           token: streamToken,
-          user: { id: String(userId) },
+          user: {
+            id: String(user.id), // Sử dụng ID duy nhất của User đang chạy ở trình duyệt này
+            name: user.name || `User ${user.id}`,
+            image: user.avatarUrl || undefined,
+          },
         });
+
         const call = client.call('default', roomId);
         await call.join();
+
         if (mounted) {
           setClient(client);
           setCall(call);

@@ -53,12 +53,12 @@ export default function MeetingRoom() {
 
   const handleFeedbackSuccess = () => {
     setShowFeedback(false);
-    navigate('/sessions'); // hoặc route mong muốn
+    navigate('/');
   };
 
   const handleFeedbackSkip = () => {
     setShowFeedback(false);
-    navigate('/sessions');
+    navigate('/');
   };
 
   if (isLoading) {
@@ -83,9 +83,7 @@ export default function MeetingRoom() {
     <>
       <StreamVideo client={client}>
         <StreamCall call={call}>
-          <VideoCallLayout
-            onLeave={handleLeaveWithFeedback} // thay vì navigate trực tiếp
-          />
+          <VideoCallLayout onLeave={handleLeaveWithFeedback} />
         </StreamCall>
       </StreamVideo>
 

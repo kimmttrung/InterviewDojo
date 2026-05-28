@@ -294,7 +294,7 @@ describe('BookingService', () => {
     expect(tx.walletTransaction.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         type: WalletTransactionType.PAYMENT,
-        amount: -100,
+        amount: 100,
         balanceAfter: 200,
       }),
     });
@@ -393,10 +393,8 @@ describe('BookingService', () => {
       }),
     });
     expect(sessionService.scheduleSessionEnd).toHaveBeenCalledWith(
-      80,
+      expect.objectContaining({ id: 80 }),
       [2, 1],
-      pending.startTime,
-      60,
     );
     expect(tx.mockSession.update).toHaveBeenCalledWith({
       where: { id: 80 },
@@ -404,12 +402,7 @@ describe('BookingService', () => {
     });
     expect(
       sessionService.scheduleSessionStartNotification,
-    ).toHaveBeenCalledWith(
-      80,
-      [2, 1],
-      pending.startTime,
-      '/interview/mentor-booking-80?sessionId=80',
-    );
+    ).toHaveBeenCalledWith(expect.objectContaining({ id: 80 }), [2, 1]);
     expect(tx.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 1,
@@ -492,10 +485,8 @@ describe('BookingService', () => {
     await service.accept(20, 2);
     expect(tx.mockSession.create).not.toHaveBeenCalled();
     expect(sessionService.scheduleSessionEnd).toHaveBeenLastCalledWith(
-      81,
+      expect.objectContaining({ id: 81 }),
       [2, 1],
-      pending.startTime,
-      30,
     );
   });
 

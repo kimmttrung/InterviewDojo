@@ -2,7 +2,7 @@
 
 import { useQuery } from '@tanstack/react-query';
 
-import { walletService } from '../services/wallet.service';
+import { walletService } from '../api/walletApi';
 
 interface Params {
   page?: number;

@@ -7,6 +7,7 @@ import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
 import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
 import { api } from '@/shared/lib/api';
 import { getMeetingLink } from '../services/session.services';
+import { useNavigate } from 'react-router-dom';
 
 dayjs.extend(relativeTime);
 
@@ -21,6 +22,7 @@ export const SessionCard = ({ session }: Props) => {
   const [isJoinable, setIsJoinable] = useState(false);
 
   const [isJoining, setIsJoining] = useState(false);
+  const navigate = useNavigate();
 
   // Chỉ dựa vào thời gian, không cần kiểm tra session.meetingLink nữa
   const canJoin = (() => {
@@ -37,7 +39,7 @@ export const SessionCard = ({ session }: Props) => {
       const meetingLink = await getMeetingLink(session.id);
       console.log('check meet', meetingLink);
       if (meetingLink) {
-        window.open(meetingLink, '_blank');
+        navigate(`/${meetingLink}`);
       } else {
         alert('Không thể tạo phòng họp');
       }

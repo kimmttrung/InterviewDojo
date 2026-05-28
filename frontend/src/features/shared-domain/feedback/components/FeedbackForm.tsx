@@ -72,7 +72,7 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
 
       {/* Rating */}
       <div className="flex items-center gap-4 mb-4">
-        <span className="text-sm font-medium text-gray-700">Overall rating (1–10 stars):</span>
+        <span className="text-sm font-medium text-gray-700">Score rating (1–10 points):</span>
 
         <div className="flex flex-row items-center [font-size:0] [&_span]:inline-block [&_svg]:inline">
           <Rating

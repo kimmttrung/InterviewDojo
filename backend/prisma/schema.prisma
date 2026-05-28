@@ -5,7 +5,7 @@ generator client {
 
 datasource db {
   provider   = "postgresql"
-  extensions = [vector] 
+  extensions = [vector]
 }
 
 // ==================== ENUMS ====================
@@ -55,11 +55,11 @@ enum SkillType {
 }
 
 enum SkillLevel {
-  AWARENESS       // Mới biết / Đang tìm hiểu
-  FOUNDATION      // Có nền tảng / Có thể làm khi có hướng dẫn
-  AUTONOMOUS      // Tự chủ / Làm việc độc lập tốt
-  FLUENT          // Thuần thục / Có thể tối ưu hoặc ứng biến linh hoạt
-  LEADERSHIP      // Chuyên gia / Có thể dẫn dắt, dạy lại người khác
+  AWARENESS // Mới biết / Đang tìm hiểu
+  FOUNDATION // Có nền tảng / Có thể làm khi có hướng dẫn
+  AUTONOMOUS // Tự chủ / Làm việc độc lập tốt
+  FLUENT // Thuần thục / Có thể tối ưu hoặc ứng biến linh hoạt
+  LEADERSHIP // Chuyên gia / Có thể dẫn dắt, dạy lại người khác
 }
 
 enum SessionStatus {
@@ -135,6 +135,7 @@ enum PaymentProvider {
   MOMO
   STRIPE
   PAYPAL
+  VIETQR
   INTERNAL_WALLET
 }
 
@@ -222,23 +223,23 @@ enum ModerationActionType {
 // ==================== USER & PROFILE ====================
 
 model User {
-  id              Int        @id @default(autoincrement())
-  email           String     @unique
+  id              Int                          @id @default(autoincrement())
+  email           String                       @unique
   password        String
   name            String?
   bio             String?
-  experienceYears Int        @default(0) @map("experience_years")
-  avatarUrl       String?    @map("avatar_url")
-  linkedInLink    String?    @map("linkedIn_link")
-  githubLink      String?    @map("github_link")
-  creditBalance   Float      @default(0.0) @map("credit_balance")
-  role            Role       @default(CANDIDATE)
-  status          UserStatus @default(ACTIVE)
-  banReason       String?    @map("ban_reason")
-  bannedUntil     DateTime?  @map("banned_until")
-  createdAt       DateTime   @default(now()) @map("created_at")
-  updatedAt       DateTime   @updatedAt @map("updated_at")
-  targetRoleId    Int?       @map("target_role_id")
+  experienceYears Int                          @default(0) @map("experience_years")
+  avatarUrl       String?                      @map("avatar_url")
+  linkedInLink    String?                      @map("linkedIn_link")
+  githubLink      String?                      @map("github_link")
+  creditBalance   Float                        @default(0.0) @map("credit_balance")
+  role            Role                         @default(CANDIDATE)
+  status          UserStatus                   @default(ACTIVE)
+  banReason       String?                      @map("ban_reason")
+  bannedUntil     DateTime?                    @map("banned_until")
+  createdAt       DateTime                     @default(now()) @map("created_at")
+  updatedAt       DateTime                     @updatedAt @map("updated_at")
+  targetRoleId    Int?                         @map("target_role_id")
   embeddingVector Unsupported("vector(1024)")? @map("embedding_vector")
 
   targetRole          JobRole?            @relation("CandidateTargetRole", fields: [targetRoleId], references: [id])
@@ -261,30 +262,32 @@ model User {
   notifications       Notification[]
 
   // Report relations
-  reportsCreated         UserReport[]    @relation("UserReportsCreated")
-  reportsReceived        UserReport[]    @relation("UserReportsReceived")
-  resolvedReports        UserReport[]    @relation("ResolvedReports")
+  reportsCreated  UserReport[] @relation("UserReportsCreated")
+  reportsReceived UserReport[] @relation("UserReportsReceived")
+  resolvedReports UserReport[] @relation("ResolvedReports")
 
   // Moderation relations
   moderationLogsReceived ModerationLog[] @relation("ModeratedUsers")
   moderationLogsCreated  ModerationLog[] @relation("ModeratorActions")
 
-  // cache recommendation 
+  // cache recommendation
   recommendationsAsCandidate CandidateRecommendation[] @relation("CandidateRecommendations")
   recommendationsAsMentor    CandidateRecommendation[] @relation("RecommendedMentors")
+
+  payments Payment[]
 
   @@map("users")
 }
 
 model CandidateRecommendation {
-  candidateId Int   @map("candidate_id")
-  mentorId    Int   @map("mentor_id")
+  candidateId Int      @map("candidate_id")
+  mentorId    Int      @map("mentor_id")
   score       Float
-  rank        Int   // Thứ hạng (1, 2, 3...) để sort nhanh hơn
+  rank        Int // Thứ hạng (1, 2, 3...) để sort nhanh hơn
   updatedAt   DateTime @default(now()) @updatedAt @map("updated_at")
 
-  candidate   User  @relation("CandidateRecommendations", fields: [candidateId], references: [id], onDelete: Cascade)
-  mentor      User  @relation("RecommendedMentors", fields: [mentorId], references: [id], onDelete: Cascade)
+  candidate User @relation("CandidateRecommendations", fields: [candidateId], references: [id], onDelete: Cascade)
+  mentor    User @relation("RecommendedMentors", fields: [mentorId], references: [id], onDelete: Cascade)
 
   @@id([candidateId, mentorId])
   @@index([candidateId, rank]) // Đánh index để query tốc độ bàn thờ
@@ -432,7 +435,7 @@ model JobRole {
   id          Int     @id @default(autoincrement())
   name        String  @unique
   description String?
-  
+
   experiences Experience[]
   questions   QuestionJobRole[]
   candidates  User[]            @relation("CandidateTargetRole")
@@ -835,6 +838,7 @@ model MockSession {
   questions MockSessionQuestion[]
 
   @@map("mock_sessions")
+  @@index([status, scheduledAt])
 }
 
 model SoloSession {
@@ -881,11 +885,11 @@ model Feedback {
   quickTags    String[] @default([]) @map("quick_tags") // Cho candidate đánh giá mentor
 
   // Quản lý thời gian & trạng thái
-  submittedAt  DateTime?      @map("submitted_at")
-  deadline     DateTime       @map("deadline")      // Bắt buộc, VD: session.endedAt + 3 ngày
-  status       FeedbackStatus @default(PENDING)
+  submittedAt DateTime?      @map("submitted_at")
+  deadline    DateTime       @map("deadline") // Bắt buộc, VD: session.endedAt + 3 ngày
+  status      FeedbackStatus @default(PENDING)
 
-  createdAt    DateTime @default(now()) @map("created_at")
+  createdAt DateTime @default(now()) @map("created_at")
 
   session  MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   reviewer User?       @relation("ReviewerFeedbacks", fields: [reviewerId], references: [id])
@@ -898,28 +902,41 @@ model Feedback {
 // ==================== PAYMENT & WALLET ====================
 
 model Payment {
-  id        Int @id @default(autoincrement())
-  bookingId Int @map("booking_id")
-
-  amount   Float
-  currency Currency
-
+  id                    Int             @id @default(autoincrement())
+  orderCode             String          @unique @map("order_code")
   provider              PaymentProvider
   providerTransactionId String?         @map("provider_transaction_id")
+  amount                Float
+  currency              Currency
+  status                PaymentStatus   @default(PENDING)
+  paymentUrl            String?         @map("payment_url")
+  refundedAmount        Float?          @default(0) @map("refunded_amount")
+  paidAt                DateTime?       @map("paid_at")
+  refundedAt            DateTime?       @map("refunded_at")
+  expiredAt             DateTime?       @map("expired_at")
+  createdAt             DateTime        @default(now()) @map("created_at")
+  updatedAt             DateTime        @updatedAt @map("updated_at")
 
-  status PaymentStatus @default(PENDING)
+  userId    Int? @map("user_id")
+  bookingId Int? @map("booking_id")
 
-  paymentUrl     String?   @map("payment_url")
-  refundedAmount Float?    @default(0) @map("refunded_amount")
-  paidAt         DateTime? @map("paid_at")
-  refundedAt     DateTime? @map("refunded_at")
+  user    User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
 
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
-
+  @@unique([provider, providerTransactionId])
   @@map("payments")
+}
+
+model PaymentWebhookLog {
+  id        Int      @id @default(autoincrement())
+  provider  String
+  payload   Json
+  signature String?
+  status    String
+  error     String?
+  createdAt DateTime @default(now())
+
+  @@map("payment_webhook_logs")
 }
 
 model WalletTransaction {
@@ -930,6 +947,7 @@ model WalletTransaction {
   balanceBefore Float                 @map("balance_before")
   balanceAfter  Float                 @map("balance_after")
   referenceId   String?               @map("reference_id")
+  note          String?
   createdAt     DateTime              @default(now()) @map("created_at")
 
   user User @relation(fields: [userId], references: [id])

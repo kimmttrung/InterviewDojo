@@ -6,7 +6,7 @@ import {
   OnModuleInit,
 } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
-import { Queue } from 'bullmq';
+import { BulkJobOptions, Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import {
@@ -20,109 +20,133 @@ import {
   SessionSource,
 } from '@prisma/client';
 import { StreamService } from '../stream/stream.service';
+import { SocketService } from '../socket/socket.service';
 @Injectable()
 export class SessionService implements OnModuleInit {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('session') private sessionQueue: Queue,
     private streamService: StreamService,
+    private socketService: SocketService,
   ) {}
 
-  async onModuleInit() {
-    try {
-      await this.prisma.mockSession.updateMany({
-        where: {
-          status: SessionStatus.SCHEDULED,
-          scheduledAt: { lt: new Date() },
-        },
-        data: { status: SessionStatus.COMPLETED },
-      });
-      await this.scheduleAllUpcomingSessions();
-      console.log('✅ SessionService initialized');
-    } catch (error) {
-      console.error('❌ SessionService initialization failed:', error);
-    }
+  onModuleInit() {
+    setTimeout(() => {
+      (async () => {
+        try {
+          await this.prisma.mockSession.updateMany({
+            where: {
+              status: SessionStatus.SCHEDULED,
+              scheduledAt: { lt: new Date() },
+            },
+            data: { status: SessionStatus.COMPLETED },
+          });
+          await this.scheduleAllUpcomingSessions();
+        } catch (error) {
+          console.error('SessionService initialization failed:', error);
+        }
+      })();
+    }, 3000);
   }
 
   private async scheduleAllUpcomingSessions() {
-    const upcomingSessions = await this.prisma.mockSession.findMany({
-      where: {
-        status: SessionStatus.SCHEDULED,
-        scheduledAt: { gt: new Date() },
-      },
-      include: {
-        booking: { select: { mentorId: true, candidateId: true } },
-        match: { select: { candidateAId: true, candidateBId: true } },
-      },
-    });
+    const BATCH_SIZE = 10;
+    let skip = 0;
+    let hasMore = true;
 
-    for (const session of upcomingSessions) {
-      const userIds: number[] = [session.intervieweeId];
-      if (session.booking) {
-        userIds.push(session.booking.mentorId, session.booking.candidateId);
-      } else if (session.match) {
-        userIds.push(session.match.candidateAId, session.match.candidateBId);
+    while (hasMore) {
+      // 1. Lấy dữ liệu theo Batch để tránh tràn RAM
+      const upcomingSessions = await this.prisma.mockSession.findMany({
+        where: {
+          status: SessionStatus.SCHEDULED,
+          scheduledAt: { gt: new Date() },
+        },
+        include: {
+          booking: { select: { mentorId: true, candidateId: true } },
+          match: { select: { candidateAId: true, candidateBId: true } },
+        },
+        skip,
+        take: BATCH_SIZE,
+        orderBy: { id: 'asc' },
+      });
+
+      if (upcomingSessions.length === 0) {
+        hasMore = false;
+        break;
       }
-      const uniqueUserIds = [...new Set(userIds)];
-      await this.scheduleSessionEnd(
-        session.id,
-        uniqueUserIds,
-        session.scheduledAt,
-        session.durationMinutes,
-      );
-      if (
-        session.source === SessionSource.MENTOR_BOOKING &&
-        session.meetingLink
-      ) {
-        await this.scheduleSessionStartNotification(
-          session.id,
-          uniqueUserIds,
-          session.scheduledAt,
-          session.meetingLink,
+
+      const jobsToAdd: { name: string; data: any; opts?: BulkJobOptions }[] =
+        [];
+
+      for (const session of upcomingSessions) {
+        const userIds: number[] = [session.intervieweeId];
+        if (session.booking) {
+          userIds.push(session.booking.mentorId, session.booking.candidateId);
+        } else if (session.match) {
+          userIds.push(session.match.candidateAId, session.match.candidateBId);
+        }
+        const uniqueUserIds = [...new Set(userIds)];
+
+        // Chuẩn bị job End Session
+        const durationMinutes = session.durationMinutes;
+        const endTime = new Date(
+          session.scheduledAt.getTime() + durationMinutes * 60 * 1000,
+        );
+        const endDelay = endTime.getTime() - Date.now();
+
+        if (endDelay > 0) {
+          // jobsToAdd.push({
+          //   name: 'end-session',
+          //   data: { sessionId: session.id, userIds: uniqueUserIds },
+          //   opts: { delay: endDelay, jobId: `session-${session.id}` },
+          // });
+          jobsToAdd.push(this.buildEndJobConfig(session, uniqueUserIds));
+        }
+
+        // Chuẩn bị job Start Notification
+        if (
+          session.source === SessionSource.MENTOR_BOOKING &&
+          session.meetingLink
+        ) {
+          // const startDelay = Math.max(
+          //   session.scheduledAt.getTime() - Date.now(),
+          //   0,
+          // );
+          // jobsToAdd.push({
+          //   name: 'start-session-notification',
+          //   data: {
+          //     sessionId: session.id,
+          //     userIds: uniqueUserIds,
+          //     meetingLink: session.meetingLink,
+          //   },
+          //   opts: { delay: startDelay, jobId: `session-start-${session.id}` },
+          // });
+          jobsToAdd.push(this.buildStartJobConfig(session, uniqueUserIds));
+        }
+      }
+
+      // 2. Dùng addBulk để đẩy toàn bộ Jobs vào Redis trong 1 lệnh
+      if (jobsToAdd.length > 0) {
+        await this.sessionQueue.addBulk(jobsToAdd);
+        console.log(
+          `✅ [Boot] Scheduled ${jobsToAdd.length} jobs for ${upcomingSessions.length} sessions.`,
         );
       }
+
+      skip += BATCH_SIZE;
     }
   }
 
-  async scheduleSessionStartNotification(
-    sessionId: number,
-    userIds: number[],
-    scheduledAt: Date,
-    meetingLink: string,
-  ) {
-    const delay = Math.max(scheduledAt.getTime() - Date.now(), 0);
-    const jobId = `session-start-${sessionId}`;
-    const existingJob = await this.sessionQueue.getJob(jobId);
+  async scheduleSessionStartNotification(session: any, userIds: number[]) {
+    const config = this.buildStartJobConfig(session, userIds);
+    await this.sessionQueue.add(config.name, config.data, config.opts);
+  }
+
+  async scheduleSessionEnd(session: any, userIds: number[]) {
+    const config = this.buildEndJobConfig(session, userIds);
+    const existingJob = await this.sessionQueue.getJob(config.opts.jobId);
     if (!existingJob) {
-      await this.sessionQueue.add(
-        'start-session-notification',
-        { sessionId, userIds, meetingLink },
-        { delay, jobId },
-      );
-    }
-  }
-
-  async scheduleSessionEnd(
-    sessionId: number,
-    userIds: number[],
-    scheduledAt: Date,
-    durationMinutes: number,
-  ) {
-    const endTime = new Date(
-      scheduledAt.getTime() + durationMinutes * 60 * 1000,
-    );
-    const delay = endTime.getTime() - Date.now();
-    if (delay > 0) {
-      const jobId = `session-${sessionId}`;
-      const existingJob = await this.sessionQueue.getJob(jobId);
-      if (!existingJob) {
-        await this.sessionQueue.add(
-          'end-session',
-          { sessionId, userIds },
-          { delay, jobId },
-        );
-        console.log(`✅ Scheduled end for session ${sessionId} in ${delay}ms`);
-      }
+      await this.sessionQueue.add(config.name, config.data, config.opts);
     }
   }
 
@@ -207,159 +231,208 @@ export class SessionService implements OnModuleInit {
     let items: SessionItem[] = [];
     let total = 0;
 
-    // Định nghĩa các promise lấy dữ liệu và đếm cho từng loại (dùng cho tab ALL)
-    const fetchAndCount = {
-      upcoming: async () => {
-        const where: Prisma.MockSessionWhereInput = {
-          status: SessionStatus.SCHEDULED,
-          OR: [
-            { intervieweeId: userId },
-            { booking: { mentorId: userId } },
-            { match: { candidateAId: userId } },
-            { match: { candidateBId: userId } },
-          ],
-          ...buildSearchCondition(search),
-          ...buildDateCondition('scheduledAt'),
-        };
-        const [data, count] = await Promise.all([
-          this.prisma.mockSession.findMany({
-            where,
-            orderBy: { scheduledAt: 'asc' },
-            include: {
-              booking: {
-                include: { mentor: true, candidate: true, coachingPlan: true },
-              },
-              match: { include: { candidateA: true, candidateB: true } },
-            },
-          }),
-          this.prisma.mockSession.count({ where }),
-        ]);
-        const mapped = data.map((session) =>
-          this.mapMockSessionToItem(session, userId),
-        );
-        return { items: mapped, count };
-      },
-
-      pending: async () => {
-        const where: Prisma.BookingWhereInput = {
-          status: BookingStatus.PENDING_ACCEPTANCE,
-          OR: [{ candidateId: userId }, { mentorId: userId }],
-          ...buildSearchCondition(search),
-          ...buildDateCondition('createdAt'),
-        };
-        const [data, count] = await Promise.all([
-          this.prisma.booking.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            include: { mentor: true, candidate: true, coachingPlan: true },
-          }),
-          this.prisma.booking.count({ where }),
-        ]);
-        const mapped = data.map((booking) =>
-          this.mapBookingToItem(booking, userId),
-        );
-        return { items: mapped, count };
-      },
-
-      rejected: async () => {
-        // Lấy các booking bị từ chối
-        const where: Prisma.BookingWhereInput = {
-          status: BookingStatus.REJECTED,
-          OR: [{ candidateId: userId }, { mentorId: userId }],
-          ...buildSearchCondition(search),
-          ...buildDateCondition('createdAt'),
-        };
-        const [data, count] = await Promise.all([
-          this.prisma.booking.findMany({
-            where,
-            orderBy: { createdAt: 'desc' },
-            include: {
-              mentor: true,
-              candidate: true,
-              coachingPlan: true,
-              logs: true,
-            },
-          }),
-          this.prisma.booking.count({ where }),
-        ]);
-        const mapped = data.map((booking) =>
-          this.mapRejectedBookingToItem(booking, userId),
-        );
-        return { items: mapped, count };
-      },
-
-      finished: async () => {
-        // Lấy các mock session đã hoàn thành (kể cả mentor, p2p, solo)
-        const where: Prisma.MockSessionWhereInput = {
-          status: SessionStatus.COMPLETED,
-          OR: [
-            { intervieweeId: userId },
-            { booking: { mentorId: userId } },
-            { match: { candidateAId: userId } },
-            { match: { candidateBId: userId } },
-          ],
-          ...buildSearchCondition(search),
-          ...buildDateCondition('scheduledAt'),
-        };
-        const [data, count] = await Promise.all([
-          this.prisma.mockSession.findMany({
-            where,
-            orderBy: { scheduledAt: 'desc' },
-            include: {
-              booking: {
-                include: { mentor: true, candidate: true, coachingPlan: true },
-              },
-              match: { include: { candidateA: true, candidateB: true } },
-              feedbacks: { where: { revieweeId: userId } }, // lấy feedback dành cho user
-            },
-          }),
-          this.prisma.mockSession.count({ where }),
-        ]);
-        const mapped = data.map((session) =>
-          this.mapFinishedSessionToItem(session, userId),
-        );
-        return { items: mapped, count };
-      },
+    const mockSessionBaseWhere: Prisma.MockSessionWhereInput = {
+      OR: [
+        { intervieweeId: userId },
+        { booking: { mentorId: userId } },
+        { match: { candidateAId: userId } },
+        { match: { candidateBId: userId } },
+      ],
+      ...buildSearchCondition(search),
+      ...buildDateCondition('scheduledAt'),
+    };
+    const bookingBaseWhere: Prisma.BookingWhereInput = {
+      OR: [{ candidateId: userId }, { mentorId: userId }],
+      ...buildSearchCondition(search),
+      ...buildDateCondition('createdAt'),
     };
 
-    // Xử lý theo từng tab
     if (tab === SessionTab.ALL) {
-      // Lấy tất cả các loại, gộp lại, sắp xếp theo createdAt/scheduledAt (tuỳ chọn)
-      const [upcoming, pending, rejected, finished] = await Promise.all([
-        fetchAndCount.upcoming(),
-        fetchAndCount.pending(),
-        fetchAndCount.rejected(),
-        fetchAndCount.finished(),
+      // Bước 3.1: Chỉ lấy ID và Ngày tháng
+      const [mockSessionIds, bookingIds] = await Promise.all([
+        this.prisma.mockSession.findMany({
+          where: {
+            ...mockSessionBaseWhere,
+            status: { in: [SessionStatus.SCHEDULED, SessionStatus.COMPLETED] },
+          },
+          select: { id: true, scheduledAt: true, status: true },
+        }),
+        this.prisma.booking.findMany({
+          where: {
+            ...bookingBaseWhere,
+            status: {
+              in: [BookingStatus.PENDING_ACCEPTANCE, BookingStatus.REJECTED],
+            },
+          },
+          select: { id: true, createdAt: true, status: true },
+        }),
       ]);
-      const allItems = [
-        ...upcoming.items,
-        ...pending.items,
-        ...rejected.items,
-        ...finished.items,
+
+      const combinedLight = [
+        ...mockSessionIds.map((s) => ({
+          type: 'mock',
+          id: s.id,
+          status: s.status,
+          date: s.scheduledAt || new Date(),
+        })),
+        ...bookingIds.map((b) => ({
+          type: 'booking',
+          id: b.id,
+          status: b.status,
+          date: b.createdAt,
+        })),
       ];
-      // Sắp xếp theo thời gian (mới nhất trước)
-      allItems.sort(
-        (a, b) =>
-          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+
+      combinedLight.sort((a, b) => b.date.getTime() - a.date.getTime());
+      total = combinedLight.length;
+
+      const pagedLight = combinedLight.slice(skip, skip + limit);
+
+      const targetMockIds = pagedLight
+        .filter((x) => x.type === 'mock')
+        .map((x) => x.id);
+      const targetBookingIds = pagedLight
+        .filter((x) => x.type === 'booking')
+        .map((x) => x.id);
+
+      const [fullMockSessions, fullBookings] = await Promise.all([
+        targetMockIds.length > 0
+          ? this.prisma.mockSession.findMany({
+              where: { id: { in: targetMockIds } },
+              include: {
+                booking: {
+                  include: {
+                    mentor: true,
+                    candidate: true,
+                    coachingPlan: true,
+                  },
+                },
+                match: { include: { candidateA: true, candidateB: true } },
+                feedbacks: { where: { revieweeId: userId } },
+              },
+            })
+          : Promise.resolve([]),
+        targetBookingIds.length > 0
+          ? this.prisma.booking.findMany({
+              where: { id: { in: targetBookingIds } },
+              include: {
+                mentor: true,
+                candidate: true,
+                coachingPlan: true,
+                logs: true,
+              },
+            })
+          : Promise.resolve([]),
+      ]);
+
+      const mappedMocks = fullMockSessions.map((s) =>
+        s.status === SessionStatus.SCHEDULED
+          ? this.mapMockSessionToItem(s, userId)
+          : this.mapFinishedSessionToItem(s, userId),
       );
-      total = allItems.length;
-      // Phân trang thủ công cho tab ALL
-      items = allItems.slice(skip, skip + limit);
-    } else if (tab === SessionTab.UPCOMING) {
-      const { items: upcomingItems, count } = await fetchAndCount.upcoming();
-      items = upcomingItems.slice(skip, skip + limit);
-      total = count;
+
+      const mappedBookings = fullBookings.map((b) =>
+        b.status === BookingStatus.REJECTED
+          ? this.mapRejectedBookingToItem(b, userId)
+          : this.mapBookingToItem(b, userId),
+      );
+
+      const allMapped = [...mappedMocks, ...mappedBookings];
+
+      items = pagedLight
+        .map((lightItem) =>
+          allMapped.find(
+            (item) =>
+              item.id === lightItem.id &&
+              ((lightItem.type === 'booking' &&
+                (item.status === 'PENDING' || item.status === 'REJECTED')) ||
+                (lightItem.type === 'mock' &&
+                  (item.status === 'UPCOMING' || item.status === 'FINISHED'))),
+          ),
+        )
+        .filter(Boolean) as SessionItem[];
     } else if (tab === SessionTab.PENDING) {
-      const { items: pendingItems, count } = await fetchAndCount.pending();
-      items = pendingItems.slice(skip, skip + limit);
+      const where = {
+        ...bookingBaseWhere,
+        status: BookingStatus.PENDING_ACCEPTANCE,
+      };
+      const [data, count] = await Promise.all([
+        this.prisma.booking.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' }, // <-- THÊM SKIP & TAKE
+          include: { mentor: true, candidate: true, coachingPlan: true },
+        }),
+        this.prisma.booking.count({ where }),
+      ]);
+      items = data.map((b) => this.mapBookingToItem(b, userId));
       total = count;
     } else if (tab === SessionTab.REJECTED) {
-      const { items: rejectedItems, count } = await fetchAndCount.rejected();
-      items = rejectedItems.slice(skip, skip + limit);
+      const where = { ...bookingBaseWhere, status: BookingStatus.REJECTED };
+      const [data, count] = await Promise.all([
+        this.prisma.booking.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { createdAt: 'desc' }, // <-- THÊM SKIP & TAKE
+          include: {
+            mentor: true,
+            candidate: true,
+            coachingPlan: true,
+            logs: true,
+          },
+        }),
+        this.prisma.booking.count({ where }),
+      ]);
+      items = data.map((b) => this.mapRejectedBookingToItem(b, userId));
+      total = count;
+    } else if (tab === SessionTab.UPCOMING) {
+      // <--- THÊM TOÀN BỘ KHỐI NÀY
+      const where = {
+        ...mockSessionBaseWhere,
+        status: SessionStatus.SCHEDULED,
+      };
+      const [data, count] = await Promise.all([
+        this.prisma.mockSession.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { scheduledAt: 'asc' },
+          include: {
+            booking: {
+              include: { mentor: true, candidate: true, coachingPlan: true },
+            },
+            match: { include: { candidateA: true, candidateB: true } },
+            feedbacks: { where: { revieweeId: userId } },
+          },
+        }),
+        this.prisma.mockSession.count({ where }),
+      ]);
+      items = data.map((s) => this.mapMockSessionToItem(s, userId));
       total = count;
     } else if (tab === SessionTab.FINISHED) {
-      const { items: finishedItems, count } = await fetchAndCount.finished();
-      items = finishedItems.slice(skip, skip + limit);
+      const where = {
+        ...mockSessionBaseWhere,
+        status: SessionStatus.COMPLETED,
+      };
+      const [data, count] = await Promise.all([
+        this.prisma.mockSession.findMany({
+          where,
+          skip,
+          take: limit,
+          orderBy: { scheduledAt: 'desc' }, // <-- THÊM SKIP & TAKE
+          include: {
+            booking: {
+              include: { mentor: true, candidate: true, coachingPlan: true },
+            },
+            match: { include: { candidateA: true, candidateB: true } },
+            feedbacks: { where: { revieweeId: userId } },
+          },
+        }),
+        this.prisma.mockSession.count({ where }),
+      ]);
+      items = data.map((s) => this.mapFinishedSessionToItem(s, userId));
       total = count;
     }
 
@@ -398,14 +471,23 @@ export class SessionService implements OnModuleInit {
         ],
         status: SessionStatus.SCHEDULED,
       },
+      include: {
+        booking: { select: { mentorId: true, candidateId: true } },
+        match: { select: { candidateAId: true, candidateBId: true } },
+      },
     });
 
     if (!booking && !mockSession) {
-      throw new Error('Không tìm thấy phiên học hoặc bạn không có quyền hủy');
+      throw new Error('Không tìm thấy phiên học hoặc bạn không có quyền huỷ');
     }
+
+    const affectedUserIds = new Set<number>();
 
     // 2. Cập nhật trạng thái và ghi log lý do
     if (booking) {
+      affectedUserIds.add(booking.mentorId);
+      affectedUserIds.add(booking.candidateId);
+
       await this.prisma.booking.update({
         where: { id: booking.id },
         data: {
@@ -429,16 +511,27 @@ export class SessionService implements OnModuleInit {
         });
       }
     } else if (mockSession) {
+      affectedUserIds.add(mockSession.intervieweeId);
+      if (mockSession.booking) {
+        affectedUserIds.add(mockSession.booking.mentorId);
+        affectedUserIds.add(mockSession.booking.candidateId);
+      }
       await this.prisma.mockSession.update({
         where: { id: mockSession.id },
         data: { status: SessionStatus.CANCELLED },
       });
     }
-
-    // 3. Emit socket event để frontend reload
-    // this.socketService.emitToUser(userId, 'SESSION_UPDATED', { sessionId });
     await this.sessionQueue.remove(`session-${sessionId}`);
-    return { success: true, message: 'Đã hủy phiên học' };
+    await this.sessionQueue.remove(`session-start-${sessionId}`);
+
+    for (const id of affectedUserIds) {
+      this.socketService.emitToUser(id, 'SESSION_CANCELED', {
+        sessionId,
+        reason,
+      });
+    }
+
+    return { success: true, message: 'Session canceled successfully' };
   }
 
   async getSessionDetail(sessionId: number, userId: number) {
@@ -505,7 +598,7 @@ export class SessionService implements OnModuleInit {
         session.match.candidateAId === userId
           ? session.match.candidateB
           : session.match.candidateA;
-      createdAtStr = session.match.createdAt.toISOString();
+      createdAtStr = session.match.createdAt?.toISOString();
     }
 
     let status = session.status;
@@ -545,7 +638,6 @@ export class SessionService implements OnModuleInit {
     const skip = (page - 1) * limit;
     const where: Prisma.MockSessionWhereInput = {
       source: type,
-      // ...(statuses?.length ? { status: { in: statuses } } : {}),
       OR: [
         { intervieweeId: userId },
         { booking: { mentorId: userId } },
@@ -663,7 +755,7 @@ export class SessionService implements OnModuleInit {
         session.match.candidateAId === userId
           ? session.match.candidateB
           : session.match.candidateA;
-      createdAtStr = session.match.createdAt.toISOString();
+      createdAtStr = session.match.createdAt?.toISOString();
     }
 
     const hasFeedback = session.feedbacks && session.feedbacks.length > 0;
@@ -688,36 +780,49 @@ export class SessionService implements OnModuleInit {
   private buildSearchCondition(searchTerm?: string) {
     if (!searchTerm) return {};
     return {
-      OR: [
+      AND: [
+        // Bọc trong AND để không ghi đè OR bên ngoài
         {
-          booking: {
-            coachingPlan: {
-              title: { contains: searchTerm, mode: 'insensitive' },
+          OR: [
+            {
+              booking: {
+                coachingPlan: {
+                  title: { contains: searchTerm, mode: 'insensitive' },
+                },
+              },
             },
-          },
-        },
-        {
-          booking: {
-            mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
-          },
-        },
-        {
-          booking: {
-            candidate: { name: { contains: searchTerm, mode: 'insensitive' } },
-          },
-        },
-        {
-          match: {
-            candidateA: { name: { contains: searchTerm, mode: 'insensitive' } },
-          },
-        },
-        {
-          match: {
-            candidateB: { name: { contains: searchTerm, mode: 'insensitive' } },
-          },
-        },
-        {
-          interviewee: { name: { contains: searchTerm, mode: 'insensitive' } },
+            {
+              booking: {
+                mentor: { name: { contains: searchTerm, mode: 'insensitive' } },
+              },
+            },
+            {
+              booking: {
+                candidate: {
+                  name: { contains: searchTerm, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              match: {
+                candidateA: {
+                  name: { contains: searchTerm, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              match: {
+                candidateB: {
+                  name: { contains: searchTerm, mode: 'insensitive' },
+                },
+              },
+            },
+            {
+              interviewee: {
+                name: { contains: searchTerm, mode: 'insensitive' },
+              },
+            },
+          ],
         },
       ],
     };
@@ -810,5 +915,30 @@ export class SessionService implements OnModuleInit {
     });
 
     return meetingLink;
+  }
+
+  private buildStartJobConfig(session: any, userIds: number[]) {
+    const delay = Math.max(session.scheduledAt.getTime() - Date.now(), 0);
+    return {
+      name: 'start-session-notification',
+      data: {
+        sessionId: session.id,
+        userIds,
+        meetingLink: session.meetingLink,
+      },
+      opts: { delay, jobId: `session-start-${session.id}` },
+    };
+  }
+  private buildEndJobConfig(session: any, userIds: number[]) {
+    const duration = session.durationMinutes || 60;
+    const endTime = new Date(
+      session.scheduledAt.getTime() + duration * 60 * 1000,
+    );
+    const delay = Math.max(endTime.getTime() - Date.now(), 0);
+    return {
+      name: 'end-session',
+      data: { sessionId: session.id, userIds },
+      opts: { delay, jobId: `session-${session.id}` },
+    };
   }
 }

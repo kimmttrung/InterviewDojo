@@ -153,8 +153,8 @@ export default function ScheduleCalendar({
         eventDrop={handleEventChange}
         eventResize={handleEventChange}
         eventContent={renderEventContent}
-        slotMinTime="06:00:00"
-        slotMaxTime="23:00:00"
+        slotMinTime="00:00:00"
+        slotMaxTime="24:00:00"
         height="80vh"
         eventOverlap={false}
         selectOverlap={false}
