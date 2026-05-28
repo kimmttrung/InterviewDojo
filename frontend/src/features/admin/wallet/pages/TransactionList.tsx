@@ -22,6 +22,7 @@ import { Skeleton } from '@/shared/components/ui/skeleton';
 import { useAdminTransactions } from '../hooks/useAdminTransactions';
 import { useDebounce } from '@/hooks/use-debounce';
 import { RefreshCcw, Search } from 'lucide-react';
+import { AdjustBalanceModal } from '../components/AdjustBalanceModal';
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -30,12 +31,30 @@ const formatDateTime = (d: string) =>
   new Intl.DateTimeFormat('vi-VN', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(d));
 
 const TX_TYPE_CONFIG: Record<string, { label: string; className: string }> = {
-  DEPOSIT: { label: 'Nạp tiền', className: 'bg-green-100 text-green-800' },
-  PAYMENT: { label: 'Thanh toán', className: 'bg-red-100 text-red-800' },
-  REFUND: { label: 'Hoàn tiền', className: 'bg-yellow-100 text-yellow-800' },
-  PAYOUT: { label: 'Trả mentor', className: 'bg-blue-100 text-blue-800' },
-  PLATFORM_FEE: { label: 'Phí nền tảng', className: 'bg-purple-100 text-purple-800' },
-  ADMIN_ADJUSTMENT: { label: 'Admin điều chỉnh', className: 'bg-orange-100 text-orange-800' },
+  DEPOSIT: {
+    label: 'Nạp tiền',
+    className: 'bg-green-100 text-green-800 border border-green-200 font-medium',
+  },
+  PAYMENT: {
+    label: 'Thanh toán',
+    className: 'bg-red-100 text-red-800 border border-red-200 font-medium',
+  },
+  REFUND: {
+    label: 'Hoàn tiền',
+    className: 'bg-yellow-100 text-yellow-800 border border-yellow-200 font-medium',
+  },
+  PAYOUT: {
+    label: 'Trả mentor',
+    className: 'bg-blue-100 text-blue-800 border border-blue-200 font-medium',
+  },
+  PLATFORM_FEE: {
+    label: 'Phí nền tảng',
+    className: 'bg-purple-100 text-purple-800 border border-purple-200 font-medium',
+  },
+  ADMIN_ADJUSTMENT: {
+    label: 'Admin điều chỉnh',
+    className: 'bg-orange-100 text-orange-800 border border-orange-200 font-medium',
+  },
 };
 
 // ── component ─────────────────────────────────────────────────────────────────
@@ -46,6 +65,12 @@ export const TransactionList = () => {
   const [search, setSearch] = useState('');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+
+  const [adjustTarget, setAdjustTarget] = useState<{
+    userId: number;
+    userName: string;
+    currentBalance: number;
+  } | null>(null);
 
   const debouncedSearch = useDebounce(search, 400);
 
@@ -61,7 +86,7 @@ export const TransactionList = () => {
   const transactions = data?.items ?? [];
   const meta = data?.meta;
 
-  const handleFilterChange = () => setPage(1); // reset page khi đổi filter
+  const handleFilterChange = () => setPage(1);
 
   return (
     <div className="space-y-6">
@@ -104,7 +129,7 @@ export const TransactionList = () => {
           <SelectTrigger className="w-[180px]">
             <SelectValue placeholder="Loại giao dịch" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="bg-background border shadow-md">
             <SelectItem value="ALL">Tất cả</SelectItem>
             {Object.entries(TX_TYPE_CONFIG).map(([key, { label }]) => (
               <SelectItem key={key} value={key}>
@@ -165,13 +190,14 @@ export const TransactionList = () => {
               <TableHead>Số dư trước → sau</TableHead>
               <TableHead>Mã tham chiếu</TableHead>
               <TableHead>Thời gian</TableHead>
+              <TableHead className="text-right">Hành động</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               Array.from({ length: 8 }).map((_, i) => (
                 <TableRow key={i}>
-                  {Array.from({ length: 7 }).map((_, j) => (
+                  {Array.from({ length: 8 }).map((_, j) => (
                     <TableCell key={j}>
                       <Skeleton className="h-4 w-full" />
                     </TableCell>
@@ -180,7 +206,7 @@ export const TransactionList = () => {
               ))
             ) : transactions.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                <TableCell colSpan={8} className="text-center py-12 text-muted-foreground">
                   Không có giao dịch nào
                 </TableCell>
               </TableRow>
@@ -188,11 +214,9 @@ export const TransactionList = () => {
               transactions.map((tx: any) => {
                 const config = TX_TYPE_CONFIG[tx.type] ?? {
                   label: tx.type,
-                  className: 'bg-gray-100 text-gray-800',
+                  className: 'bg-gray-100 text-gray-800 border border-gray-200 font-medium',
                 };
-                const isPositive = ['DEPOSIT', 'REFUND', 'ADMIN_ADJUSTMENT'].includes(tx.type)
-                  ? tx.amount >= 0
-                  : false;
+                const isPositive = tx.balanceAfter > tx.balanceBefore;
 
                 return (
                   <TableRow key={tx.id} className="hover:bg-muted/40">
@@ -239,6 +263,23 @@ export const TransactionList = () => {
                     <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                       {formatDateTime(tx.createdAt)}
                     </TableCell>
+                    <TableCell className="text-right">
+                      {tx.user && (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() =>
+                            setAdjustTarget({
+                              userId: tx.user.id,
+                              userName: tx.user.name,
+                              currentBalance: tx.balanceAfter,
+                            })
+                          }
+                        >
+                          Điều chỉnh
+                        </Button>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })
@@ -272,6 +313,20 @@ export const TransactionList = () => {
             </Button>
           </div>
         </div>
+      )}
+
+      {/* Adjust Balance Modal */}
+      {adjustTarget && (
+        <AdjustBalanceModal
+          open={!!adjustTarget}
+          onClose={() => setAdjustTarget(null)}
+          userId={adjustTarget.userId}
+          userName={adjustTarget.userName}
+          currentBalance={adjustTarget.currentBalance}
+          onSuccess={() => {
+            refetch();
+          }}
+        />
       )}
     </div>
   );

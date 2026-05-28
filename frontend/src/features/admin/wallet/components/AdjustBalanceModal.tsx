@@ -136,7 +136,7 @@ export const AdjustBalanceModal = ({
             <Textarea
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              placeholder="VD: Bù credit do lỗi hệ thống ngày 27/05..."
+              placeholder="VD: Bù credit do lỗi hệ thống ngày ..., chi tiet ma loi ..."
               rows={3}
               className="mt-1 resize-none"
             />
