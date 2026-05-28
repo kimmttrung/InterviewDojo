@@ -121,45 +121,4 @@ export class WalletService {
 
     return { id: updated.id, creditBalance: updated.creditBalance };
   }
-
-  /**
-   * Admin điều chỉnh số dư (tăng hoặc giảm) — trả raw data.
-   */
-  async adminAdjustBalance(userId: number, amount: number, note: string) {
-    if (amount === 0) throw new BadRequestException('Amount must not be zero');
-
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-
-    await this.prisma.$transaction(async (tx) => {
-      const userBefore = await tx.user.findUnique({
-        where: { id: userId },
-        select: { creditBalance: true },
-      });
-
-      const updated = await tx.user.update({
-        where: { id: userId },
-        data: { creditBalance: { increment: amount } },
-        select: { creditBalance: true },
-      });
-
-      await tx.walletTransaction.create({
-        data: {
-          userId,
-          type:
-            amount > 0
-              ? WalletTransactionType.DEPOSIT
-              : WalletTransactionType.PAYMENT,
-          amount: Math.abs(amount),
-          balanceBefore: userBefore!.creditBalance,
-          balanceAfter: updated.creditBalance,
-          referenceId: `admin:${Date.now()}`,
-          note,
-        },
-      });
-    });
-
-    // Trả raw data — không cần return { success: true } vì interceptor bọc rồi
-    return null;
-  }
 }

@@ -50,6 +50,9 @@ import JobRolesPage from '@/features/admin/job-roles/pages/JobRolesPage';
 
 import CandidateSessionsPage from '@/features/session/page/CandidateSessionPage';
 import MentorSessionsPage from '@/features/session/page/MentorSessionPage';
+
+import { WalletStatistics } from '@/features/admin/wallet/pages/WalletStatistics';
+import { TransactionList } from '@/features/admin/wallet/pages/TransactionList';
 // import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 // import { Navbar } from '@/shared/components/layout/Navbar';
 // ──────────────────────────────────────────
@@ -333,6 +336,8 @@ export function App() {
               <Route path="questions" element={<QuestionList />} />
               <Route path="questions/new" element={<QuestionForm />} />
               <Route path="questions/:id/edit" element={<QuestionForm />} />
+              <Route path="wallet-statistics" element={<WalletStatistics />} />
+              <Route path="transactions" element={<TransactionList />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 
