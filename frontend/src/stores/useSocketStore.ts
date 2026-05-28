@@ -36,12 +36,18 @@ export const useSocketStore = create<SocketState>((set, get) => ({
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      autoConnect: true,
     });
 
     newSocket.on('connect', () => {
       console.log(`✅ Socket connected: ${newSocket.id}`);
       set({ socket: newSocket, isConnected: true });
+    });
+
+    // ✅ Re-join tất cả room đã đăng ký sau khi connect/reconnect
+    const { joinedRooms } = get();
+    joinedRooms.forEach((roomId) => {
+      newSocket.emit('join_room', roomId);
+      console.log(`🔄 Re-joined room: ${roomId}`);
     });
 
     newSocket.on('disconnect', () => {
@@ -69,23 +75,39 @@ export const useSocketStore = create<SocketState>((set, get) => ({
   // ====================== JOIN ROOM ======================
   joinRoom: (roomId: string) => {
     const { socket, joinedRooms } = get();
-
-    if (!socket?.connected) return;
     if (joinedRooms.has(roomId)) return;
 
-    socket.emit('join_room', roomId);
-    console.log(`Joined room: ${roomId}`);
-
+    // Đăng ký vào danh sách trước (để re-join sau reconnect)
     set((state) => ({
       joinedRooms: new Set(state.joinedRooms).add(roomId),
     }));
+
+    if (!socket) return;
+
+    if (socket.connected) {
+      socket.emit('join_room', roomId);
+      console.log(`🏠 Joined room: ${roomId}`);
+    } else {
+      // Chưa connect xong → đợi connect event một lần
+      socket.once('connect', () => {
+        socket.emit('join_room', roomId);
+        console.log(`🏠 Joined room (after connect): ${roomId}`);
+      });
+    }
   },
 
   // ====================== EMIT ======================
   emit: (event: string, data: any) => {
     const { socket } = get();
-    if (socket?.connected) {
+    if (!socket) return;
+
+    if (socket.connected) {
       socket.emit(event, data);
+    } else {
+      // Buffer: đợi connect rồi gửi (chỉ dùng cho các event quan trọng như join_room)
+      socket.once('connect', () => {
+        socket.emit(event, data);
+      });
     }
   },
 }));

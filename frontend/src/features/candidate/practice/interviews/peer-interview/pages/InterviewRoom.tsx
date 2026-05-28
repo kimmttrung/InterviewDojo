@@ -32,9 +32,20 @@ export default function InterviewRoom() {
   const [streamToken, setStreamToken] = useState<string | null>(searchParams.get('token'));
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false); // đánh dấu đã rời phòng
+  const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser();
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+  const userId =
+    isAuthenticated && currentUser?.id
+      ? String(currentUser.id)
+      : searchParams.get('userId') || 'guest';
+
+  const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
+  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
+  const { emit, socket } = useSocketStore();
 
   const mainContainerRef = useRef<HTMLDivElement>(null);
-  const { cursors, sendMouseMove } = useCursorSync(roomId!, true);
+  const isReady = !!client && !!call && !!currentUser?.id;
+  const { cursors, sendMouseMove } = useCursorSync(roomId!, isReady);
 
   // Lắng nghe mousemove trên toàn bộ main
   useEffect(() => {
@@ -86,14 +97,6 @@ export default function InterviewRoom() {
   };
 
   // Lấy userId từ auth store (ưu tiên) hoặc từ query param
-  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-
-  const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser();
-
-  const userId =
-    isAuthenticated && currentUser?.id
-      ? String(currentUser.id)
-      : searchParams.get('userId') || 'guest';
 
   useEffect(() => {
     if (streamToken || !isAuthenticated || !currentUser?.id) return;
@@ -125,14 +128,7 @@ export default function InterviewRoom() {
     }
   }, [randomQuestion]);
 
-  // currentQuestion sẽ lấy từ randomQuestion hoặc null
-  // const currentQuestion = randomQuestion || null;
-  // const isLoading = isFetching;
-
   // Lấy các hàm từ Zustand Socket Store
-  const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
-  const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
-  const { emit, socket } = useSocketStore();
 
   // Socket listeners
   useEffect(() => {
@@ -197,7 +193,7 @@ export default function InterviewRoom() {
         <StreamCall call={call}>
           <div className="h-screen flex flex-col bg-white overflow-hidden">
             <InterviewHeader roomId={roomId!} />
-            <main ref={mainContainerRef} className="flex-1 flex overflow-hidden">
+            <main ref={mainContainerRef} className="flex-1 flex">
               <QuestionPanel
                 question={displayedQuestion}
                 onRandom={handleRandom}

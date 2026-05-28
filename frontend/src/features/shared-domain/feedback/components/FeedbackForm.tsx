@@ -96,6 +96,7 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
             selected={form.quickTags || []}
             onChange={(tags) => setForm((prev) => ({ ...prev, quickTags: tags }))}
           />
+          {renderTextarea('Additional comments', 'comment', 'Any other feedback or comments?')}
         </div>
       )}
 
@@ -107,8 +108,6 @@ export const FeedbackForm = ({ mode, sessionId, onSuccess, onCancel }: Props) =>
           {renderTextarea('Suggestions', 'suggestions', 'Advice for next time?')}
         </>
       )}
-
-      {renderTextarea('Additional comments', 'comment', 'Any other feedback or comments?')}
 
       <div className="flex justify-end gap-3 mt-4 pt-3 border-t border-gray-100">
         <button

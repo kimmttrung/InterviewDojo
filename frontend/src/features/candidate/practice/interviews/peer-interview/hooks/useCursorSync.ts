@@ -21,29 +21,47 @@ export interface CursorData {
 }
 
 export function useCursorSync(roomId: string, enabled: boolean = true) {
-  const { socket, emit } = useSocketStore();
+  // const { socket, emit, joinRoom } = useSocketStore();
   const { data: currentUser } = useCurrentUser();
   const [cursors, setCursors] = useState<Map<string, CursorData>>(new Map());
   const throttleRef = useRef<number | null>(null);
   const lastSentRef = useRef<{ x: number; y: number } | null>(null);
 
+  const joinRoom = useSocketStore((s) => s.joinRoom);
+
+  // ✅ Join room, và re-join mỗi khi socket thay đổi
+  useEffect(() => {
+    if (!roomId || !enabled) return;
+
+    // Join ngay lập tức với socket hiện tại
+    joinRoom(roomId);
+
+    // Subscribe để re-join khi socket bị thay thế (remount/reconnect)
+    const unsubscribe = useSocketStore.subscribe((state, prevState) => {
+      if (state.socket !== prevState.socket && state.socket) {
+        console.log('🔄 Socket changed, re-joining room:', roomId);
+        joinRoom(roomId);
+      }
+    });
+
+    return () => unsubscribe();
+  }, [roomId, enabled, joinRoom]);
+
   const sendMouseMove = useCallback(
     (x: number, y: number) => {
-      if (!socket || !roomId || !currentUser?.id || !enabled) {
-        console.log('🐭 sendMouseMove blocked:', {
-          socket: !!socket,
-          roomId,
-          userId: currentUser?.id,
-          enabled,
-        });
-        return;
-      }
+      if (!roomId || !currentUser?.id || !enabled) return;
       if (throttleRef.current) return;
+
       throttleRef.current = window.setTimeout(() => {
         throttleRef.current = null;
         if (lastSentRef.current?.x === x && lastSentRef.current?.y === y) return;
         lastSentRef.current = { x, y };
-        emit('mouse_move', {
+
+        // ✅ Lấy socket tại thời điểm gọi, không phải lúc tạo closure
+        const { socket } = useSocketStore.getState();
+        if (!socket?.connected) return;
+
+        socket.emit('mouse_move', {
           roomId,
           x,
           y,
@@ -54,42 +72,70 @@ export function useCursorSync(roomId: string, enabled: boolean = true) {
         console.log(`🖱️ Sent mouse: (${x}, ${y})`);
       }, 33);
     },
-    [socket, roomId, currentUser, enabled, emit],
+    [roomId, currentUser, enabled],
+    // ✅ Không có socket trong deps
   );
 
+  // ✅ Listener dùng subscribe để bắt socket mới ngay khi thay đổi
   useEffect(() => {
-    if (!socket || !roomId || !enabled) return;
+    if (!roomId || !enabled || !currentUser?.id) return;
 
-    const handleMouseMove = (data: any) => {
-      const { userId, x, y, displayName, color } = data;
-      if (userId === String(currentUser?.id)) return;
-      console.log(`📡 Received mouse from ${userId}: (${x}, ${y})`);
-      setCursors((prev) => {
-        const newMap = new Map(prev);
-        newMap.set(userId, {
-          userId,
-          displayName: displayName || `User ${userId.slice(0, 5)}`,
-          color: color || getUserColor(userId),
-          x,
-          y,
+    // Hàm attach listener vào một socket cụ thể, trả về cleanup
+    const attachListener = (socket: ReturnType<typeof useSocketStore.getState>['socket']) => {
+      if (!socket) return () => {};
+
+      const handleMouseMove = (data: any) => {
+        const { userId, x, y, displayName, color } = data;
+        if (userId === String(currentUser.id)) return;
+        console.log(`📡 Received mouse from ${userId}: (${x}, ${y})`);
+
+        setCursors((prev) => {
+          const next = new Map(prev);
+          next.set(userId, {
+            userId,
+            displayName: displayName || `User ${userId.slice(0, 5)}`,
+            color: color || getUserColor(userId),
+            x,
+            y,
+          });
+          return next;
         });
-        return newMap;
-      });
+      };
+
+      socket.on('mouse_move', handleMouseMove);
+      console.log('👂 Attached mouse_move listener');
+      return () => {
+        socket.off('mouse_move', handleMouseMove);
+        console.log('🗑️ Removed mouse_move listener');
+      };
     };
 
-    socket.on('mouse_move', handleMouseMove);
+    // Attach vào socket hiện tại ngay lập tức
+    let cleanup = attachListener(useSocketStore.getState().socket);
+
+    // Khi socket thay đổi → gỡ listener cũ, gắn listener mới
+    const unsubscribe = useSocketStore.subscribe((state, prevState) => {
+      if (state.socket !== prevState.socket) {
+        cleanup();
+        cleanup = attachListener(state.socket);
+      }
+    });
+
     return () => {
-      socket.off('mouse_move', handleMouseMove);
+      cleanup();
+      unsubscribe();
     };
-  }, [socket, roomId, currentUser?.id, enabled]);
+  }, [roomId, currentUser?.id, enabled]);
 
-  // Xóa con trỏ khi rời phòng (tuỳ chọn)
+  // ✅ Clear cursors khi mất kết nối
   useEffect(() => {
-    if (!socket) return;
-    const handleDisconnect = () => setCursors(new Map());
-    socket.on('disconnect', handleDisconnect);
-    return () => socket.off('disconnect', handleDisconnect);
-  }, [socket]);
+    const unsubscribe = useSocketStore.subscribe((state, prevState) => {
+      if (prevState.isConnected && !state.isConnected) {
+        setCursors(new Map());
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   return { cursors, sendMouseMove };
 }

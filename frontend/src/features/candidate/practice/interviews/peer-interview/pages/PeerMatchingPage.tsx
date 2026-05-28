@@ -209,6 +209,7 @@ export default function PeerMatchingPage() {
         <ReceivedFeedbackModal
           open={showReceivedFeedback}
           onClose={() => setShowReceivedFeedback(false)}
+          sessionId={null}
         />
       </div>
     </Layout>

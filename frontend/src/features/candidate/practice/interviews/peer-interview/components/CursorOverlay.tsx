@@ -1,60 +1,62 @@
 // components/CursorOverlay.tsx
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { CursorData } from '../hooks/useCursorSync';
 
 interface CursorOverlayProps {
   cursors: Map<string, CursorData>;
-  containerRef: React.RefObject<HTMLElement>;
+  containerRef: React.RefObject<HTMLDivElement>;
 }
 
 export const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, containerRef }) => {
   const [containerRect, setContainerRect] = useState<DOMRect | null>(null);
-  const rafId = useRef<number>();
 
   useEffect(() => {
-    const updateRect = () => {
-      if (containerRef.current) {
-        setContainerRect(containerRef.current.getBoundingClientRect());
-      }
-      rafId.current = requestAnimationFrame(updateRect);
-    };
-    updateRect();
-    window.addEventListener('resize', updateRect);
-    window.addEventListener('scroll', updateRect, true);
+    const el = containerRef.current;
+    if (!el) return;
+
+    const update = () => setContainerRect(el.getBoundingClientRect());
+    update();
+
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    window.addEventListener('scroll', update, true);
+
     return () => {
-      window.removeEventListener('resize', updateRect);
-      window.removeEventListener('scroll', updateRect, true);
-      if (rafId.current) cancelAnimationFrame(rafId.current);
+      ro.disconnect();
+      window.removeEventListener('scroll', update, true);
     };
   }, [containerRef]);
 
-  if (!containerRect) return null;
+  if (!containerRect || cursors.size === 0) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed top-0 left-0 pointer-events-none z-50"
       style={{
+        position: 'fixed',
+        top: 0,
+        left: 0,
         width: containerRect.width,
         height: containerRect.height,
         transform: `translate(${containerRect.left}px, ${containerRect.top}px)`,
+        pointerEvents: 'none',
+        zIndex: 9999,
+        overflow: 'visible',
       }}
     >
       {Array.from(cursors.values()).map((cursor) => (
         <div
           key={cursor.userId}
-          className="absolute transition-transform duration-75 ease-out"
           style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
             transform: `translate(${cursor.x}px, ${cursor.y}px)`,
+            transition: 'transform 75ms ease-out',
+            pointerEvents: 'none',
           }}
         >
-          {/* SVG mũi tên */}
-          <svg
-            width="22"
-            height="22"
-            viewBox="0 0 24 24"
-            fill="none"
-            xmlns="http://www.w3.org/2000/svg"
-          >
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
             <path
               d="M5.5 3.5L19 12L12 13L9 20L5.5 3.5Z"
               fill={cursor.color}
@@ -62,15 +64,27 @@ export const CursorOverlay: React.FC<CursorOverlayProps> = ({ cursors, container
               strokeWidth="1.5"
             />
           </svg>
-          {/* Tên người dùng */}
           <div
-            className="absolute left-5 top-0 px-2 py-0.5 rounded text-xs font-semibold whitespace-nowrap shadow-md"
-            style={{ backgroundColor: cursor.color, color: '#fff' }}
+            style={{
+              position: 'absolute',
+              left: '20px',
+              top: '0px',
+              padding: '1px 6px',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: 600,
+              whiteSpace: 'nowrap',
+              backgroundColor: cursor.color,
+              color: '#fff',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.25)',
+              pointerEvents: 'none',
+            }}
           >
             {cursor.displayName}
           </div>
         </div>
       ))}
-    </div>
+    </div>,
+    document.body,
   );
 };
