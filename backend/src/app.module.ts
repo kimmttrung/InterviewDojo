@@ -58,10 +58,8 @@ import { JobRolesModule } from './modules/job-roles/job-roles.module';
     // Đăng ký toàn bộ queue hệ thống sẽ dùng
     BullModule.registerQueue(
       { name: 'code-execution' }, // cho submit code
-      { name: 'code-execution' },
       { name: 'ai-analysis' },
       { name: 'notification' },
-      { name: 'email' },
       { name: 'recommendation-queue' },
       { name: 'session' },
     ),

@@ -8,6 +8,8 @@ import {
   Layers,
   Building2,
   Briefcase,
+  TrendingUp,
+  Receipt,
 } from 'lucide-react';
 
 const menuItems = [
@@ -19,6 +21,9 @@ const menuItems = [
   { path: '/admin/coaching-categories', label: 'Coaching Categories', icon: Layers },
   { path: '/admin/companies', label: 'Companies', icon: Building2 }, // mới
   { path: '/admin/job-roles', label: 'Job Roles', icon: Briefcase },
+
+  { path: '/admin/wallet-statistics', label: 'Thống kê ví', icon: TrendingUp },
+  { path: '/admin/transactions', label: 'Giao dịch', icon: Receipt },
 ];
 
 export default function AdminSidebar() {
