@@ -1,31 +1,3 @@
-// import { ConfigService } from '@nestjs/config';
-// import { BullRootModuleOptions } from '@nestjs/bullmq';
-// import Redis from 'ioredis';
-
-// export const bullConfig = (config: ConfigService): BullRootModuleOptions => {
-//   const redisUrl = config.get<string>('REDIS_URL');
-
-//   if (!redisUrl) {
-//     throw new Error('REDIS_URL is not defined');
-//   }
-
-//   return {
-//     connection: new Redis(redisUrl, {
-//       //tls: {},
-//       maxRetriesPerRequest: null,
-//     }),
-//     defaultJobOptions: {
-//       removeOnComplete: 500,
-//       removeOnFail: 100,
-//       attempts: 5,
-//       backoff: {
-//         type: 'exponential',
-//         delay: 2000,
-//       },
-//     },
-//   };
-// };
-
 import { ConfigService } from '@nestjs/config';
 import { BullRootModuleOptions } from '@nestjs/bullmq';
 import Redis from 'ioredis';
@@ -36,6 +8,12 @@ export const bullConfig = (config: ConfigService): BullRootModuleOptions => {
 
   const connection = new Redis(redisUrl, {
     maxRetriesPerRequest: null,
+    keepAlive: 10000,
+    connectTimeout: 30000,
+    enableReadyCheck: false,
+    tls: {
+      rejectUnauthorized: false,
+    },
     retryStrategy: (times) => {
       console.log(`🔁 Redis retry attempt ${times}`);
       if (times > 5) {
@@ -52,7 +30,8 @@ export const bullConfig = (config: ConfigService): BullRootModuleOptions => {
   return {
     connection,
     defaultJobOptions: {
-      /* ... */
+      removeOnComplete: true,
+      removeOnFail: 100,
     },
   };
 };

@@ -270,7 +270,7 @@ model User {
   moderationLogsReceived ModerationLog[] @relation("ModeratedUsers")
   moderationLogsCreated  ModerationLog[] @relation("ModeratorActions")
 
-  // cache recommendation 
+  // cache recommendation
   recommendationsAsCandidate CandidateRecommendation[] @relation("CandidateRecommendations")
   recommendationsAsMentor    CandidateRecommendation[] @relation("RecommendedMentors")
 
@@ -838,6 +838,7 @@ model MockSession {
   questions MockSessionQuestion[]
 
   @@map("mock_sessions")
+  @@index([status, scheduledAt])
 }
 
 model SoloSession {
