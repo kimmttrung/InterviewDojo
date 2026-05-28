@@ -39,6 +39,7 @@ import { AdminModule } from './modules/admin/admin.module';
 import { MentorRecommendationModule } from './modules/mentor-recommendation/recommendation.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { JobRolesModule } from './modules/job-roles/job-roles.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -47,6 +48,7 @@ import { JobRolesModule } from './modules/job-roles/job-roles.module';
     }),
 
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
 
     // Setup BullMQ
     BullModule.forRootAsync({

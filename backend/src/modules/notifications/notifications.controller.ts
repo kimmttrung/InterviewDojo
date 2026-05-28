@@ -4,6 +4,7 @@ import {
   Patch,
   Param,
   Query,
+  ValidationPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -26,7 +27,9 @@ export class NotificationsController {
   @ResponseMessage(Messages.NOTIFICATIONS.FETCHED)
   findMyNotifications(
     @CurrentUser() user: any,
-    @Query() query: QueryNotificationsDto,
+    // @Query() query: QueryNotificationsDto,
+    @Query(new ValidationPipe({ transform: true }))
+    query: QueryNotificationsDto,
   ) {
     return this.notificationsService.findMyNotifications(
       Number(user.sub),
