@@ -402,17 +402,10 @@ export class BookingService {
       }
 
       const userIds = [updated.mentorId, updated.candidateId];
-      await this.sessionService.scheduleSessionEnd(
-        mockSession.id,
-        userIds,
-        mockSession.scheduledAt,
-        mockSession.durationMinutes,
-      );
+      await this.sessionService.scheduleSessionEnd(mockSession, userIds);
       await this.sessionService.scheduleSessionStartNotification(
-        mockSession.id,
+        mockSession,
         userIds,
-        mockSession.scheduledAt,
-        meetingLink,
       );
 
       await tx.bookingActionLog.create({
