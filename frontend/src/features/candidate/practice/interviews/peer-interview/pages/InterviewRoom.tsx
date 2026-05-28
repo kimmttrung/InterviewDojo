@@ -34,12 +34,14 @@ export default function InterviewRoom() {
   const [isLeaving, setIsLeaving] = useState(false); // đánh dấu đã rời phòng
   const { data: currentUser, isLoading: isCurrentUserLoading } = useCurrentUser();
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const userId =
-    isAuthenticated && currentUser?.id
-      ? String(currentUser.id)
-      : searchParams.get('userId') || 'guest';
+  const userId = currentUser?.id ? String(currentUser.id) : null;
 
-  const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
+  const { client, call, error, isInitializing } = useVideoCall(
+    roomId,
+    streamToken,
+    userId,
+    currentUser,
+  );
   const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
   const { emit, socket } = useSocketStore();
 
@@ -87,13 +89,13 @@ export default function InterviewRoom() {
   // Xử lý sau khi gửi feedback thành công
   const handleFeedbackSuccess = () => {
     setShowFeedback(false);
-    navigate('/practice/matching'); // điều hướng về trang danh sách
+    window.location.replace('/practice/matching');
   };
 
   // Xử lý khi bỏ qua feedback (bấm "Để sau")
   const handleFeedbackSkip = () => {
     setShowFeedback(false);
-    navigate('/practice/matching');
+    window.location.replace('/practice/matching');
   };
 
   // Lấy userId từ auth store (ưu tiên) hoặc từ query param
@@ -175,8 +177,12 @@ export default function InterviewRoom() {
       localStorage.removeItem('workMode');
       localStorage.removeItem('questionMode');
       localStorage.removeItem('whiteboard_shapes');
+
+      if (roomId) {
+        useSocketStore.getState().leaveRoom(roomId);
+      }
     };
-  }, []);
+  }, []); // eslint-disable-line
 
   if (isAuthenticated && isCurrentUserLoading) {
     return <InterviewLoading roomId={roomId} />;
@@ -212,7 +218,7 @@ export default function InterviewRoom() {
               />
 
               <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-                <VideoCallSection onLeave={handleLeaveRoom} />
+                <VideoCallSection onLeave={handleLeaveRoom} roomId={roomId!} />
                 <ChatAndNotes />
               </aside>
               <CursorOverlay cursors={cursors} containerRef={mainContainerRef} />

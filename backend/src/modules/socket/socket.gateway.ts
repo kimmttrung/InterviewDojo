@@ -171,4 +171,20 @@ export class SocketGateway
       color: payload.color,
     });
   }
+
+  @SubscribeMessage('end_call')
+  handleEndCall(client: Socket, payload: { roomId: string; userId: string }) {
+    console.log(`User ${payload.userId} ended call in room ${payload.roomId}`);
+
+    // Thông báo cho tất cả người còn lại trong phòng
+    client.to(payload.roomId).emit('call_ended', {
+      endedBy: payload.userId,
+    });
+  }
+
+  @SubscribeMessage('leave_room')
+  handleLeaveRoom(client: Socket, roomId: string) {
+    client.leave(roomId);
+    console.log(`🚪 Client ${client.id} left room: ${roomId}`);
+  }
 }

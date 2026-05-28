@@ -1,3 +1,5 @@
+import { useCurrentUser } from '@/features/auth';
+import { useSocketStore } from '@/stores/useSocketStore';
 import {
   SpeakerLayout,
   useCall,
@@ -20,20 +22,65 @@ const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParti
 
 interface VideoCallSectionProps {
   onLeave?: () => void; // callback khi người dùng xác nhận rời phòng
+  roomId: string;
 }
 
-export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
+export function VideoCallSection({ onLeave, roomId }: VideoCallSectionProps) {
   const call = useCall();
   const { useCameraState, useMicrophoneState, useLocalParticipant } = useCallStateHooks();
 
   const localParticipant = useLocalParticipant();
   const { camera } = useCameraState();
   const { microphone } = useMicrophoneState();
+  const { emit, leaveRoom } = useSocketStore();
+  const { data: currentUser } = useCurrentUser();
 
   const handleLeave = async () => {
     const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
-    if (confirmed && call) {
+    if (!confirmed || !call) return;
+
+    try {
+      await Promise.all([call.camera.disable(), call.microphone.disable()]);
+
+      // 2. ✅ Stop trực tiếp tất cả media tracks của browser
+      // Đây là cách duy nhất tắt đèn camera vật lý
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((track) => {
+            track.stop();
+            console.log(`🎥 Stopped track: ${track.kind}`);
+          });
+        })
+        .catch(() => {
+          // Không có permission thì bỏ qua
+        });
+
+      // 3. Stop tất cả tracks đang chạy trên trang hiện tại
+      document.querySelectorAll('video, audio').forEach((el) => {
+        const mediaEl = el as HTMLMediaElement;
+        if (mediaEl.srcObject) {
+          (mediaEl.srcObject as MediaStream).getTracks().forEach((track) => {
+            track.stop();
+          });
+          mediaEl.srcObject = null;
+        }
+      });
+
+      // 1. Báo server để server thông báo người kia
+      emit('end_call', { roomId, userId: String(currentUser?.id) });
+
+      // Xóa room khỏi store ngay lập tức
+      leaveRoom(roomId);
+
+      // 2. Chờ một chút để socket event đi trước
+      await new Promise((resolve) => setTimeout(resolve, 200));
+
+      // 3. Rời call
       await call.leave();
+    } catch (err) {
+      console.warn('leave failed:', err);
+    } finally {
       onLeave?.();
     }
   };

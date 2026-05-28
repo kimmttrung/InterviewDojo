@@ -122,7 +122,7 @@ export default function PeerMatchingPage() {
     <Layout>
       <div className="min-h-[80vh] flex flex-col items-center justify-center bg-slate-50 px-4">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => navigate('/home')}
           className="absolute top-24 left-8 flex items-center text-muted-foreground hover:text-primary transition-colors"
         >
           <ArrowLeft className="mr-2 h-4 w-4" /> Go Back

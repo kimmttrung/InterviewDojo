@@ -9,6 +9,7 @@ interface SocketState {
   connect: (userId: string) => void;
   disconnect: () => void;
   joinRoom: (roomId: string) => void;
+  leaveRoom: (roomId: string) => void;
   emit: (event: string, data: any) => void;
 }
 
@@ -94,6 +95,21 @@ export const useSocketStore = create<SocketState>((set, get) => ({
         console.log(`🏠 Joined room (after connect): ${roomId}`);
       });
     }
+  },
+
+  leaveRoom: (roomId: string) => {
+    const { socket, joinedRooms } = get();
+
+    // Rời socket room
+    if (socket?.connected) {
+      socket.emit('leave_room', roomId);
+    }
+
+    // Xóa khỏi danh sách
+    const newRooms = new Set(joinedRooms);
+    newRooms.delete(roomId);
+    set({ joinedRooms: newRooms });
+    console.log('🚪 Left room:', roomId);
   },
 
   // ====================== EMIT ======================

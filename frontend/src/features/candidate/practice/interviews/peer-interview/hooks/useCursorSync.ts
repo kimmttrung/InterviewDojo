@@ -69,7 +69,6 @@ export function useCursorSync(roomId: string, enabled: boolean = true) {
           displayName: currentUser.fullName || currentUser.email || `User ${currentUser.id}`,
           color: getUserColor(String(currentUser.id)),
         });
-        console.log(`🖱️ Sent mouse: (${x}, ${y})`);
       }, 33);
     },
     [roomId, currentUser, enabled],
@@ -87,8 +86,6 @@ export function useCursorSync(roomId: string, enabled: boolean = true) {
       const handleMouseMove = (data: any) => {
         const { userId, x, y, displayName, color } = data;
         if (userId === String(currentUser.id)) return;
-        console.log(`📡 Received mouse from ${userId}: (${x}, ${y})`);
-
         setCursors((prev) => {
           const next = new Map(prev);
           next.set(userId, {
@@ -103,10 +100,8 @@ export function useCursorSync(roomId: string, enabled: boolean = true) {
       };
 
       socket.on('mouse_move', handleMouseMove);
-      console.log('👂 Attached mouse_move listener');
       return () => {
         socket.off('mouse_move', handleMouseMove);
-        console.log('🗑️ Removed mouse_move listener');
       };
     };
 
