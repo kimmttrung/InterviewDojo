@@ -11,6 +11,5 @@ export const cancelSession = async (data: { sessionId: string; reason: string })
   const response = await api.post(API_ENDPOINT.SESSION.CANCEL(data.sessionId), {
     reason: data.reason,
   });
-  // Tương tự, nếu backend trả về { success, data, message } thì lấy response.data.data
   return response.data.data;
 };

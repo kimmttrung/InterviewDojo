@@ -60,14 +60,22 @@ export const SessionCard = ({ session }: Props) => {
     <div className="border rounded-lg p-4 shadow-sm flex flex-col gap-3 bg-white">
       <div className="flex justify-between items-center">
         <div className="flex items-center gap-3">
-          <UserAvatar
-            userId={session.opponentId ?? 0} // Nếu null thì truyền 0
-            avatarUrl={session.opponentAvatar}
-            name={session.opponentName ?? undefined} // Biến null thành undefined
-            className="h-10 w-10"
-          />
+          {session.type === 'SOLO' ? (
+            <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold shrink-0">
+              AI
+            </div>
+          ) : (
+            <UserAvatar
+              userId={session.opponentId ?? 0}
+              avatarUrl={session.opponentAvatar}
+              name={session.opponentName ?? undefined}
+              className="h-10 w-10"
+            />
+          )}
           <div>
-            <h3 className="font-bold hover:text-primary">{session.opponentName}</h3>
+            <h3 className={`font-bold ${session.type !== 'SOLO' ? 'hover:text-primary' : ''}`}>
+              {session.type === 'SOLO' ? 'AI' : session.opponentName}
+            </h3>
             <span className="text-xs px-2 py-1 bg-blue-100 text-blue-700 rounded-full inline-block mt-1">
               {session.type === 'MENTOR'
                 ? 'Mentor Session'
@@ -89,14 +97,18 @@ export const SessionCard = ({ session }: Props) => {
         </div>
       </div>
 
-      <div className="bg-gray-50 p-3 rounded-md">
-        <p className="font-medium">Plan: {session.coachingPlan || 'N/A'}</p>
-        {session.candidateAnswers && (
-          <p className="text-sm text-gray-600 mt-1 line-clamp-2">
-            Answers: {session.candidateAnswers}
-          </p>
-        )}
-      </div>
+      {(session.type === 'MENTOR' || session.candidateAnswers) && (
+        <div className="bg-gray-50 p-3 rounded-md">
+          {session.type === 'MENTOR' && (
+            <p className="font-medium">Plan: {session.coachingPlan || 'N/A'}</p>
+          )}
+          {session.candidateAnswers && (
+            <p className="text-sm text-gray-600 mt-1 line-clamp-2">
+              Answers: {session.candidateAnswers}
+            </p>
+          )}
+        </div>
+      )}
 
       <div className="flex justify-between items-center mt-2">
         <div className="text-sm font-medium text-orange-600">
