@@ -151,11 +151,23 @@ describe('DashboardService', () => {
       overallScore: 7.5,
       completedCodingQuestions: 4,
       savedQuestions: 6,
-      sessionBreakdown: { mentor: 1, p2p: 1, solo: 2 },
       scoreChart: [
-        { date: first, score: 7 },
-        { date: second, score: 8 },
+        {
+          date: new Date('2026-01-01'),
+          score: 7,
+          sessionType: 'UNKNOWN',
+        },
+        {
+          date: new Date('2026-01-02'),
+          score: 8,
+          sessionType: 'UNKNOWN',
+        },
       ],
+      sessionBreakdown: {
+        mentor: 1,
+        p2p: 1,
+        solo: 2,
+      },
     });
   });
 
