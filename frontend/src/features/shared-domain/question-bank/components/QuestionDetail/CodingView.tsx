@@ -1,15 +1,29 @@
 // features/questions/components/QuestionDetail/CodingView.tsx
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ChevronLeft, Info, Lightbulb, Beaker } from 'lucide-react';
 import CodeEditor from '../../../code-editor/pages/CodeEditor';
 import { Badge } from '@/shared/components/ui/badge';
 import { QuestionDetail } from '../../types/question.types';
+import { CommentSection } from '@/features/comment/components/CommentSection';
+import { useEffect } from 'react';
 
 interface CodingViewProps {
   question: QuestionDetail;
 }
 
 export function CodingView({ question }: CodingViewProps) {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#comments') {
+      const element = document.getElementById('comments');
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location]);
   return (
     <div className="h-screen flex overflow-hidden bg-white w-full">
       {/* LEFT: Question Details */}
@@ -119,6 +133,9 @@ export function CodingView({ question }: CodingViewProps) {
             </div>
           </div>
         )}
+        <div id="comments" className="mt-12 pt-8 border-t border-slate-100">
+          <CommentSection questionId={question.id} />
+        </div>
       </div>
 
       {/* RIGHT: Code Editor */}

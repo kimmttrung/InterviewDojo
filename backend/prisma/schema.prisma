@@ -186,6 +186,7 @@ enum ReportTargetType {
   USER
   SYSTEM
   QUESTION
+  COMMENT
 }
 
 enum ReportType {
@@ -208,6 +209,11 @@ enum ReportType {
   INAPPROPRIATE_CONTENT
   DUPLICATE
   OTHER_QUESTION
+
+  // COMMENT
+  SPAM
+  HATE_SPEECH
+  HARASSMENT_COMMENT
 }
 
 enum ReportStatus {
@@ -285,6 +291,8 @@ model User {
   recommendationsAsCandidate CandidateRecommendation[] @relation("CandidateRecommendations")
   recommendationsAsMentor    CandidateRecommendation[] @relation("RecommendedMentors")
 
+  comments        Comment[]
+
   payments Payment[]
 
   @@map("users")
@@ -325,13 +333,13 @@ model UserReport {
   // targetType = SYSTEM   → tất cả null, reason mô tả lỗi
   targetUserId          Int?    @map("target_user_id")
   targetQuestionId      Int?    @map("target_question_id")
-  snapshotQuestionTitle String? @map("snapshot_question_title") // giữ lại khi question bị xóa
-
+  snapshotQuestionTitle String? @map("snapshot_question_title")
+  targetCommentId       Int?    @map("target_comment_id")
   reporter       User      @relation("UserReportsCreated", fields: [reporterId], references: [id])
   targetUser     User?     @relation("UserReportsReceived", fields: [targetUserId], references: [id])
   targetQuestion Question? @relation("QuestionReports", fields: [targetQuestionId], references: [id], onDelete: SetNull)
   resolvedBy     User?     @relation("ResolvedReports", fields: [resolvedById], references: [id])
-
+  targetComment  Comment?  @relation("CommentReports", fields: [targetCommentId], references: [id], onDelete: SetNull)
   moderationLogs ModerationLog[]
 
   @@index([status])
@@ -641,6 +649,7 @@ model Question {
   bookmarks    UserBookmark[]
   mockSessions MockSessionQuestion[]
   reports      UserReport[]          @relation("QuestionReports")
+  comments        Comment[]
 
   theoryQuestion TheoryQuestion?
   codingQuestion CodingQuestion?
@@ -999,4 +1008,31 @@ model MentorPayout {
   @@index([mentorId])
   @@index([candidateId])
   @@map("mentor_payouts")
+}
+
+// ==================== COMMENT ====================
+
+model Comment {
+  id         Int      @id @default(autoincrement())
+  content    String   // Prisma với Postgres sẽ tự động map thành TEXT, thoải mái lưu Markdown
+
+  userId     Int      @map("user_id")
+  questionId Int      @map("question_id")
+  parentId   Int?     @map("parent_id") // ID của comment cha (nếu là reply)
+
+  isEdited   Boolean  @default(false) @map("is_edited") // Đánh dấu đã chỉnh sửa
+  isDeleted  Boolean  @default(false) @map("is_deleted") // Xóa mềm (Soft delete)
+
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  question   Question  @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  parent     Comment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies    Comment[] @relation("CommentReplies")
+  reports    UserReport[] @relation("CommentReports")
+  @@index([questionId])
+  @@index([parentId])
+  @@map("comments")
 }
