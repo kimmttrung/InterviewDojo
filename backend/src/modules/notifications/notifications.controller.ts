@@ -4,6 +4,7 @@ import {
   Patch,
   Param,
   Query,
+  ValidationPipe,
   UseGuards,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -26,7 +27,9 @@ export class NotificationsController {
   @ResponseMessage(Messages.NOTIFICATIONS.FETCHED)
   findMyNotifications(
     @CurrentUser() user: any,
-    @Query() query: QueryNotificationsDto,
+    // @Query() query: QueryNotificationsDto,
+    @Query(new ValidationPipe({ transform: true }))
+    query: QueryNotificationsDto,
   ) {
     return this.notificationsService.findMyNotifications(
       Number(user.sub),
@@ -44,5 +47,12 @@ export class NotificationsController {
   @ResponseMessage(Messages.NOTIFICATIONS.MARKED_ALL_AS_READ)
   markAllAsRead(@CurrentUser() user: any) {
     return this.notificationsService.markAllAsRead(Number(user.sub));
+  }
+
+  @Patch(':id/pin')
+  @ApiOperation({ summary: 'Ghim hoặc bỏ ghim thông báo' })
+  @ResponseMessage(Messages.NOTIFICATIONS.TOGGLE_PIN)
+  togglePin(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.notificationsService.togglePin(Number(user.sub), Number(id));
   }
 }

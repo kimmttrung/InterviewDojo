@@ -27,9 +27,24 @@ import { useCurrentUser } from '@/features/auth';
 type QuestionItem = {
   id: number;
   title: string;
+  description?: string;
   difficulty: string;
-  type: string;
+  type?: string;
+  questionType?: string;
+  data?: {
+    question?: string;
+  };
 };
+
+const SOLO_QUESTION_TYPES = [
+  { value: 'SYSTEM_DESIGN', label: 'System Design' },
+  { value: 'BEHAVIORAL', label: 'Behavioral' },
+  { value: 'TECHNICAL', label: 'Technical' },
+] as const;
+
+const getQuestionType = (question: QuestionItem) => question.type ?? question.questionType ?? '';
+const getQuestionText = (question: QuestionItem) =>
+  question.data?.question ?? question.description ?? question.title;
 
 export default function SoloRecording() {
   const navigate = useNavigate();
@@ -54,7 +69,12 @@ export default function SoloRecording() {
   const [companyFilter, setCompanyFilter] = useState('');
 
   const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
-  const selectedQuestionTitle = selectedQuestion?.title ?? '';
+  const selectedQuestionTitle = selectedQuestion ? getQuestionText(selectedQuestion) : '';
+
+  const resetQuestionSelection = useCallback(() => {
+    setQuestions([]);
+    setSelectedQuestionId(null);
+  }, []);
 
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -73,8 +93,12 @@ export default function SoloRecording() {
   const [showTranscript, setShowTranscript] = useState(true);
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     const fetchQuestions = async () => {
       try {
+        resetQuestionSelection();
+
         const res = await soloRecordingService.getQuestions({
           page: 1,
           limit: 50,
@@ -83,7 +107,15 @@ export default function SoloRecording() {
         });
 
         const payload = res.data?.data ?? res.data;
-        const items = payload?.items ?? [];
+        const items = (payload?.items ?? []).filter((q: QuestionItem) => {
+          const questionType = getQuestionType(q);
+          const matchesType = !typeFilter || questionType === typeFilter;
+          const matchesDifficulty = !difficultyFilter || q.difficulty === difficultyFilter;
+
+          return questionType !== 'CODING' && matchesType && matchesDifficulty;
+        });
+
+        if (!isCurrentRequest) return;
 
         setQuestions(items);
 
@@ -99,7 +131,11 @@ export default function SoloRecording() {
     };
 
     fetchQuestions();
-  }, [typeFilter, difficultyFilter]);
+
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [typeFilter, difficultyFilter, resetQuestionSelection]);
 
   //AUTO-SCROLL TRANSCRIPT
   useEffect(() => {
@@ -550,19 +586,26 @@ export default function SoloRecording() {
                     <select
                       className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value)}
+                      onChange={(e) => {
+                        setTypeFilter(e.target.value);
+                        resetQuestionSelection();
+                      }}
                     >
                       <option value="">All categories</option>
-                      <option value="SYSTEM_DESIGN">System Design</option>
-                      <option value="BEHAVIORAL">Behavioral</option>
-                      <option value="TECHNICAL">Technical</option>
-                      <option value="CODING">Coding</option>
+                      {SOLO_QUESTION_TYPES.map((type) => (
+                        <option key={type.value} value={type.value}>
+                          {type.label}
+                        </option>
+                      ))}
                     </select>
 
                     <select
                       className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
                       value={difficultyFilter}
-                      onChange={(e) => setDifficultyFilter(e.target.value)}
+                      onChange={(e) => {
+                        setDifficultyFilter(e.target.value);
+                        resetQuestionSelection();
+                      }}
                     >
                       <option value="">All difficulty</option>
                       <option value="EASY">Easy</option>
@@ -593,7 +636,7 @@ export default function SoloRecording() {
 
                     {questions.map((q) => (
                       <option key={q.id} value={q.id}>
-                        {q.title} - {q.type} - {q.difficulty}
+                        {getQuestionText(q)}
                       </option>
                     ))}
                   </select>
@@ -872,21 +915,5 @@ export default function SoloRecording() {
         </div>
       </div>
     </Layout>
-  );
-}
-
-// Custom Zap Icon
-function Zap({ className, size }: { className?: string; size?: number }) {
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
-    </svg>
   );
 }

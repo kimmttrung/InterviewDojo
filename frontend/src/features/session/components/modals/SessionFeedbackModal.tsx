@@ -39,7 +39,7 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Đánh giá sau buổi học</DialogTitle>
+          <DialogTitle>Session Feedback</DialogTitle>
         </DialogHeader>
 
         {/* 2. SỬA LỖI: Đặt mặc định tab tuỳ theo loại session */}
@@ -152,9 +152,11 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                 <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
               </div>
             )}
+
             {partnerError && (
-              <div className="text-center text-red-500 py-8">Không thể tải đánh giá</div>
+              <div className="text-center text-red-500 py-8">Failed to load feedback</div>
             )}
+
             {!partnerLoading && !partnerError && !partnerFeedback && (
               <div className="text-center py-12 text-gray-500">
                 {sessionType === 'SOLO'
@@ -162,6 +164,7 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                   : 'Đối tác chưa gửi đánh giá cho bạn.'}
               </div>
             )}
+
             {partnerFeedback && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border p-5">
@@ -173,6 +176,7 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                           ? 'AI'
                           : partnerFeedback.reviewerName?.charAt(0).toUpperCase() || 'U'}
                       </div>
+
                       <div>
                         <h4 className="font-semibold">
                           {sessionType === 'SOLO' ? 'AI Reviewer' : partnerFeedback.reviewerName}
@@ -185,11 +189,13 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                         </div>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
                       <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                       <span className="text-sm font-medium">{partnerFeedback.overallScore}</span>
                     </div>
                   </div>
+
                   {partnerFeedback.quickTags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
                       {partnerFeedback.quickTags.map((tag: string) => (
@@ -202,30 +208,34 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                       ))}
                     </div>
                   )}
+
                   {partnerFeedback.comment && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg italic text-gray-600 text-sm">
                       “{partnerFeedback.comment}”
                     </div>
                   )}
+
                   {(partnerFeedback.strengths ||
                     partnerFeedback.weaknesses ||
                     partnerFeedback.suggestions) && (
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                       {partnerFeedback.strengths && (
                         <div className="bg-green-50 p-2 rounded-lg">
-                          <p className="font-semibold text-green-700">💪 Điểm mạnh</p>
+                          <p className="font-semibold text-green-700">💪 Strengths</p>
                           <p className="text-gray-700">{partnerFeedback.strengths}</p>
                         </div>
                       )}
+
                       {partnerFeedback.weaknesses && (
                         <div className="bg-amber-50 p-2 rounded-lg">
-                          <p className="font-semibold text-amber-700">⚠️ Cần cải thiện</p>
+                          <p className="font-semibold text-amber-700">⚠️ Areas for improvement</p>
                           <p className="text-gray-700">{partnerFeedback.weaknesses}</p>
                         </div>
                       )}
+
                       {partnerFeedback.suggestions && (
                         <div className="bg-blue-50 p-2 rounded-lg">
-                          <p className="font-semibold text-blue-700">🎯 Lời khuyên</p>
+                          <p className="font-semibold text-blue-700">🎯 Suggestions</p>
                           <p className="text-gray-700">{partnerFeedback.suggestions}</p>
                         </div>
                       )}

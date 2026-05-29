@@ -5,6 +5,9 @@ import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
 import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
 import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
+import { api } from '@/shared/lib/api';
+import { getMeetingLink } from '../services/session.services';
+import { useNavigate } from 'react-router-dom';
 
 dayjs.extend(relativeTime);
 
@@ -18,6 +21,35 @@ export const SessionCard = ({ session }: Props) => {
   const [timeLeft, setTimeLeft] = useState('');
   const [isJoinable, setIsJoinable] = useState(false);
 
+  const [isJoining, setIsJoining] = useState(false);
+  const navigate = useNavigate();
+
+  // Chỉ dựa vào thời gian, không cần kiểm tra session.meetingLink nữa
+  const canJoin = (() => {
+    const now = dayjs();
+    const start = dayjs(session.scheduledAt);
+    const diffMinutes = start.diff(now, 'minute');
+    return diffMinutes <= 15 && diffMinutes >= -120;
+  })();
+
+  const handleJoin = async () => {
+    if (!canJoin) return;
+    setIsJoining(true);
+    try {
+      const meetingLink = await getMeetingLink(session.id);
+      console.log('check meet', meetingLink);
+      if (meetingLink) {
+        navigate(`/${meetingLink}`);
+      } else {
+        alert('Không thể tạo phòng họp');
+      }
+    } catch (error: any) {
+      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+    } finally {
+      setIsJoining(false);
+    }
+  };
+
   useEffect(() => {
     if (session.status !== SessionTab.UPCOMING) return;
 
@@ -26,7 +58,8 @@ export const SessionCard = ({ session }: Props) => {
       const start = dayjs(session.scheduledAt);
       const diffMinutes = start.diff(now, 'minute');
 
-      const canJoin = diffMinutes <= 30 && diffMinutes >= -120;
+      const canJoin = diffMinutes <= 15 && diffMinutes >= -120;
+      // diffMinutes <= 30 && diffMinutes >= -120;
       setIsJoinable(canJoin && !!session.meetingLink);
 
       if (diffMinutes > 0) {
@@ -124,17 +157,21 @@ export const SessionCard = ({ session }: Props) => {
               >
                 Cancel session
               </button>
-              <a
-                href={isJoinable ? (session.meetingLink ?? undefined) : '#'}
-                target={isJoinable ? '_blank' : '_self'}
+              <button
+                onClick={handleJoin}
+                disabled={!canJoin || isJoining}
                 className={`px-4 py-2 rounded-md font-semibold ${
-                  isJoinable
+                  canJoin && !isJoining
                     ? 'bg-primary text-white hover:bg-primary-dark'
                     : 'bg-gray-300 text-gray-500 cursor-not-allowed'
                 }`}
               >
-                {timeLeft === 'On live' ? 'In-progress ' : 'Join'}
-              </a>
+                {isJoining
+                  ? 'Đang tạo phòng...'
+                  : timeLeft === 'Đang diễn ra'
+                    ? 'Vào ngay'
+                    : 'Join'}
+              </button>
             </>
           )}
 

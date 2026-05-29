@@ -1,4 +1,3 @@
-// src/modules/reports/reports.controller.ts
 import {
   Controller,
   Post,
@@ -68,5 +67,15 @@ export class ReportsController {
     @CurrentUser() admin: JwtPayload,
   ) {
     return this.reportsService.updateStatus(id, admin.sub, dto);
+  }
+
+  @Post('comment')
+  @UseGuards(JwtAuthGuard)
+  async reportComment(
+    @CurrentUser() user: JwtPayload,
+    @Body() body: { commentId: number; reason: any },
+  ) {
+    // 2. Truyền user.sub (chính là ID của người dùng) vào service
+    return await this.reportsService.reportComment(user.sub, body);
   }
 }

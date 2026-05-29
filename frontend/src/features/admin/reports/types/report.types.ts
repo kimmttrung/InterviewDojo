@@ -1,5 +1,6 @@
 export type ReportStatus = 'PENDING' | 'RESOLVED' | 'REJECTED';
-export type ReportTargetType = 'USER' | 'QUESTION' | 'SYSTEM';
+export type ReportTargetType = 'USER' | 'QUESTION' | 'SYSTEM' | 'COMMENT';
+
 export type ReportType =
   | 'HARASSMENT'
   | 'SCAM'
@@ -14,7 +15,10 @@ export type ReportType =
   | 'WRONG_ANSWER'
   | 'INAPPROPRIATE_CONTENT'
   | 'DUPLICATE'
-  | 'OTHER_QUESTION';
+  | 'OTHER_QUESTION'
+  | 'SPAM'
+  | 'HATE_SPEECH'
+  | 'HARASSMENT_COMMENT';
 
 export interface Report {
   id: number;
@@ -32,6 +36,8 @@ export interface Report {
   targetUserName: string | null;
   targetQuestionId: number | null;
   snapshotQuestionTitle: string | null;
+  targetCommentId?: number | null;
+  targetCommentContent?: string | null;
 }
 
 export interface UpdateReportStatusData {

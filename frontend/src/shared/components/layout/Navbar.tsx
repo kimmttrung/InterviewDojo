@@ -1,18 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import {
-  Moon,
-  Sun,
-  Globe,
-  Search,
-  Sparkles,
-  UserIcon,
-  LogOut,
-  Wallet,
-  CreditCard,
-} from 'lucide-react';
+import { Moon, Sun, Globe, Sparkles, UserIcon, LogOut, Wallet, CreditCard } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
@@ -120,7 +109,7 @@ export function Navbar() {
             onClick={() => navigate('/wallet')}
           >
             <Sparkles className="h-4 w-4 mr-1" />
-            Upgrade
+            Nạp tiền
           </Button>
 
           {/* Language */}

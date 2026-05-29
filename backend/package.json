@@ -19,6 +19,7 @@
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed-mentor": "ts-node prisma/seed-mentor.ts",
+    "db:seed-solo-questions": "tsx prisma/seed-solo-questions.ts",
     "db:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
@@ -107,9 +108,14 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|@stream-io)/)"
+    ],
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^uuid$": "<rootDir>/__mocks__/uuid.ts",
+      "^@stream-io/node-sdk$": "<rootDir>/__mocks__/@stream-io/node-sdk.ts"
     },
     "collectCoverageFrom": [
       "src/modules/**/*.service.ts",

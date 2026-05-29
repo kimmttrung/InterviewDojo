@@ -3,6 +3,7 @@ import {
   getMyNotifications,
   markAllNotificationsAsRead,
   markNotificationAsRead,
+  togglePinNotification,
 } from '../api/notification.api';
 
 export const useNotifications = () => {
@@ -29,6 +30,17 @@ export const useMarkAllNotificationsAsRead = () => {
 
   return useMutation({
     mutationFn: markAllNotificationsAsRead,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+};
+
+export const useTogglePinNotification = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: togglePinNotification,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },

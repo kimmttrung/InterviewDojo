@@ -13,3 +13,9 @@ export const cancelSession = async (data: { sessionId: string; reason: string })
   });
   return response.data.data;
 };
+
+export const getMeetingLink = async (sessionId: number | string) => {
+  const response = await api.post(`/sessions/${sessionId}/meeting-link`);
+  console.log('check res', response);
+  return response.data.data.meetingLink as string;
+};

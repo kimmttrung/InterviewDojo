@@ -177,6 +177,7 @@ export const Messages = {
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
 
     ADMIN_ADJUSTED: 'Admin cập nhật số dư thành công',
+    STATISTICS_FETCHED: 'Lấy thống kê ví thành công',
   },
 
   PAYMENT: {
@@ -222,6 +223,7 @@ export const Messages = {
     FETCHED: 'Lấy danh sách thông báo thành công',
     MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',
     MARKED_ALL_AS_READ: 'Đã đánh dấu tất cả thông báo là đã đọc',
+    TOGGLE_PIN: 'Đã thay đổi trạng thái ghim thông báo',
   },
 
   SESSION: {
@@ -253,5 +255,13 @@ export const Messages = {
     USER_NOT_FOUND: 'Người dùng không tồn tại',
     QUESTION_NOT_FOUND: 'Câu hỏi không tồn tại',
     ALREADY_REPORTED: 'Bạn đã báo cáo đối tượng này trước đó',
+  },
+  COMMENT: {
+    FETCHED: 'Lấy danh sách bình luận thành công',
+    CREATED: 'Thêm bình luận thành công',
+    UPDATED: 'Cập nhật bình luận thành công',
+    DELETED: 'Xóa bình luận thành công',
+    NOT_FOUND: 'Không tìm thấy bình luận',
+    FORBIDDEN: 'Bạn không có quyền thực hiện hành động này',
   },
 } as const;

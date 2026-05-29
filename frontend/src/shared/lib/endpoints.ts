@@ -161,6 +161,10 @@ export const API_ENDPOINT = {
     REPORTS: '/reports',
     REPORT_DETAIL: (id: number) => `/reports/${id}`,
     UPDATE_REPORT_STATUS: (id: number) => `/reports/${id}/status`,
+
+    WALLET_TRANSACTIONS: '/admin/wallet/transactions',
+    WALLET_STATISTICS: '/admin/wallet/statistics',
+    WALLET_ADJUST: (userId: number) => `/admin/wallet/adjust/${userId}`,
   },
 
   RECOMMENDATIONS: {
@@ -170,6 +174,7 @@ export const API_ENDPOINT = {
 
   REPORT: {
     CREATE_USER: '/reports/user',
+    CREATE_COMMENT: '/reports/comment',
     GET_LIST: '/reports',
     GET_ONE: (id: number) => `/reports/${id}`,
   },
