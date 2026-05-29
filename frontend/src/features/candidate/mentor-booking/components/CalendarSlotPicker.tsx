@@ -6,31 +6,64 @@ import { Calendar } from '@/shared/components/ui/calendar';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
 import { Clock, CalendarDays } from 'lucide-react';
-import type { AvailableSession } from '../types/mentor-detail.types'; // import type session
+import type { AvailableSession } from '../types/mentor-detail.types';
 import { formatDateForInput, formatICTTime, formatICTFullDate } from '@/shared/utils/date';
+import { startOfToday, addMonths, endOfMonth, startOfMonth, isSameMonth } from 'date-fns';
+
+const MAX_BOOKING_MONTHS = 2;
 
 interface CalendarSlotPickerProps {
   mentorId: number;
   planId: number;
   onSelectSession: (session: AvailableSession) => void;
+  onDateSelect?: (date?: Date) => void;
 }
 
-export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: CalendarSlotPickerProps) {
+export function CalendarSlotPicker({
+  mentorId,
+  planId,
+  onSelectSession,
+  onDateSelect,
+}: CalendarSlotPickerProps) {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedSession, setSelectedSession] = useState<AvailableSession | null>(null);
-  const [displayedMonth, setDisplayedMonth] = useState(new Date());
+  const [displayedMonth, setDisplayedMonth] = useState(() => startOfMonth(new Date()));
 
   const currentMonth = formatDateForInput(displayedMonth).slice(0, 7);
   const { data: availableDays = [] } = useAvailableDays(mentorId, planId, currentMonth);
   const dateStr = selectedDate ? formatDateForInput(selectedDate) : '';
   const { data: sessions = [] } = useAvailableSessions(mentorId, planId, dateStr);
 
+  const today = startOfToday();
+  const maxDate = endOfMonth(addMonths(today, MAX_BOOKING_MONTHS));
+  const minMonth = startOfMonth(today);
+  const maxMonth = startOfMonth(maxDate);
+
   const disabledDays = useMemo(() => {
     return (date: Date) => {
+      if (date < today) return true;
+      if (date > maxDate) return true;
       const dateStr = formatDateForInput(date);
       return !availableDays.includes(dateStr);
     };
-  }, [availableDays]);
+  }, [availableDays, today, maxDate]);
+
+  const handleDateSelect = (date?: Date) => {
+    setSelectedDate(date);
+    setSelectedSession(null);
+    if (onDateSelect) onDateSelect(date);
+  };
+
+  const handleMonthChange = (newMonth: Date) => {
+    // Chỉ cho phép tháng nằm trong khoảng [minMonth, maxMonth]
+    if (newMonth >= minMonth && newMonth <= maxMonth) {
+      setDisplayedMonth(newMonth);
+    } else if (newMonth < minMonth) {
+      setDisplayedMonth(minMonth);
+    } else if (newMonth > maxMonth) {
+      setDisplayedMonth(maxMonth);
+    }
+  };
 
   const handleSelectSession = (session: AvailableSession) => {
     setSelectedSession(session);
@@ -39,7 +72,6 @@ export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: Calend
 
   return (
     <div className="grid gap-6 md:grid-cols-2">
-      {/* Calendar */}
       <Card className="p-4 border-0 shadow-none bg-transparent">
         <div className="flex items-center gap-2 mb-3">
           <CalendarDays className="h-5 w-5 text-indigo-600" />
@@ -48,9 +80,9 @@ export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: Calend
         <Calendar
           mode="single"
           month={displayedMonth}
-          onMonthChange={setDisplayedMonth}
+          onMonthChange={handleMonthChange}
           selected={selectedDate}
-          onSelect={setSelectedDate}
+          onSelect={handleDateSelect}
           disabled={disabledDays}
           className="rounded-xl border shadow-sm"
           classNames={{
@@ -65,26 +97,16 @@ export function CalendarSlotPicker({ mentorId, planId, onSelectSession }: Calend
             week: 'grid grid-cols-7',
             weekdays: 'grid grid-cols-7',
             weekday: 'size-9 flex items-center justify-center text-gray-500',
-            // Ngày thường (khả dụng) – hiện con trỏ pointer
             day: 'inline-flex items-center justify-center rounded text-gray-700 hover:bg-indigo-50 hover:text-indigo-700 size-9 font-normal aria-selected:opacity-100 cursor-pointer',
-            // Ngày hôm nay
             today: 'bg-indigo-50 text-indigo-700 font-semibold',
-            // Ngày được chọn
             selected:
               'bg-indigo-600 text-white hover:bg-indigo-600 hover:text-white focus:bg-indigo-600 focus:text-white',
-            // Ngày ngoài tháng (outside) – mờ, không tương tác
             outside: 'text-gray-400 opacity-50 cursor-default',
-            // Ngày bị disabled – mờ, không tương tác
             disabled: 'text-gray-400 opacity-50 cursor-not-allowed',
-            // Các class khác giữ nguyên
-            range_middle:
-              'aria-selected:bg-blue-50 aria-selected:text-gray-900 aria-selected:hover:bg-blue-200 rounded-none',
-            hidden: 'invisible',
           }}
         />
       </Card>
 
-      {/* Time slots */}
       <Card className="p-4 border-0 shadow-none bg-transparent">
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-5 w-5 text-indigo-600" />
