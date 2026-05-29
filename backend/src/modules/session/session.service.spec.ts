@@ -62,74 +62,101 @@ describe('SessionService', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  describe('onModuleInit', () => {
+  describe('SessionService - CronJob: handleOverdueSessions', () => {
+    let scheduleSpy: jest.SpyInstance;
+
     beforeEach(() => {
+      // Đặt thời gian giả lập để test new Date()
       jest.useFakeTimers().setSystemTime(new Date('2026-05-01T00:00:00.000Z'));
+
+      // Spy vào hàm scheduleAllUpcomingSessions để xem nó có được gọi không
+      scheduleSpy = jest
+        .spyOn(service, 'scheduleAllUpcomingSessions')
+        .mockResolvedValue(undefined);
     });
 
-    it('completes expired sessions and schedules upcoming sessions once per user', async () => {
-      const scheduledAt = new Date('2026-06-01T10:00:00.000Z');
-      prisma.mockSession.updateMany.mockResolvedValue({ count: 1 });
+    afterEach(() => {
+      jest.clearAllMocks();
+      jest.useRealTimers();
+    });
 
+    it('không làm gì cả nếu không có session nào quá hạn', async () => {
+      // Giả lập DB trả về mảng rỗng ngay lần query đầu tiên
+      prisma.mockSession.findMany.mockResolvedValueOnce([]);
+
+      await service.handleOverdueSessions();
+
+      // Hàm update không bao giờ được gọi
+      expect(prisma.mockSession.updateMany).not.toHaveBeenCalled();
+      // Không có dữ liệu cập nhật nên không gọi schedule
+      expect(scheduleSpy).not.toHaveBeenCalled();
+    });
+
+    it('quét và cập nhật 1 lô (batch) nếu số lượng session quá hạn ít hơn batchSize', async () => {
+      const mockSessions = [{ id: 1 }, { id: 2 }];
+
+      // Lần 1: Trả về 2 bản ghi
+      // Lần 2: Trả về mảng rỗng để thoát vòng lặp while
       prisma.mockSession.findMany
-        .mockResolvedValueOnce([
-          {
-            id: 11,
-            intervieweeId: 2,
-            scheduledAt,
-            durationMinutes: 60,
-            booking: { mentorId: 1, candidateId: 2 },
-            match: null,
-          },
-        ])
+        .mockResolvedValueOnce(mockSessions as any)
         .mockResolvedValueOnce([]);
 
-      service.onModuleInit();
-      jest.advanceTimersByTime(3000);
-      await Promise.resolve();
-      await Promise.resolve();
+      prisma.mockSession.updateMany.mockResolvedValue({ count: 2 });
 
-      expect(prisma.mockSession.updateMany).toHaveBeenCalledWith({
+      await service.handleOverdueSessions();
+
+      // Kiểm tra câu lệnh SELECT
+      expect(prisma.mockSession.findMany).toHaveBeenCalledWith({
         where: {
           status: SessionStatus.SCHEDULED,
           scheduledAt: { lt: expect.any(Date) },
         },
+        select: { id: true },
+        take: 100, // Kiểm tra xem có đúng batchSize bạn đặt không (ví dụ là 100)
+      });
+
+      // Kiểm tra câu lệnh UPDATE lấy đúng ID
+      expect(prisma.mockSession.updateMany).toHaveBeenCalledWith({
+        where: { id: { in: [1, 2] } },
         data: { status: SessionStatus.COMPLETED },
       });
-      expect(sessionQueue.addBulk).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'end-session' }),
-        ]),
-      );
+
+      // Đã có cập nhật thành công nên phải gọi hàm schedule
+      expect(scheduleSpy).toHaveBeenCalledTimes(1);
     });
 
-    it('schedules participants from peer matching sessions', async () => {
-      const scheduledAt = new Date('2026-06-02T10:00:00.000Z');
-      prisma.mockSession.updateMany.mockResolvedValue({ count: 0 });
+    it('xử lý cuốn chiếu nhiều lô (batches) nếu số lượng session quá lớn', async () => {
+      // Giả lập 2 lô dữ liệu
+      const batch1 = Array.from({ length: 100 }, (_, i) => ({ id: i + 1 })); // 100 bản ghi
+      const batch2 = [{ id: 101 }, { id: 102 }]; // 2 bản ghi dư ra
 
       prisma.mockSession.findMany
-        .mockResolvedValueOnce([
-          {
-            id: 12,
-            intervieweeId: 2,
-            scheduledAt,
-            durationMinutes: 45,
-            booking: null,
-            match: { candidateAId: 1, candidateBId: 2 },
-          },
-        ])
-        .mockResolvedValueOnce([]);
+        .mockResolvedValueOnce(batch1 as any) // Vòng 1
+        .mockResolvedValueOnce(batch2 as any) // Vòng 2
+        .mockResolvedValueOnce([]); // Vòng 3: Hết dữ liệu, thoát
 
-      service.onModuleInit();
-      jest.advanceTimersByTime(3000);
-      await Promise.resolve();
-      await Promise.resolve();
+      prisma.mockSession.updateMany
+        .mockResolvedValueOnce({ count: 100 })
+        .mockResolvedValueOnce({ count: 2 });
 
-      expect(sessionQueue.addBulk).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ name: 'end-session' }),
-        ]),
-      );
+      await service.handleOverdueSessions();
+
+      // Hàm findMany phải được gọi 3 lần
+      expect(prisma.mockSession.findMany).toHaveBeenCalledTimes(3);
+
+      // Hàm updateMany phải được gọi 2 lần với các danh sách ID tương ứng
+      expect(prisma.mockSession.updateMany).toHaveBeenCalledTimes(2);
+      expect(prisma.mockSession.updateMany).toHaveBeenNthCalledWith(1, {
+        where: { id: { in: batch1.map((s) => s.id) } },
+        data: { status: SessionStatus.COMPLETED },
+      });
+      expect(prisma.mockSession.updateMany).toHaveBeenNthCalledWith(2, {
+        where: { id: { in: batch2.map((s) => s.id) } },
+        data: { status: SessionStatus.COMPLETED },
+      });
+
+      // Hàm schedule chỉ được gọi 1 lần duy nhất vào cuối Cronjob
+      expect(scheduleSpy).toHaveBeenCalledTimes(1);
     });
   });
 
@@ -486,10 +513,6 @@ describe('SessionService', () => {
     it('throws when the user has no cancellable session', async () => {
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.mockSession.findFirst.mockResolvedValue(null);
-
-      // await expect(service.cancelSession(10, 999, 'Stop')).rejects.toThrow(
-      //   /phi.+n h.+c ho.+c b.+n kh.+ng c.+ quy.+n h.+y/,
-      // );
 
       // Vì throw error nên queue không được gỡ
       expect(sessionQueue.remove).not.toHaveBeenCalled();
