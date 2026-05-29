@@ -255,4 +255,12 @@ export const Messages = {
     QUESTION_NOT_FOUND: 'Câu hỏi không tồn tại',
     ALREADY_REPORTED: 'Bạn đã báo cáo đối tượng này trước đó',
   },
+  COMMENT: {
+    FETCHED: 'Lấy danh sách bình luận thành công',
+    CREATED: 'Thêm bình luận thành công',
+    UPDATED: 'Cập nhật bình luận thành công',
+    DELETED: 'Xóa bình luận thành công',
+    NOT_FOUND: 'Không tìm thấy bình luận',
+    FORBIDDEN: 'Bạn không có quyền thực hiện hành động này',
+  },
 } as const;

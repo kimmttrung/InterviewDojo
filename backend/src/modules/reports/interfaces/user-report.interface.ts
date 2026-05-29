@@ -1,4 +1,4 @@
-// src/modules/reports/interfaces/user-report.interface.ts
+import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
 export interface UserReportItem {
   id: number;
   reporterId: number;
@@ -17,9 +17,9 @@ export interface UserReportItem {
   targetUserName?: string | null;
   targetQuestionId: number | null;
   snapshotQuestionTitle: string | null;
-}
 
-import { PaginatedResponse } from '@/common/interfaces/pagination.interface';
-// src/modules/reports/interfaces/report-response.interface.ts
+  targetCommentId: number | null;
+  targetCommentContent?: string | null;
+}
 
 export type ReportsPaginatedResponse = PaginatedResponse<UserReportItem>;

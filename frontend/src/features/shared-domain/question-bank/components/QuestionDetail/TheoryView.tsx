@@ -1,6 +1,9 @@
 // features/questions/components/QuestionDetail/TheoryView.tsx
 import { KeyRound, Lightbulb, CheckCircle2 } from 'lucide-react';
 import { QuestionDetail } from '../../types/question.types';
+import { CommentSection } from '@/features/comment/components/CommentSection';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 
 interface TheoryViewProps {
   question: QuestionDetail;
@@ -8,6 +11,18 @@ interface TheoryViewProps {
 }
 
 export function TheoryView({ question, parsedData }: TheoryViewProps) {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (location.hash === '#comments') {
+      const element = document.getElementById('comments');
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location]);
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -51,6 +66,9 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
             </ul>
           </SectionBox>
         )}
+      </div>
+      <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
+        <CommentSection questionId={question.id} />
       </div>
     </div>
   );
