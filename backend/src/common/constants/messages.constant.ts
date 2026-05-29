@@ -177,6 +177,7 @@ export const Messages = {
     TRANSACTIONS_FETCHED: 'Lấy lịch sử giao dịch thành công',
 
     ADMIN_ADJUSTED: 'Admin cập nhật số dư thành công',
+    STATISTICS_FETCHED: 'Lấy thống kê ví thành công',
   },
 
   PAYMENT: {

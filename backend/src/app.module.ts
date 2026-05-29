@@ -40,6 +40,7 @@ import { MentorRecommendationModule } from './modules/mentor-recommendation/reco
 import { ReportsModule } from './modules/reports/reports.module';
 import { JobRolesModule } from './modules/job-roles/job-roles.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -48,6 +49,7 @@ import { AdminModule } from './modules/admin/admin.module';
     }),
 
     EventEmitterModule.forRoot(),
+    ScheduleModule.forRoot(),
 
     // Setup BullMQ
     BullModule.forRootAsync({
@@ -59,10 +61,8 @@ import { AdminModule } from './modules/admin/admin.module';
     // Đăng ký toàn bộ queue hệ thống sẽ dùng
     BullModule.registerQueue(
       { name: 'code-execution' }, // cho submit code
-      { name: 'code-execution' },
       { name: 'ai-analysis' },
       { name: 'notification' },
-      { name: 'email' },
       { name: 'recommendation-queue' },
       { name: 'session' },
     ),
