@@ -1,6 +1,6 @@
 // pages/MentorDetailPage.tsx
 import { useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { useMentorDetail } from '../hooks/useMentorDetail';
 import { useMentorPlans } from '../hooks/useMentorPlans';
 import { MentorProfileSection } from '../components/MentorProfileSection';
@@ -9,11 +9,11 @@ import { MentorExperiencesSection } from '../components/MentorExperiencesSection
 import { PlanSelector } from '../components/PlanSelector';
 import { BookingModal } from '../components/BookingModal';
 import { Layout } from '@/shared/components/layout/Layout';
-import { Loader2 } from 'lucide-react';
-import type { CoachingPlan } from '../types/mentor-detail.types';
+import { Loader2, ArrowLeft } from 'lucide-react';
 
 export default function MentorDetailPage() {
   const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
   const mentorId = Number(id);
   const { data: mentor, isLoading, isError } = useMentorDetail(mentorId);
   const { data: plans = [] } = useMentorPlans(mentorId);
@@ -44,6 +44,13 @@ export default function MentorDetailPage() {
   return (
     <Layout>
       <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+        <button
+          onClick={() => navigate('/mentors')}
+          className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline mb-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại danh sách mentor
+        </button>
         <MentorProfileSection mentor={mentor} />
         <MentorSkillsSection skills={mentor.skills ?? []} />
         <MentorExperiencesSection
