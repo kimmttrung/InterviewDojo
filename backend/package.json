@@ -107,9 +107,14 @@
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
     },
+    "transformIgnorePatterns": [
+      "node_modules/(?!(uuid|@stream-io)/)"
+    ],
     "testEnvironment": "node",
     "moduleNameMapper": {
-      "^@/(.*)$": "<rootDir>/src/$1"
+      "^@/(.*)$": "<rootDir>/src/$1",
+      "^uuid$": "<rootDir>/__mocks__/uuid.ts",
+      "^@stream-io/node-sdk$": "<rootDir>/__mocks__/@stream-io/node-sdk.ts"
     },
     "collectCoverageFrom": [
       "src/modules/**/*.service.ts",

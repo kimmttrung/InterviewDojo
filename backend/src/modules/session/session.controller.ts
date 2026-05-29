@@ -45,4 +45,25 @@ export class SessionController {
     const userId = Number(user.sub || user.id);
     return this.sessionService.cancelSession(userId, +sessionId, reason);
   }
+
+  @Post(':id/meeting-link')
+  @ResponseMessage('Lấy link meeting thành công') // hoặc thêm message trong Messages nếu muốn
+  async getMeetingLink(
+    @CurrentUser() user: any, // 👈 dùng CurrentUser thay vì @Req
+    @Param('id') sessionId: string,
+  ) {
+    const userId = Number(user.sub || user.id);
+    const link = await this.sessionService.getOrCreateMeetingLink(
+      +sessionId,
+      userId,
+    );
+    return { meetingLink: link };
+  }
+
+  @Get(':id')
+  @ResponseMessage(Messages.SESSION.SESSION_FETCHED)
+  async getSessionDetail(@CurrentUser() user: any, @Param('id') id: string) {
+    const userId = Number(user.sub || user.id);
+    return this.sessionService.getSessionDetail(+id, userId);
+  }
 }

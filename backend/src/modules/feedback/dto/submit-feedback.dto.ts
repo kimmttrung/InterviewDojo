@@ -5,7 +5,6 @@ import {
   Max,
   IsArray,
   IsString,
-  IsNotEmpty,
   ArrayMaxSize,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -13,7 +12,7 @@ import { Type } from 'class-transformer';
 export class SubmitFeedbackDto {
   @IsNumber()
   @Min(1)
-  @Max(5)
+  @Max(10)
   @Type(() => Number)
   overallScore: number;
 

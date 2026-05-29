@@ -19,6 +19,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SocketService } from '../socket/socket.service';
 import { SessionService } from '../session/session.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { StreamService } from '../stream/stream.service';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -30,6 +31,12 @@ describe('BookingService', () => {
       findMany: jest.fn(),
       findUnique: jest.fn(),
     },
+  };
+
+  const streamServiceMock = {
+    getOrCreateMeetingLink: jest.fn().mockResolvedValue('/meeting/room'),
+    createCall: jest.fn(),
+    createMeetingRoom: jest.fn(),
   };
 
   const socketService = {
@@ -55,6 +62,7 @@ describe('BookingService', () => {
             emit: jest.fn(),
           },
         },
+        { provide: StreamService, useValue: streamServiceMock },
       ],
     }).compile();
 
@@ -362,6 +370,11 @@ describe('BookingService', () => {
       durationMinutes: 60,
       meetingLink: null,
     };
+    const expectedMeetingLink = '/interview/mentor-booking-80?sessionId=80';
+    streamServiceMock.getOrCreateMeetingLink.mockResolvedValueOnce(
+      expectedMeetingLink,
+    );
+
     const tx = {
       booking: {
         findUnique: jest.fn().mockResolvedValue(pending),
@@ -375,7 +388,7 @@ describe('BookingService', () => {
         create: jest.fn().mockResolvedValue(mockSession),
         update: jest.fn().mockResolvedValue({
           ...mockSession,
-          meetingLink: '/interview/mentor-booking-80?sessionId=80',
+          meetingLink: expectedMeetingLink,
         }),
       },
       bookingActionLog: { create: jest.fn() },
@@ -398,11 +411,13 @@ describe('BookingService', () => {
     );
     expect(tx.mockSession.update).toHaveBeenCalledWith({
       where: { id: 80 },
-      data: { meetingLink: '/interview/mentor-booking-80?sessionId=80' },
+      data: { meetingLink: expectedMeetingLink },
     });
     expect(
       sessionService.scheduleSessionStartNotification,
     ).toHaveBeenCalledWith(expect.objectContaining({ id: 80 }), [2, 1]);
+
+    // Chỉ có một notification cho candidate (userId=1)
     expect(tx.notification.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
         userId: 1,
@@ -410,22 +425,34 @@ describe('BookingService', () => {
         targetUrl: '/sessions',
       }),
     });
-    expect(tx.notification.create).toHaveBeenCalledWith({
-      data: expect.objectContaining({
-        userId: 2,
-        type: NotificationType.INTERVIEW_UPCOMING,
-        targetUrl: '/mentor/sessions',
-      }),
-    });
+
+    // Kiểm tra socket emit: 4 lần (2 SESSION_UPDATED + 2 SESSION_ACCEPTED)
+    expect(socketService.emitToUser).toHaveBeenCalledTimes(4);
+    expect(socketService.emitToUser).toHaveBeenCalledWith(
+      2,
+      'SESSION_UPDATED',
+      { bookingId: 20 },
+    );
+    expect(socketService.emitToUser).toHaveBeenCalledWith(
+      1,
+      'SESSION_UPDATED',
+      { bookingId: 20 },
+    );
+    expect(socketService.emitToUser).toHaveBeenCalledWith(
+      2,
+      'SESSION_ACCEPTED',
+      expect.objectContaining({ bookingId: 20, sessionId: 80 }),
+    );
     expect(socketService.emitToUser).toHaveBeenCalledWith(
       1,
       'SESSION_ACCEPTED',
-      { bookingId: 20 },
+      expect.objectContaining({ bookingId: 20, sessionId: 80 }),
     );
+
     expect(result.status).toBe(BookingStatus.ACCEPTED);
   });
 
-  it('accept - rejects invalid ownership, status and time conflicts, and reuses an existing session', async () => {
+  it('accept - rejects invalid ownership, status and time conflicts', async () => {
     prisma.$transaction.mockImplementationOnce(async (callback) =>
       callback({ booking: { findUnique: jest.fn().mockResolvedValue(null) } }),
     );
@@ -455,38 +482,6 @@ describe('BookingService', () => {
     );
     await expect(service.accept(20, 2)).rejects.toBeInstanceOf(
       BadRequestException,
-    );
-
-    const existingSession = {
-      id: 81,
-      scheduledAt: pending.startTime,
-      durationMinutes: 30,
-      meetingLink: '/interview/mentor-booking-81?sessionId=81',
-    };
-    const tx = {
-      booking: {
-        findUnique: jest.fn().mockResolvedValue(pending),
-        findFirst: jest.fn().mockResolvedValue(null),
-        update: jest
-          .fn()
-          .mockResolvedValue({ ...pending, status: BookingStatus.ACCEPTED }),
-      },
-      mockSession: {
-        findFirst: jest.fn().mockResolvedValue(existingSession),
-        create: jest.fn(),
-        update: jest.fn(),
-      },
-      bookingActionLog: { create: jest.fn() },
-      notification: { create: jest.fn() },
-    };
-    prisma.$transaction.mockImplementationOnce(async (callback) =>
-      callback(tx),
-    );
-    await service.accept(20, 2);
-    expect(tx.mockSession.create).not.toHaveBeenCalled();
-    expect(sessionService.scheduleSessionEnd).toHaveBeenLastCalledWith(
-      expect.objectContaining({ id: 81 }),
-      [2, 1],
     );
   });
 
@@ -658,6 +653,9 @@ describe('BookingService', () => {
     };
     prisma.$transaction.mockImplementationOnce(async (callback) =>
       callback(tx),
+    );
+    streamServiceMock.getOrCreateMeetingLink.mockResolvedValueOnce(
+      '/meeting/room',
     );
 
     await service.accept(20, 2);

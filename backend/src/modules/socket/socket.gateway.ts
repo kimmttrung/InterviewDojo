@@ -149,4 +149,42 @@ export class SocketGateway
       `🔄 Filters updated in room ${payload.roomId}: Type=${payload.type}, Diff=${payload.difficulty}`,
     );
   }
+
+  @SubscribeMessage('mouse_move')
+  handleMouseMove(
+    client: Socket,
+    payload: {
+      roomId: string;
+      x: number;
+      y: number;
+      userId: string;
+      displayName?: string;
+      color?: string;
+    },
+  ) {
+    // Gửi lại cho tất cả mọi người trong phòng (trừ người gửi)
+    client.to(payload.roomId).emit('mouse_move', {
+      x: payload.x,
+      y: payload.y,
+      userId: payload.userId,
+      displayName: payload.displayName,
+      color: payload.color,
+    });
+  }
+
+  @SubscribeMessage('end_call')
+  handleEndCall(client: Socket, payload: { roomId: string; userId: string }) {
+    console.log(`User ${payload.userId} ended call in room ${payload.roomId}`);
+
+    // Thông báo cho tất cả người còn lại trong phòng
+    client.to(payload.roomId).emit('call_ended', {
+      endedBy: payload.userId,
+    });
+  }
+
+  @SubscribeMessage('leave_room')
+  handleLeaveRoom(client: Socket, roomId: string) {
+    client.leave(roomId);
+    console.log(`🚪 Client ${client.id} left room: ${roomId}`);
+  }
 }

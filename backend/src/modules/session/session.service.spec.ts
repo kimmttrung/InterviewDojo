@@ -5,6 +5,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import { SessionService } from './session.service';
 import { SocketService } from '../socket/socket.service';
+import { StreamService } from '../stream/stream.service';
 
 describe('SessionService', () => {
   let service: SessionService;
@@ -39,6 +40,12 @@ describe('SessionService', () => {
     emitToRoom: jest.fn(),
   };
 
+  const mockStreamService = {
+    getOrCreateMeetingLink: jest.fn().mockResolvedValue('/meeting/room'),
+    createCall: jest.fn(),
+    createMeetingRoom: jest.fn(),
+  };
+
   beforeEach(async () => {
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -49,6 +56,7 @@ describe('SessionService', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: getQueueToken('session'), useValue: sessionQueue },
         { provide: SocketService, useValue: mockSocketService },
+        { provide: StreamService, useValue: mockStreamService },
       ],
     }).compile();
 
@@ -184,7 +192,6 @@ describe('SessionService', () => {
 
     it('does not add a duplicate or already-ended job', async () => {
       jest.useFakeTimers().setSystemTime(new Date('2026-01-01T01:00:00.000Z'));
-      // Trả về một job giả
       sessionQueue.getJob.mockResolvedValue({ id: 'session-21' });
 
       await service.scheduleSessionEnd(
@@ -295,9 +302,6 @@ describe('SessionService', () => {
       prisma.booking.findMany
         .mockResolvedValueOnce([pending, rejected])
         .mockResolvedValueOnce([pending, rejected]);
-      // prisma.booking.findMany
-      //   .mockResolvedValueOnce([pending])
-      //   .mockResolvedValueOnce([rejected]);
       prisma.booking.count.mockResolvedValueOnce(1).mockResolvedValueOnce(1);
 
       const result = await service.getSessions(10, {
@@ -473,7 +477,6 @@ describe('SessionService', () => {
         where: { bookingId: 31 },
         data: { status: SessionStatus.CANCELLED },
       });
-      // ✅ SỬA: Test hàm queue.remove theo ID trực tiếp
       expect(sessionQueue.remove).toHaveBeenCalledWith('session-31');
       expect(result.success).toBe(true);
     });
@@ -489,8 +492,6 @@ describe('SessionService', () => {
         data: { status: SessionStatus.CANCELLED },
       });
       expect(prisma.booking.update).not.toHaveBeenCalled();
-
-      // ✅ SỬA
       expect(sessionQueue.remove).toHaveBeenCalledWith('session-41');
     });
 
@@ -506,7 +507,6 @@ describe('SessionService', () => {
 
       expect(prisma.booking.update).toHaveBeenCalled();
       expect(prisma.mockSession.updateMany).not.toHaveBeenCalled();
-
       expect(sessionQueue.remove).toHaveBeenCalledWith('session-32');
     });
 
@@ -514,6 +514,8 @@ describe('SessionService', () => {
       prisma.booking.findFirst.mockResolvedValue(null);
       prisma.mockSession.findFirst.mockResolvedValue(null);
 
+      // The method throws an error, we just verify queue.remove is not called
+      await expect(service.cancelSession(10, 999, 'Stop')).rejects.toThrow();
       // Vì throw error nên queue không được gỡ
       expect(sessionQueue.remove).not.toHaveBeenCalled();
     });

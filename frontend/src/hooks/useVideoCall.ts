@@ -5,7 +5,7 @@ import { StreamVideoClient, User, Call } from '@stream-io/video-react-sdk';
 export function useVideoCall(
   roomId: string | undefined,
   token: string | null,
-  userId: string | number | undefined,
+  userId: string | number | undefined | null,
   currentUser: any,
 ) {
   const [client, setClient] = useState<StreamVideoClient | null>(null);
