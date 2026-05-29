@@ -1,7 +1,14 @@
 // shared-domain/feedback/components/QuickTagsSelector.tsx
 import { cn } from '@/shared/lib/utils';
 
-const QUICK_TAGS = ['Nhiệt tình', 'Đúng giờ', 'Chuyên môn cao', 'Dễ hiểu', 'Tài liệu hữu ích'];
+// const QUICK_TAGS = ['Nhiệt tình', 'Đúng giờ', 'Chuyên môn cao', 'Dễ hiểu', 'Tài liệu hữu ích'];
+const QUICK_TAGS = [
+  'Enthusiastic',
+  'Punctual',
+  'Highly knowledgeable',
+  'Easy to understand',
+  'Helpful materials',
+];
 
 interface Props {
   selected: string[];

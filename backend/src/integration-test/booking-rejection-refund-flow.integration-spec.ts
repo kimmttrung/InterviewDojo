@@ -8,6 +8,7 @@ import { BookingService } from '../modules/booking/booking.service';
 import { SessionService } from '../modules/session/session.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
+import { StreamService } from '../modules/stream/stream.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 
@@ -34,6 +35,11 @@ describe('Booking Rejection Refund Integration', () => {
   const payments = [{ bookingId: 10, status: PaymentStatus.PAID }];
   const logs: any[] = [];
   const socketService = { emitToUser: jest.fn() };
+  const streamServiceMock = {
+    getOrCreateMeetingLink: jest.fn().mockResolvedValue('/meeting/room'),
+    createCall: jest.fn(),
+    createMeetingRoom: jest.fn(),
+  };
   const prisma: any = {
     $transaction: jest.fn(async (callback: any) => callback(prisma)),
     booking: {
@@ -83,6 +89,7 @@ describe('Booking Rejection Refund Integration', () => {
           provide: SessionService,
           useValue: { scheduleSessionEnd: jest.fn() },
         },
+        { provide: StreamService, useValue: streamServiceMock },
       ],
     }).compile();
     bookingService = moduleRef.get(BookingService);

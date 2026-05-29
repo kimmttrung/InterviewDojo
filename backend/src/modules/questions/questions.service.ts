@@ -17,14 +17,18 @@ export class QuestionsService {
   private toQuestionItem(q: any): QuestionItem {
     const isCoding = q.type === QuestionType.CODING;
     const specificData = isCoding ? q.codingQuestion : q.theoryQuestion;
+    const theoryQuestionText = !isCoding
+      ? specificData?.data?.question || q.title
+      : q.title;
     return {
       id: q.id,
-      title: q.title,
+      title: theoryQuestionText,
       slug: q.slug,
       difficulty: q.difficulty,
       questionType: q.type,
       isPublished: q.isPublished,
       createdAt: q.createdAt,
+      ...(!isCoding && { data: specificData?.data }),
       description: isCoding
         ? specificData?.description || ''
         : specificData?.data?.question || '',
@@ -66,7 +70,9 @@ export class QuestionsService {
 
     return {
       id: rawQ.id,
-      title: rawQ.title,
+      title: !isCoding
+        ? rawQ.theoryQuestion?.data?.question || rawQ.title
+        : rawQ.title,
       slug: rawQ.slug,
       difficulty: rawQ.difficulty,
       type: rawQ.type,

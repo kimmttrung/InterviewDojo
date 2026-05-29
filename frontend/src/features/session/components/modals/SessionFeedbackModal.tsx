@@ -26,6 +26,7 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
   const { data: myFeedback, isLoading: myLoading } = useMyFeedback(sessionId);
 
   let feedbackMode: 'CANDIDATE_TO_MENTOR' | 'MENTOR_TO_CANDIDATE' | 'P2P' = 'P2P';
+
   if (sessionType === 'MENTOR') {
     feedbackMode = currentUser?.role === 'MENTOR' ? 'MENTOR_TO_CANDIDATE' : 'CANDIDATE_TO_MENTOR';
   } else if (sessionType === 'P2P') {
@@ -38,14 +39,17 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle>Đánh giá sau buổi học</DialogTitle>
+          <DialogTitle>Session Feedback</DialogTitle>
         </DialogHeader>
+
         <Tabs defaultValue="send" className="flex-1 flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="send">Gửi đánh giá</TabsTrigger>
-            <TabsTrigger value="sent">Đã gửi</TabsTrigger>
-            <TabsTrigger value="received">Nhận được</TabsTrigger>
+            <TabsTrigger value="send">Submit Feedback</TabsTrigger>
+            <TabsTrigger value="sent">Sent</TabsTrigger>
+            <TabsTrigger value="received">Received</TabsTrigger>
           </TabsList>
+
+          {/* SEND */}
           <TabsContent value="send" className="flex-1 overflow-y-auto mt-4">
             <FeedbackForm
               mode={feedbackMode}
@@ -54,6 +58,8 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
               onCancel={onClose}
             />
           </TabsContent>
+
+          {/* SENT */}
           <TabsContent value="sent" className="flex-1 overflow-y-auto mt-4">
             {myLoading ? (
               <div className="flex justify-center py-12">
@@ -61,30 +67,31 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
               </div>
             ) : !myFeedback ? (
               <div className="text-center py-12 text-gray-500">
-                Bạn chưa gửi đánh giá cho phiên học này.
+                You have not submitted feedback for this session.
               </div>
             ) : (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border p-5">
-                  {/* Hiển thị feedback đã gửi - tương tự như hiển thị feedback nhận được */}
                   <div className="flex flex-wrap justify-between items-start gap-3 mb-3">
                     <div className="flex items-center gap-3">
                       <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
-                        Bạn
+                        You
                       </div>
                       <div>
-                        <h4 className="font-semibold">Bạn</h4>
+                        <h4 className="font-semibold">You</h4>
                         <div className="flex items-center gap-2 text-xs text-gray-400">
                           <Calendar size={12} />
                           <span>{format(new Date(myFeedback.createdAt), 'dd/MM/yyyy HH:mm')}</span>
                         </div>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
                       <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                       <span className="text-sm font-medium">{myFeedback.overallScore}</span>
                     </div>
                   </div>
+
                   {myFeedback.quickTags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
                       {myFeedback.quickTags.map((tag: string) => (
@@ -97,28 +104,32 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                       ))}
                     </div>
                   )}
+
                   {myFeedback.comment && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg italic text-gray-600 text-sm">
                       “{myFeedback.comment}”
                     </div>
                   )}
+
                   {(myFeedback.strengths || myFeedback.weaknesses || myFeedback.suggestions) && (
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                       {myFeedback.strengths && (
                         <div className="bg-green-50 p-2 rounded-lg">
-                          <p className="font-semibold text-green-700">💪 Điểm mạnh</p>
+                          <p className="font-semibold text-green-700">💪 Strengths</p>
                           <p className="text-gray-700">{myFeedback.strengths}</p>
                         </div>
                       )}
+
                       {myFeedback.weaknesses && (
                         <div className="bg-amber-50 p-2 rounded-lg">
-                          <p className="font-semibold text-amber-700">⚠️ Cần cải thiện</p>
+                          <p className="font-semibold text-amber-700">⚠️ Areas for improvement</p>
                           <p className="text-gray-700">{myFeedback.weaknesses}</p>
                         </div>
                       )}
+
                       {myFeedback.suggestions && (
                         <div className="bg-blue-50 p-2 rounded-lg">
-                          <p className="font-semibold text-blue-700">🎯 Lời khuyên</p>
+                          <p className="font-semibold text-blue-700">🎯 Suggestions</p>
                           <p className="text-gray-700">{myFeedback.suggestions}</p>
                         </div>
                       )}
@@ -128,20 +139,25 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
               </div>
             )}
           </TabsContent>
+
+          {/* RECEIVED */}
           <TabsContent value="received" className="flex-1 overflow-y-auto mt-4">
             {partnerLoading && (
               <div className="flex justify-center py-12">
                 <Loader2 className="h-8 w-8 animate-spin text-indigo-600" />
               </div>
             )}
+
             {partnerError && (
-              <div className="text-center text-red-500 py-8">Không thể tải đánh giá</div>
+              <div className="text-center text-red-500 py-8">Failed to load feedback</div>
             )}
+
             {!partnerLoading && !partnerError && !partnerFeedback && (
               <div className="text-center py-12 text-gray-500">
-                Đối tác chưa gửi đánh giá cho bạn.
+                Your partner has not submitted feedback yet.
               </div>
             )}
+
             {partnerFeedback && (
               <div className="space-y-4">
                 <div className="bg-white rounded-xl border p-5">
@@ -150,8 +166,10 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                       <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700 font-bold">
                         {partnerFeedback.reviewerName?.charAt(0).toUpperCase() || 'U'}
                       </div>
+
                       <div>
                         <h4 className="font-semibold">{partnerFeedback.reviewerName}</h4>
+
                         <div className="flex items-center gap-2 text-xs text-gray-400">
                           <Calendar size={12} />
                           <span>
@@ -160,11 +178,13 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                         </div>
                       </div>
                     </div>
+
                     <div className="flex items-center gap-1 bg-amber-50 px-2 py-1 rounded-full">
                       <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-400" />
                       <span className="text-sm font-medium">{partnerFeedback.overallScore}</span>
                     </div>
                   </div>
+
                   {partnerFeedback.quickTags?.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
                       {partnerFeedback.quickTags.map((tag: string) => (
@@ -177,30 +197,34 @@ export const SessionFeedbackModal = ({ open, onClose, sessionId, sessionType }: 
                       ))}
                     </div>
                   )}
+
                   {partnerFeedback.comment && (
                     <div className="mt-3 p-3 bg-gray-50 rounded-lg italic text-gray-600 text-sm">
                       “{partnerFeedback.comment}”
                     </div>
                   )}
+
                   {(partnerFeedback.strengths ||
                     partnerFeedback.weaknesses ||
                     partnerFeedback.suggestions) && (
                     <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
                       {partnerFeedback.strengths && (
                         <div className="bg-green-50 p-2 rounded-lg">
-                          <p className="font-semibold text-green-700">💪 Điểm mạnh</p>
+                          <p className="font-semibold text-green-700">💪 Strengths</p>
                           <p className="text-gray-700">{partnerFeedback.strengths}</p>
                         </div>
                       )}
+
                       {partnerFeedback.weaknesses && (
                         <div className="bg-amber-50 p-2 rounded-lg">
-                          <p className="font-semibold text-amber-700">⚠️ Cần cải thiện</p>
+                          <p className="font-semibold text-amber-700">⚠️ Areas for improvement</p>
                           <p className="text-gray-700">{partnerFeedback.weaknesses}</p>
                         </div>
                       )}
+
                       {partnerFeedback.suggestions && (
                         <div className="bg-blue-50 p-2 rounded-lg">
-                          <p className="font-semibold text-blue-700">🎯 Lời khuyên</p>
+                          <p className="font-semibold text-blue-700">🎯 Suggestions</p>
                           <p className="text-gray-700">{partnerFeedback.suggestions}</p>
                         </div>
                       )}

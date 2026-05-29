@@ -1,6 +1,6 @@
 // src/features/admin/users/pages/UserDetail.tsx
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { userAdminApi } from '../api/userApi';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
@@ -18,6 +18,8 @@ import {
   User,
   AlertCircle,
 } from 'lucide-react';
+import { useState } from 'react';
+import { AdjustBalanceModal } from '@/features/admin/wallet/components/AdjustBalanceModal';
 
 function unwrapUser(response: any) {
   return response?.data?.data;
@@ -26,6 +28,9 @@ function unwrapUser(response: any) {
 export const UserDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [adjustOpen, setAdjustOpen] = useState(false);
+
   const { data: response, isLoading } = useQuery({
     queryKey: ['admin', 'user', id],
     queryFn: () => userAdminApi.getOne(Number(id)),
@@ -33,6 +38,10 @@ export const UserDetail = () => {
   });
 
   const user = unwrapUser(response);
+
+  const handleAdjustSuccess = () => {
+    queryClient.invalidateQueries({ queryKey: ['admin', 'user', id] });
+  };
 
   if (isLoading) return <div className="p-6">Đang tải...</div>;
   if (!user) return <div className="p-6">Không tìm thấy người dùng</div>;
@@ -45,7 +54,6 @@ export const UserDetail = () => {
       .join('')
       .toUpperCase() || '?';
 
-  // Helper: hiển thị giá trị hoặc "Chưa cập nhật"
   const displayValue = (value: any, unit?: string) => {
     if (value === null || value === undefined || value === '') return '—';
     if (unit === 'credits') return `${value.toLocaleString()} credits`;
@@ -63,7 +71,6 @@ export const UserDetail = () => {
           <CardTitle>Chi tiết người dùng</CardTitle>
         </CardHeader>
         <CardContent className="space-y-5">
-          {/* Avatar + Tên + Email + Role */}
           <div className="flex items-center gap-4">
             <Avatar className="h-16 w-16">
               <AvatarImage src={user.avatarUrl} />
@@ -78,7 +85,6 @@ export const UserDetail = () => {
             </div>
           </div>
 
-          {/* Thông tin chung dạng lưới */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm border-t pt-4">
             <div className="flex items-center gap-2">
               <Mail className="h-4 w-4 text-muted-foreground" />
@@ -94,6 +100,14 @@ export const UserDetail = () => {
               <Wallet className="h-4 w-4 text-muted-foreground" />
               <span className="font-medium">Số dư ví:</span>
               <span>{displayValue(user.creditBalance, 'credits')}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setAdjustOpen(true)}
+                className="ml-auto"
+              >
+                Điều chỉnh
+              </Button>
             </div>
             <div className="flex items-center gap-2">
               <Briefcase className="h-4 w-4 text-muted-foreground" />
@@ -134,7 +148,6 @@ export const UserDetail = () => {
             </div>
           </div>
 
-          {/* Bio */}
           <div className="border-t pt-3">
             <div className="flex items-start gap-2">
               <User className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
@@ -145,7 +158,6 @@ export const UserDetail = () => {
             </div>
           </div>
 
-          {/* Thông tin ban (nếu có) */}
           {user.status === 'BANNED' && (
             <div className="bg-red-50 p-3 rounded-lg border border-red-200">
               <div className="flex items-start gap-2">
@@ -169,6 +181,15 @@ export const UserDetail = () => {
           )}
         </CardContent>
       </Card>
+
+      <AdjustBalanceModal
+        open={adjustOpen}
+        onClose={() => setAdjustOpen(false)}
+        userId={user.id}
+        userName={user.name}
+        currentBalance={user.creditBalance}
+        onSuccess={handleAdjustSuccess}
+      />
     </div>
   );
 };
