@@ -223,6 +223,7 @@ export const Messages = {
     FETCHED: 'Lấy danh sách thông báo thành công',
     MARKED_AS_READ: 'Đã đánh dấu thông báo là đã đọc',
     MARKED_ALL_AS_READ: 'Đã đánh dấu tất cả thông báo là đã đọc',
+    TOGGLE_PIN: 'Đã thay đổi trạng thái ghim thông báo',
   },
 
   SESSION: {

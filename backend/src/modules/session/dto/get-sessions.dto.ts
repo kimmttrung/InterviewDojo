@@ -57,7 +57,6 @@ export class GetSessionsDto {
   @IsEnum(SessionStatus, { each: true })
   @Transform(({ value }) => {
     if (value === undefined || value === null || value === '') return undefined;
-    // Nếu nó là mảng rồi thì giữ nguyên, nếu là chuỗi (vd: 'SCHEDULED') thì bọc vào mảng
     return Array.isArray(value) ? value : [value];
   })
   statuses?: SessionStatus[];

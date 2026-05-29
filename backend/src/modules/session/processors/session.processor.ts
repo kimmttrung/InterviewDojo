@@ -28,7 +28,7 @@ export class SessionProcessor extends WorkerHost {
           type: NotificationType.INTERVIEW_UPCOMING,
           title: 'Phỏng vấn đã bắt đầu',
           message: 'Nhấn vào đây để tham gia cuộc họp.',
-          targetUrl: job.data.meetingLink!,
+          targetUrl: '/sessions/',
         })),
       });
 

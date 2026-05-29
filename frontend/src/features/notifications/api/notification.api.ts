@@ -25,3 +25,8 @@ export const markAllNotificationsAsRead = async () => {
 
   return res.data;
 };
+
+export const togglePinNotification = async (id: number) => {
+  const res = await api.patch(`/notifications/${id}/pin`);
+  return res.data;
+};

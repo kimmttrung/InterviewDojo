@@ -54,7 +54,6 @@ export class BookingController {
     if (paymentDto.method === 'INTERNAL_WALLET') {
       return this.bookingService.payWithWallet(id, Number(user.sub));
     }
-    // TODO: Thêm các cổng thanh toán khác
     throw new BadRequestException('Phương thức thanh toán chưa hỗ trợ');
   }
 

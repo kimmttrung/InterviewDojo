@@ -1,4 +1,3 @@
-// src/features/session/pages/CandidateSessionsPage.tsx
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { SessionFilters } from '../components/SessionFilters';
 import { SessionListByType } from '../components/SessionListByType';
