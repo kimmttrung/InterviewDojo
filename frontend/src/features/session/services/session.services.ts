@@ -14,3 +14,9 @@ export const cancelSession = async (data: { sessionId: string; reason: string })
   // Tương tự, nếu backend trả về { success, data, message } thì lấy response.data.data
   return response.data.data;
 };
+
+export const getMeetingLink = async (sessionId: number | string) => {
+  const response = await api.post(`/sessions/${sessionId}/meeting-link`);
+  console.log('check res', response);
+  return response.data.data.meetingLink as string;
+};

@@ -35,10 +35,11 @@ import { CandidateDashboardModule } from './modules/candidate-dashboard/candidat
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { SessionModule } from './modules/session/session.module';
 import { BookmarkModule } from './modules/bookmark/bookmark.module';
-import { AdminModule } from './modules/admin/admin.module';
+import { MeetingModule } from './modules/meeting/meeting.module';
 import { MentorRecommendationModule } from './modules/mentor-recommendation/recommendation.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { JobRolesModule } from './modules/job-roles/job-roles.module';
+import { AdminModule } from './modules/admin/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -60,10 +61,8 @@ import { ScheduleModule } from '@nestjs/schedule';
     // Đăng ký toàn bộ queue hệ thống sẽ dùng
     BullModule.registerQueue(
       { name: 'code-execution' }, // cho submit code
-      { name: 'code-execution' },
       { name: 'ai-analysis' },
       { name: 'notification' },
-      { name: 'email' },
       { name: 'recommendation-queue' },
       { name: 'session' },
     ),
@@ -97,6 +96,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationsModule,
     SessionModule,
     BookmarkModule,
+    MeetingModule,
     AdminModule,
     ReportsModule,
     JobRolesModule,

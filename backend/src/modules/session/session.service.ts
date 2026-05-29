@@ -1,4 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { BulkJobOptions, Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,6 +19,7 @@ import {
   BookingStatus,
   SessionSource,
 } from '@prisma/client';
+import { StreamService } from '../stream/stream.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SocketService } from '../socket/socket.service';
 @Injectable()
@@ -21,6 +28,7 @@ export class SessionService {
   constructor(
     private prisma: PrismaService,
     @InjectQueue('session') private sessionQueue: Queue,
+    private streamService: StreamService,
     private socketService: SocketService,
   ) {}
 
@@ -557,6 +565,43 @@ export class SessionService {
     return { success: true, message: 'Session canceled successfully' };
   }
 
+  async getSessionDetail(sessionId: number, userId: number) {
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: {
+          select: { mentorId: true, candidateId: true },
+        },
+        match: {
+          select: { candidateAId: true, candidateBId: true },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    // Kiểm tra quyền: user phải tham gia session
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    if (!isParticipant) throw new ForbiddenException('Not participant');
+
+    return {
+      id: session.id,
+      source: session.source,
+      scheduledAt: session.scheduledAt,
+      durationMinutes: session.durationMinutes,
+      status: session.status,
+      mentorId: session.booking?.mentorId || null,
+      candidateId: session.booking?.candidateId || null,
+      intervieweeId: session.intervieweeId,
+      // thêm các field cần thiết
+    };
+  }
+
   // ==================== MAPPERS ====================
 
   private mapMockSessionToItem(session: any, userId: number): SessionItem {
@@ -828,6 +873,81 @@ export class SessionService {
     }
     return condition;
   }
+
+  async getOrCreateMeetingLink(
+    sessionId: number,
+    userId: number,
+  ): Promise<string> {
+    // 1. Lấy session và kiểm tra quyền
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: { include: { mentor: true, candidate: true } },
+        match: { include: { candidateA: true, candidateB: true } },
+      },
+    });
+    if (!session) throw new Error('Session không tồn tại');
+
+    // const userId = Number(req.user.sub); // Ép sang number
+    if (isNaN(userId)) throw new BadRequestException('Invalid user');
+
+    // Kiểm tra user có tham gia session không
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    console.log(
+      'Found session:',
+      session.id,
+      'bookingId:',
+      session.bookingId,
+      'matchId:',
+      session.matchId,
+    );
+    console.log('Current userId:', userId);
+    console.log('Booking mentorId:', session.booking?.mentorId);
+    console.log('Booking candidateId:', session.booking?.candidateId);
+
+    if (!isParticipant)
+      throw new Error('Bạn không có quyền tham gia session này');
+
+    // 2. Kiểm tra thời gian cho phép (15 phút trước đến 2 giờ sau)
+    const now = new Date();
+    const start = session.scheduledAt;
+    const diffMinutes = (start.getTime() - now.getTime()) / 60000;
+    const canJoin = diffMinutes <= 15 && diffMinutes >= -120; // giống frontend
+    if (!canJoin) {
+      throw new Error(
+        `Chỉ có thể tham gia từ 15 phút trước đến 2 giờ sau giờ bắt đầu`,
+      );
+    }
+
+    // 3. Nếu đã có meetingLink thì trả về luôn
+    if (session.meetingLink) {
+      return session.meetingLink;
+    }
+
+    // 4. Tạo room mới (dùng bookingId hoặc sessionId làm roomId)
+    const roomId = `${sessionId}`;
+    const creatorId =
+      session.booking?.mentorId?.toString() || userId.toString();
+    const meetingLink = await this.streamService.getOrCreateMeetingLink(
+      roomId,
+      creatorId,
+    );
+
+    // 5. Cập nhật meetingLink vào session
+    await this.prisma.mockSession.update({
+      where: { id: sessionId },
+      data: { meetingLink },
+    });
+
+    return meetingLink;
+  }
+
   private buildStartJobConfig(session: any, userIds: number[]) {
     const delay = Math.max(session.scheduledAt.getTime() - Date.now(), 0);
     return {

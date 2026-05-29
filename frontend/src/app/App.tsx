@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { I18nextProvider } from 'react-i18next';
 import { ThemeProvider } from '../contexts/ThemeContext';
 import { Toaster as Sonner } from '../shared/components/ui/sonner';
@@ -17,9 +17,6 @@ import MentorBookings from '../features/mentor/booking-management/pages/MentorBo
 import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedulePage';
 import MentorDetailPage from '../features/candidate/mentor-booking/pages/MentorDetailPage';
 import MentorProfile from '../features/mentor/profile-management/pages/MentorProfileManagement';
-
-import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard';
-import CompaniesPage from '../features/admin/companies/pages/CompaniesPage';
 import SelectTargetRole from '../features/candidate/target-role/pages/SelectTargetRole';
 import Login from '../features/auth/pages/Login';
 import Register from '../features/auth/pages/Register';
@@ -27,7 +24,6 @@ import InterviewRoom from '../features/candidate/practice/interviews/peer-interv
 import SoloRecording from '../features/candidate/practice/interviews/solo-ai/pages/SoloRecording';
 import PeerMatchingPage from '../features/candidate/practice/interviews/peer-interview/pages/PeerMatchingPage';
 import QuestionBank from '../features/shared-domain/question-bank/pages/QuestionBank';
-// import QuestionsPage from '../features/admin/question-management/pages/QuestionsPage';
 import { BookmarkedQuestionsPage } from '../features/bookmark/components/BookmarkedQuestionsPage';
 import AIAnalysisResult from '../features/candidate/practice/interviews/solo-ai/pages/AIAnalysisResult';
 import { ProtectedRoute, useCurrentUser } from '@/features/auth';
@@ -35,13 +31,13 @@ import QuestionDetailContainer from '../features/shared-domain/question-bank/pag
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
 import WalletPage from '@/features/wallet/pages/WalletPage';
+import MeetingRoom from '@/features/candidate/practice/interviews/mentor-interview/pages/MeetingRoom';
 import AdminLayout from '@/features/admin/components/AdminLayout';
 import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprovalList';
 import { MentorDetail } from '@/features/admin/mentors/pages/MentorDetail';
 import { UserManagement } from '@/features/admin/users/pages/UserManagement';
 import { UserDetail } from '@/features/admin/users/pages/UserDetail';
 import { CoachingCategoryList } from '@/features/admin/coaching-categories/pages/CoachingCategoryList';
-import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 import { ReportList } from '@/features/admin/reports/pages/ReportList';
 import { ReportDetail } from '@/features/admin/reports/pages/ReportDetail';
 import { QuestionList } from '@/features/admin/questions/pages/QuestionList';
@@ -50,8 +46,10 @@ import JobRolesPage from '@/features/admin/job-roles/pages/JobRolesPage';
 
 import CandidateSessionsPage from '@/features/session/page/CandidateSessionPage';
 import MentorSessionsPage from '@/features/session/page/MentorSessionPage';
-// import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
-// import { Navbar } from '@/shared/components/layout/Navbar';
+import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard';
+import CompaniesPage from '@/features/admin/companies/pages/CompaniesPage';
+import { WalletStatistics } from '@/features/admin/wallet/pages/WalletStatistics';
+import { TransactionList } from '@/features/admin/wallet/pages/TransactionList';
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -76,28 +74,6 @@ const SelectRoleGuard = () => {
 
   return <Navigate to="/" replace />;
 };
-
-// const SessionLayout = () => {
-//   return (
-//     <div className="min-h-screen bg-background">
-//       <Navbar />
-//       <main>
-//         <Outlet />
-//       </main>
-//     </div>
-//   );
-// };
-
-// Layout cho Candidate (Không chứa Navbar để các trang Home, Practice tự render layout của nó)
-// const CandidateLayout = () => {
-//   return (
-//     <div className="min-h-screen bg-background">
-//       <main>
-//         <Outlet />
-//       </main>
-//     </div>
-//   );
-// };
 
 // ──────────────────────────────────────────
 // App component chính
@@ -254,6 +230,15 @@ export function App() {
               }
             />
 
+            <Route
+              path="/meeting/:roomId"
+              element={
+                <ProtectedRoute>
+                  <MeetingRoom />
+                </ProtectedRoute>
+              }
+            />
+
             {/* ========================================== */}
             {/* CÁC ROUTE CÒN LẠI CỦA HỆ THỐNG             */}
             {/* ========================================== */}
@@ -333,6 +318,8 @@ export function App() {
               <Route path="questions" element={<QuestionList />} />
               <Route path="questions/new" element={<QuestionForm />} />
               <Route path="questions/:id/edit" element={<QuestionForm />} />
+              <Route path="wallet-statistics" element={<WalletStatistics />} />
+              <Route path="transactions" element={<TransactionList />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 

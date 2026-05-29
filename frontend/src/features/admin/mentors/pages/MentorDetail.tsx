@@ -25,7 +25,6 @@ import {
   User,
   DollarSign,
   AlertCircle,
-  MapPin,
   HelpCircle,
 } from 'lucide-react';
 

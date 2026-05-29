@@ -11,6 +11,7 @@ import { MentorService } from '../modules/mentor/mentor.service';
 import { BookingController } from '../modules/booking/booking.controller';
 import { BookingService } from '../modules/booking/booking.service';
 import { BookingStatus } from '@prisma/client';
+import { StreamService } from '../modules/stream/stream.service';
 
 import { JwtAuthGuard } from '../modules/auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../modules/auth/guards/roles.guard';
@@ -71,6 +72,12 @@ describe('Mentor Booking Backend Integration', () => {
     }),
   };
 
+  const streamServiceMock = {
+    getOrCreateMeetingLink: jest.fn().mockResolvedValue('/meeting/room'),
+    createCall: jest.fn(),
+    createMeetingRoom: jest.fn(),
+  };
+
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({
       controllers: [MentorController, BookingController],
@@ -82,6 +89,10 @@ describe('Mentor Booking Backend Integration', () => {
         {
           provide: BookingService,
           useValue: bookingServiceMock,
+        },
+        {
+          provide: StreamService,
+          useValue: streamServiceMock,
         },
       ],
     })
