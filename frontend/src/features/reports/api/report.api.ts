@@ -14,3 +14,12 @@ export const reportUser = async (payload: CreateReportPayload | FormData): Promi
   const response = await api.post(API_ENDPOINT.REPORT.CREATE_USER, payload);
   return response.data;
 };
+export interface ReportCommentPayload {
+  commentId: number;
+  reason: string;
+}
+
+export const reportComment = async (payload: ReportCommentPayload): Promise<void> => {
+  const response = await api.post(API_ENDPOINT.REPORT.CREATE_COMMENT, payload);
+  return response.data;
+};

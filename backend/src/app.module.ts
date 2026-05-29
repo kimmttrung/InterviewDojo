@@ -41,6 +41,7 @@ import { ReportsModule } from './modules/reports/reports.module';
 import { JobRolesModule } from './modules/job-roles/job-roles.module';
 import { AdminModule } from './modules/admin/admin.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { CommentModule } from './modules/comment/comment.module';
 
 @Module({
   imports: [
@@ -100,6 +101,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     AdminModule,
     ReportsModule,
     JobRolesModule,
+    CommentModule,
   ],
   controllers: [AppController],
   providers: [
