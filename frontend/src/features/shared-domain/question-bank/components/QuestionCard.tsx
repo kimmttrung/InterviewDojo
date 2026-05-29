@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom';
-import { MessageCircle, PlusCircle, ChevronDown, Flag } from 'lucide-react';
+import { MessageCircle, PlusCircle, ChevronDown, Flag, MessageSquare } from 'lucide-react';
 import { Question } from '../types/question.types';
 import { Card } from '../../../../shared/components/ui/card';
 import { Badge } from '../../../../shared/components/ui/badge';
@@ -99,6 +99,15 @@ export function QuestionCard({ question }: QuestionCardProps) {
             <BookmarkButton questionId={id} isBookmarked={isBookmarked} />
             <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
               <MessageCircle className="w-4 h-4" /> {answersCount || 0} answers
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                navigate(`/questions/${id}/${slug}#comments`);
+              }}
+              className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors"
+            >
+              <MessageSquare className="w-4 h-4" /> Comment
             </button>
             <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
               <PlusCircle className="w-4 h-4" /> I was asked this
