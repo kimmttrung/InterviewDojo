@@ -4,6 +4,7 @@ import { SocketService } from '../../socket/socket.service';
 import { SessionProcessor } from './session.processor';
 import { Job } from 'bullmq';
 import { NotificationType } from '@prisma/client';
+import { MentorPayoutService } from '../../mentor-payout/mentor-payout.service';
 
 describe('SessionProcessor', () => {
   let processor: SessionProcessor;
@@ -12,6 +13,7 @@ describe('SessionProcessor', () => {
     notification: { createMany: jest.Mock };
   };
   let socketService: { emitToUser: jest.Mock };
+  let mentorPayoutService: { createPendingPayoutSafely: jest.Mock };
   let moduleRef: TestingModule;
 
   beforeEach(async () => {
@@ -20,12 +22,14 @@ describe('SessionProcessor', () => {
       notification: { createMany: jest.fn() },
     };
     socketService = { emitToUser: jest.fn() };
+    mentorPayoutService = { createPendingPayoutSafely: jest.fn() };
 
     moduleRef = await Test.createTestingModule({
       providers: [
         SessionProcessor,
         { provide: PrismaService, useValue: prisma },
         { provide: SocketService, useValue: socketService },
+        { provide: MentorPayoutService, useValue: mentorPayoutService },
       ],
     }).compile();
 
@@ -52,6 +56,9 @@ describe('SessionProcessor', () => {
       where: { id: 3 },
       data: { status: 'COMPLETED' },
     });
+    expect(mentorPayoutService.createPendingPayoutSafely).toHaveBeenCalledWith(
+      3,
+    );
     expect(socketService.emitToUser).toHaveBeenNthCalledWith(
       1,
       1,
@@ -93,5 +100,8 @@ describe('SessionProcessor', () => {
       ],
     });
     expect(prisma.mockSession.update).not.toHaveBeenCalled();
+    expect(
+      mentorPayoutService.createPendingPayoutSafely,
+    ).not.toHaveBeenCalled();
   });
 });

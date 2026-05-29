@@ -3,6 +3,7 @@ import { Job } from 'bullmq';
 import { SocketService } from '../../socket/socket.service';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { NotificationType } from '@prisma/client';
+import { MentorPayoutService } from '../../mentor-payout/mentor-payout.service';
 
 interface SessionJobData {
   sessionId: number;
@@ -15,6 +16,7 @@ export class SessionProcessor extends WorkerHost {
   constructor(
     private socketService: SocketService,
     private prisma: PrismaService,
+    private mentorPayoutService: MentorPayoutService,
   ) {
     super();
   }
@@ -45,6 +47,7 @@ export class SessionProcessor extends WorkerHost {
       where: { id: sessionId },
       data: { status: 'COMPLETED' },
     });
+    await this.mentorPayoutService.createPendingPayoutSafely(sessionId);
 
     for (const userId of userIds) {
       this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });

@@ -6,12 +6,14 @@ import { SocketModule } from '../socket/socket.module';
 import { BullModule } from '@nestjs/bullmq';
 import { SessionProcessor } from './processors/session.processor';
 import { StreamModule } from '../stream/stream.module';
+import { MentorPayoutModule } from '../mentor-payout/mentor-payout.module';
 @Module({
   imports: [
     PrismaModule,
     SocketModule,
     BullModule.registerQueue({ name: 'session' }),
     StreamModule,
+    MentorPayoutModule,
   ],
   controllers: [SessionController],
   providers: [SessionService, SessionProcessor],

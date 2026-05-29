@@ -10,6 +10,7 @@ import {
   Briefcase,
   TrendingUp,
   Receipt,
+  WalletCards,
 } from 'lucide-react';
 
 const menuItems = [
@@ -24,6 +25,7 @@ const menuItems = [
 
   { path: '/admin/wallet-statistics', label: 'Thống kê ví', icon: TrendingUp },
   { path: '/admin/transactions', label: 'Giao dịch', icon: Receipt },
+  { path: '/admin/mentor-payouts', label: 'Thanh toan mentor', icon: WalletCards },
 ];
 
 export default function AdminSidebar() {
