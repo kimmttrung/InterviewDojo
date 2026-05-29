@@ -83,12 +83,16 @@ describe('SessionProcessor', () => {
         expect.objectContaining({
           userId: 1,
           type: NotificationType.INTERVIEW_UPCOMING,
-          targetUrl: '/interview/mentor-booking-3?sessionId=3',
+          title: 'Phỏng vấn đã bắt đầu',
+          message: 'Nhấn vào đây để tham gia cuộc họp.',
+          targetUrl: '/sessions/',
         }),
         expect.objectContaining({
           userId: 2,
           type: NotificationType.INTERVIEW_UPCOMING,
-          targetUrl: '/interview/mentor-booking-3?sessionId=3',
+          title: 'Phỏng vấn đã bắt đầu',
+          message: 'Nhấn vào đây để tham gia cuộc họp.',
+          targetUrl: '/sessions/',
         }),
       ],
     });

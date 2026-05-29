@@ -59,7 +59,7 @@ describe('NotificationsService', () => {
       where: { userId: 10 },
       skip: 0,
       take: 10,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
     });
   });
 
@@ -80,7 +80,7 @@ describe('NotificationsService', () => {
       where: { userId: 10, isRead: true },
       skip: 5,
       take: 5,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
     });
   });
 
@@ -96,7 +96,7 @@ describe('NotificationsService', () => {
       where: { userId: 10, isRead: false },
       skip: 0,
       take: 10,
-      orderBy: { createdAt: 'desc' },
+      orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
     });
   });
 
