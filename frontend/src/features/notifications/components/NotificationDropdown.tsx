@@ -37,7 +37,7 @@ export default function NotificationDropdown() {
     return filtered.sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
-      return 0; // Giữ nguyên thứ tự thời gian gốc nếu cùng trạng thái
+      return 0;
     });
   }, [data, filter]);
 

@@ -1,4 +1,3 @@
-// pages/MentorDetailPage.tsx
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useMentorDetail } from '../hooks/useMentorDetail';
