@@ -56,3 +56,23 @@ export class MentorPayoutController {
     );
   }
 }
+
+@Controller('admin/payout')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.ADMIN)
+export class AdminPayoutRetryController {
+  constructor(private readonly mentorPayoutService: MentorPayoutService) {}
+
+  @Get('retryable')
+  getRetryablePayouts(
+    @Query(new ValidationPipe({ whitelist: true, transform: true }))
+    query: QueryMentorPayoutDto,
+  ) {
+    return this.mentorPayoutService.getRetryablePayoutSessions(query);
+  }
+
+  @Post('retry/:sessionId')
+  retryPayout(@Param('sessionId', ParseIntPipe) sessionId: number) {
+    return this.mentorPayoutService.retryPayoutForSession(sessionId);
+  }
+}

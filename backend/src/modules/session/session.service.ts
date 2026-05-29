@@ -68,7 +68,7 @@ export class SessionService {
 
         await Promise.all(
           sessionIds.map((sessionId) =>
-            this.mentorPayoutService.createPendingPayoutSafely(sessionId),
+            this.mentorPayoutService.payoutCompletedSessionSafely(sessionId),
           ),
         );
 

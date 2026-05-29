@@ -31,7 +31,7 @@ export class MentorPayoutService {
     private readonly configService: ConfigService,
   ) {}
 
-  async createPendingPayoutForCompletedSession(sessionId: number) {
+  async payoutCompletedSession(sessionId: number) {
     const platformFeePercent = this.getPlatformFeePercent();
 
     return this.prisma.$transaction(async (tx) => {
@@ -55,10 +55,6 @@ export class MentorPayoutService {
         return null;
       }
 
-      if (session.mentorPayout) {
-        return session.mentorPayout;
-      }
-
       if (!payableBookingStatuses.includes(session.booking.status)) {
         return null;
       }
@@ -72,6 +68,41 @@ export class MentorPayoutService {
         (grossAmount * platformFeePercent) / 100,
       );
       const mentorEarning = this.roundMoney(grossAmount - platformFeeAmount);
+      const referenceId = this.sessionReferenceId(session.id);
+
+      const existingPayoutTransaction = await tx.walletTransaction.findFirst({
+        where: {
+          type: WalletTransactionType.PAYOUT,
+          referenceId,
+        },
+      });
+
+      if (existingPayoutTransaction) {
+        if (session.mentorPayout) {
+          return tx.mentorPayout.update({
+            where: { id: session.mentorPayout.id },
+            data: {
+              status: MentorPayoutStatus.COMPLETED,
+              failureReason: null,
+            },
+          });
+        }
+
+        return tx.mentorPayout.create({
+          data: {
+            sessionId: session.id,
+            bookingId: session.booking.id,
+            mentorId: session.booking.mentorId,
+            candidateId: session.booking.candidateId,
+            grossAmount,
+            platformFeePercent,
+            platformFeeAmount,
+            mentorEarning,
+            refundableAmount: grossAmount,
+            status: MentorPayoutStatus.COMPLETED,
+          },
+        });
+      }
 
       if (session.booking.status === BookingStatus.ACCEPTED) {
         await tx.booking.update({
@@ -80,7 +111,81 @@ export class MentorPayoutService {
         });
       }
 
-      return tx.mentorPayout.create({
+      const payout = session.mentorPayout
+        ? await tx.mentorPayout.update({
+            where: { id: session.mentorPayout.id },
+            data: {
+              grossAmount,
+              platformFeePercent,
+              platformFeeAmount,
+              mentorEarning,
+              refundableAmount: grossAmount,
+              status: MentorPayoutStatus.PENDING,
+              failureReason: null,
+            },
+          })
+        : await tx.mentorPayout.create({
+            data: {
+              sessionId: session.id,
+              bookingId: session.booking.id,
+              mentorId: session.booking.mentorId,
+              candidateId: session.booking.candidateId,
+              grossAmount,
+              platformFeePercent,
+              platformFeeAmount,
+              mentorEarning,
+              refundableAmount: grossAmount,
+              status: MentorPayoutStatus.PENDING,
+            },
+          });
+
+      const mentorBefore = await tx.user.findUnique({
+        where: { id: session.booking.mentorId },
+        select: { creditBalance: true },
+      });
+
+      if (!mentorBefore) {
+        return tx.mentorPayout.update({
+          where: { id: payout.id },
+          data: {
+            status: MentorPayoutStatus.FAILED,
+            failureReason: 'Mentor not found',
+          },
+        });
+      }
+
+      const mentorAfter = await tx.user.update({
+        where: { id: session.booking.mentorId },
+        data: { creditBalance: { increment: mentorEarning } },
+        select: { creditBalance: true },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          userId: session.booking.mentorId,
+          type: WalletTransactionType.PAYOUT,
+          amount: mentorEarning,
+          balanceBefore: mentorBefore.creditBalance,
+          balanceAfter: mentorAfter.creditBalance,
+          referenceId,
+          note: `Thanh toan cho session coaching #${session.id}`,
+        },
+      });
+
+      await tx.walletTransaction.create({
+        data: {
+          userId: null,
+          type: WalletTransactionType.PLATFORM_FEE,
+          amount: platformFeeAmount,
+          balanceBefore: 0,
+          balanceAfter: 0,
+          referenceId,
+          note: `Phi nen tang (${platformFeePercent}%)`,
+        },
+      });
+
+      return tx.mentorPayout.update({
+        where: { id: payout.id },
         data: {
           sessionId: session.id,
           bookingId: session.booking.id,
@@ -91,22 +196,28 @@ export class MentorPayoutService {
           platformFeeAmount,
           mentorEarning,
           refundableAmount: grossAmount,
-          status: MentorPayoutStatus.PENDING,
+          status: MentorPayoutStatus.COMPLETED,
+          failureReason: null,
         },
       });
     });
   }
 
-  async createPendingPayoutSafely(sessionId: number) {
+  async payoutCompletedSessionSafely(sessionId: number) {
     try {
-      return await this.createPendingPayoutForCompletedSession(sessionId);
+      return await this.payoutCompletedSession(sessionId);
     } catch (error) {
       this.logger.error(
-        `Failed to create pending mentor payout for session ${sessionId}`,
+        `Failed to payout completed mentor session ${sessionId}`,
         error instanceof Error ? error.stack : error,
       );
+      await this.markPayoutFailed(sessionId, error);
       return null;
     }
+  }
+
+  async retryPayoutForSession(sessionId: number) {
+    return this.payoutCompletedSession(sessionId);
   }
 
   async getPayouts(dto: QueryMentorPayoutDto) {
@@ -137,6 +248,115 @@ export class MentorPayoutService {
         page,
         limit: safeLimit,
         totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
+  async getRetryablePayoutSessions(dto: QueryMentorPayoutDto) {
+    const { page = 1, limit = 15, status } = dto;
+    const safeLimit = Math.min(limit, 100);
+    const platformFeePercent = this.getPlatformFeePercent();
+
+    const sessions = await this.prisma.mockSession.findMany({
+      where: {
+        status: SessionStatus.COMPLETED,
+        source: SessionSource.MENTOR_BOOKING,
+        booking: {
+          is: {
+            status: { in: payableBookingStatuses },
+            snapshotPlanPrice: { gt: 0 },
+          },
+        },
+      },
+      include: {
+        mentorPayout: true,
+        booking: {
+          include: {
+            mentor: {
+              select: { id: true, name: true, email: true, avatarUrl: true },
+            },
+            candidate: {
+              select: { id: true, name: true, email: true, avatarUrl: true },
+            },
+          },
+        },
+      },
+      orderBy: [{ endedAt: 'desc' }, { scheduledAt: 'desc' }],
+    });
+
+    const referenceIds = sessions.map((session) =>
+      this.sessionReferenceId(session.id),
+    );
+    const payoutTransactions = referenceIds.length
+      ? await this.prisma.walletTransaction.findMany({
+          where: {
+            type: WalletTransactionType.PAYOUT,
+            referenceId: { in: referenceIds },
+          },
+          select: { referenceId: true },
+        })
+      : [];
+    const paidReferenceIds = new Set(
+      payoutTransactions
+        .map((transaction) => transaction.referenceId)
+        .filter(Boolean),
+    );
+
+    const retryableItems = sessions
+      .filter(
+        (session) => !paidReferenceIds.has(this.sessionReferenceId(session.id)),
+      )
+      .map((session) => {
+        const grossAmount = session.booking!.snapshotPlanPrice ?? 0;
+        const platformFeeAmount = this.roundMoney(
+          (grossAmount * platformFeePercent) / 100,
+        );
+        const mentorEarning = this.roundMoney(grossAmount - platformFeeAmount);
+
+        return {
+          id: session.mentorPayout?.id ?? session.id,
+          sessionId: session.id,
+          bookingId: session.booking!.id,
+          grossAmount,
+          platformFeePercent,
+          platformFeeAmount,
+          mentorEarning,
+          refundableAmount: grossAmount,
+          status: session.mentorPayout?.status ?? MentorPayoutStatus.PENDING,
+          failureReason: session.mentorPayout?.failureReason ?? null,
+          createdAt: session.mentorPayout?.createdAt ?? session.scheduledAt,
+          reviewedAt: session.mentorPayout?.reviewedAt ?? null,
+          mentor: session.booking!.mentor,
+          candidate: session.booking!.candidate,
+          booking: {
+            id: session.booking!.id,
+            startTime: session.booking!.startTime,
+            endTime: session.booking!.endTime,
+            snapshotPlanTitle: session.booking!.snapshotPlanTitle,
+            snapshotPlanPrice: session.booking!.snapshotPlanPrice,
+            status: session.booking!.status,
+          },
+          session: {
+            id: session.id,
+            scheduledAt: session.scheduledAt,
+            durationMinutes: session.durationMinutes,
+            status: session.status,
+            endedAt: session.endedAt,
+          },
+        };
+      })
+      .filter((item) => !status || item.status === status);
+
+    const skip = (page - 1) * safeLimit;
+    const items = retryableItems.slice(skip, skip + safeLimit);
+
+    return {
+      items,
+      meta: {
+        total: retryableItems.length,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(retryableItems.length / safeLimit),
       },
     };
   }
@@ -172,7 +392,7 @@ export class MentorPayoutService {
           amount: payout.mentorEarning,
           balanceBefore: mentorBefore.creditBalance,
           balanceAfter: mentorAfter.creditBalance,
-          referenceId: this.payoutReferenceId(payout.id),
+          referenceId: this.sessionReferenceId(payout.sessionId),
           note: `Mentor payout for session ${payout.sessionId}`,
         },
       });
@@ -184,7 +404,7 @@ export class MentorPayoutService {
           amount: payout.platformFeeAmount,
           balanceBefore: 0,
           balanceAfter: 0,
-          referenceId: this.payoutReferenceId(payout.id),
+          referenceId: this.sessionReferenceId(payout.sessionId),
           note: `Platform fee ${payout.platformFeePercent}% for session ${payout.sessionId}`,
         },
       });
@@ -248,7 +468,7 @@ export class MentorPayoutService {
             amount: refundAmount,
             balanceBefore: candidateBefore.creditBalance,
             balanceAfter: candidateAfter.creditBalance,
-            referenceId: this.payoutReferenceId(updatedPayout.id),
+            referenceId: this.sessionReferenceId(updatedPayout.sessionId),
             note: `Refund after rejected mentor payout for session ${updatedPayout.sessionId}: ${reason}`,
           },
         });
@@ -295,6 +515,63 @@ export class MentorPayoutService {
     });
   }
 
+  private async markPayoutFailed(sessionId: number, error: unknown) {
+    try {
+      const session = await this.prisma.mockSession.findUnique({
+        where: { id: sessionId },
+        include: { booking: true, mentorPayout: true },
+      });
+
+      if (
+        !session?.booking ||
+        session.source !== SessionSource.MENTOR_BOOKING
+      ) {
+        return;
+      }
+
+      const grossAmount = session.booking.snapshotPlanPrice ?? 0;
+      const platformFeePercent = this.getPlatformFeePercent();
+      const platformFeeAmount = this.roundMoney(
+        (grossAmount * platformFeePercent) / 100,
+      );
+      const mentorEarning = this.roundMoney(grossAmount - platformFeeAmount);
+      const failureReason =
+        error instanceof Error ? error.message : 'Unknown payout failure';
+
+      if (session.mentorPayout) {
+        await this.prisma.mentorPayout.update({
+          where: { id: session.mentorPayout.id },
+          data: {
+            status: MentorPayoutStatus.FAILED,
+            failureReason,
+          },
+        });
+        return;
+      }
+
+      await this.prisma.mentorPayout.create({
+        data: {
+          sessionId: session.id,
+          bookingId: session.booking.id,
+          mentorId: session.booking.mentorId,
+          candidateId: session.booking.candidateId,
+          grossAmount,
+          platformFeePercent,
+          platformFeeAmount,
+          mentorEarning,
+          refundableAmount: grossAmount,
+          status: MentorPayoutStatus.FAILED,
+          failureReason,
+        },
+      });
+    } catch (markError) {
+      this.logger.error(
+        `Failed to mark mentor payout as failed for session ${sessionId}`,
+        markError instanceof Error ? markError.stack : markError,
+      );
+    }
+  }
+
   private resolveRefundAmount(payout: MentorPayout, refundableAmount?: number) {
     const refundAmount = refundableAmount ?? payout.refundableAmount;
 
@@ -315,8 +592,8 @@ export class MentorPayoutService {
     return value;
   }
 
-  private payoutReferenceId(payoutId: number) {
-    return `payout:${payoutId}`;
+  private sessionReferenceId(sessionId: number) {
+    return `session:${sessionId}`;
   }
 
   private roundMoney(value: number) {

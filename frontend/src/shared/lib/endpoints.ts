@@ -168,6 +168,8 @@ export const API_ENDPOINT = {
     MENTOR_PAYOUTS: '/admin/mentor-payouts',
     APPROVE_MENTOR_PAYOUT: (id: number) => `/admin/mentor-payouts/${id}/approve`,
     REJECT_MENTOR_PAYOUT: (id: number) => `/admin/mentor-payouts/${id}/reject`,
+    RETRYABLE_PAYOUTS: '/admin/payout/retryable',
+    RETRY_SESSION_PAYOUT: (sessionId: number) => `/admin/payout/retry/${sessionId}`,
   },
 
   RECOMMENDATIONS: {

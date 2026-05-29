@@ -47,7 +47,7 @@ export class SessionProcessor extends WorkerHost {
       where: { id: sessionId },
       data: { status: 'COMPLETED' },
     });
-    await this.mentorPayoutService.createPendingPayoutSafely(sessionId);
+    await this.mentorPayoutService.payoutCompletedSessionSafely(sessionId);
 
     for (const userId of userIds) {
       this.socketService.emitToUser(userId, 'SESSION_ENDED', { sessionId });

@@ -16,11 +16,14 @@ export interface RejectMentorPayoutPayload {
 
 export const adminMentorPayoutApi = {
   getPayouts: (params: MentorPayoutQuery) =>
-    api.get(API_ENDPOINT.ADMIN.MENTOR_PAYOUTS, { params }).then((res) => res.data.data),
+    api.get(API_ENDPOINT.ADMIN.RETRYABLE_PAYOUTS, { params }).then((res) => res.data.data),
 
   approvePayout: (id: number) =>
     api.post(API_ENDPOINT.ADMIN.APPROVE_MENTOR_PAYOUT(id)).then((res) => res.data.data),
 
   rejectPayout: (id: number, payload: RejectMentorPayoutPayload) =>
     api.post(API_ENDPOINT.ADMIN.REJECT_MENTOR_PAYOUT(id), payload).then((res) => res.data.data),
+
+  retrySessionPayout: (sessionId: number) =>
+    api.post(API_ENDPOINT.ADMIN.RETRY_SESSION_PAYOUT(sessionId)).then((res) => res.data.data),
 };

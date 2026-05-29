@@ -46,3 +46,19 @@ export const useRejectMentorPayout = () => {
       showToast.error(err?.response?.data?.message || 'Khong the tu choi payout'),
   });
 };
+
+export const useRetrySessionPayout = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (sessionId: number) => adminMentorPayoutApi.retrySessionPayout(sessionId),
+    onSuccess: () => {
+      showToast.success('Da retry payout cho session');
+      queryClient.invalidateQueries({ queryKey: ['admin', 'mentor-payouts'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-transactions'] });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'wallet-statistics'] });
+    },
+    onError: (err: any) =>
+      showToast.error(err?.response?.data?.message || 'Khong the retry payout'),
+  });
+};

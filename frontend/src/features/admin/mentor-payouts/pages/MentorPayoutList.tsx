@@ -1,16 +1,7 @@
 import { useState } from 'react';
-import { RefreshCcw, BadgeCheck, Ban, WalletCards } from 'lucide-react';
+import { RefreshCcw, RotateCcw } from 'lucide-react';
 import { Badge } from '@/shared/components/ui/badge';
 import { Button } from '@/shared/components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@/shared/components/ui/dialog';
-import { Input } from '@/shared/components/ui/input';
-import { Label } from '@/shared/components/ui/label';
 import {
   Select,
   SelectContent,
@@ -27,12 +18,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/shared/components/ui/table';
-import { Textarea } from '@/shared/components/ui/textarea';
-import {
-  useAdminMentorPayouts,
-  useApproveMentorPayout,
-  useRejectMentorPayout,
-} from '../hooks/useAdminMentorPayouts';
+import { useAdminMentorPayouts, useRetrySessionPayout } from '../hooks/useAdminMentorPayouts';
 import { MentorPayoutStatus } from '../api/adminMentorPayoutApi';
 
 type UserSummary = {
@@ -73,7 +59,7 @@ type MentorPayout = {
 
 const statusConfig: Record<MentorPayoutStatus, { label: string; className: string }> = {
   PENDING: {
-    label: 'Cho duyet',
+    label: 'Cho retry',
     className: 'bg-amber-100 text-amber-800 border border-amber-200',
   },
   COMPLETED: {
@@ -102,10 +88,7 @@ const formatDateTime = (value?: string | null) =>
 
 export const MentorPayoutList = () => {
   const [page, setPage] = useState(1);
-  const [status, setStatus] = useState<MentorPayoutStatus | 'ALL'>('PENDING');
-  const [rejectTarget, setRejectTarget] = useState<MentorPayout | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
-  const [refundAmount, setRefundAmount] = useState('');
+  const [status, setStatus] = useState<MentorPayoutStatus | 'ALL'>('ALL');
 
   const query = {
     page,
@@ -114,34 +97,10 @@ export const MentorPayoutList = () => {
   };
 
   const { data, isLoading, isFetching, refetch } = useAdminMentorPayouts(query);
-  const approveMutation = useApproveMentorPayout();
-  const rejectMutation = useRejectMentorPayout();
+  const retryMutation = useRetrySessionPayout();
 
   const payouts: MentorPayout[] = data?.items ?? [];
   const meta = data?.meta;
-
-  const openRejectDialog = (payout: MentorPayout) => {
-    setRejectTarget(payout);
-    setRejectReason('');
-    setRefundAmount(String(payout.refundableAmount));
-  };
-
-  const submitReject = () => {
-    if (!rejectTarget || !rejectReason.trim()) return;
-
-    rejectMutation.mutate(
-      {
-        id: rejectTarget.id,
-        payload: {
-          reason: rejectReason.trim(),
-          refundableAmount: refundAmount ? Number(refundAmount) : undefined,
-        },
-      },
-      {
-        onSuccess: () => setRejectTarget(null),
-      },
-    );
-  };
 
   return (
     <div className="space-y-6">
@@ -149,7 +108,7 @@ export const MentorPayoutList = () => {
         <div>
           <h1 className="text-2xl font-bold">Thanh toan mentor</h1>
           <p className="text-sm text-muted-foreground mt-1">
-            Duyet payout sau khi session mentor booking hoan thanh
+            Theo doi payout tu dong va retry session completed chua thanh toan
           </p>
         </div>
         <Button variant="outline" size="sm" onClick={() => refetch()} disabled={isFetching}>
@@ -171,7 +130,7 @@ export const MentorPayoutList = () => {
           </SelectTrigger>
           <SelectContent className="bg-background border shadow-md">
             <SelectItem value="ALL">Tat ca</SelectItem>
-            <SelectItem value="PENDING">Cho duyet</SelectItem>
+            <SelectItem value="PENDING">Cho retry</SelectItem>
             <SelectItem value="COMPLETED">Da thanh toan</SelectItem>
             <SelectItem value="REJECTED">Tu choi</SelectItem>
             <SelectItem value="FAILED">That bai</SelectItem>
@@ -214,7 +173,7 @@ export const MentorPayoutList = () => {
             ) : (
               payouts.map((payout) => {
                 const config = statusConfig[payout.status];
-                const isPending = payout.status === 'PENDING';
+                const canRetry = payout.status === 'PENDING' || payout.status === 'FAILED';
 
                 return (
                   <TableRow key={payout.id} className="hover:bg-muted/40">
@@ -255,24 +214,15 @@ export const MentorPayoutList = () => {
                       </span>
                     </TableCell>
                     <TableCell className="text-right">
-                      {isPending ? (
+                      {canRetry ? (
                         <div className="flex justify-end gap-2">
                           <Button
                             size="sm"
-                            onClick={() => approveMutation.mutate(payout.id)}
-                            disabled={approveMutation.isPending || rejectMutation.isPending}
+                            onClick={() => retryMutation.mutate(payout.sessionId)}
+                            disabled={retryMutation.isPending}
                           >
-                            <BadgeCheck className="h-4 w-4 mr-1" />
-                            Duyet
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => openRejectDialog(payout)}
-                            disabled={approveMutation.isPending || rejectMutation.isPending}
-                          >
-                            <Ban className="h-4 w-4 mr-1" />
-                            Tu choi
+                            <RotateCcw className="h-4 w-4 mr-1" />
+                            Retry
                           </Button>
                         </div>
                       ) : (
@@ -312,58 +262,6 @@ export const MentorPayoutList = () => {
           </Button>
         </div>
       )}
-
-      <Dialog open={!!rejectTarget} onOpenChange={(open) => !open && setRejectTarget(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Tu choi payout</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            {rejectTarget && (
-              <div className="rounded-md border bg-muted/40 p-3 text-sm">
-                <div className="flex items-center gap-2 font-medium">
-                  <WalletCards className="h-4 w-4" />
-                  Refund candidate
-                </div>
-                <div className="mt-1 text-muted-foreground">
-                  Toi da {formatVND(rejectTarget.grossAmount)} cho session #{rejectTarget.sessionId}
-                </div>
-              </div>
-            )}
-            <div className="space-y-2">
-              <Label htmlFor="refundAmount">So tien refund</Label>
-              <Input
-                id="refundAmount"
-                type="number"
-                min={0}
-                value={refundAmount}
-                onChange={(event) => setRefundAmount(event.target.value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="rejectReason">Ly do</Label>
-              <Textarea
-                id="rejectReason"
-                value={rejectReason}
-                onChange={(event) => setRejectReason(event.target.value)}
-                placeholder="Vi du: Candidate dispute hop le, session khong du dieu kien..."
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRejectTarget(null)}>
-              Huy
-            </Button>
-            <Button
-              variant="destructive"
-              onClick={submitReject}
-              disabled={!rejectReason.trim() || rejectMutation.isPending}
-            >
-              Xac nhan tu choi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
 };

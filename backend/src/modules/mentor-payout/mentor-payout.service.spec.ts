@@ -46,6 +46,7 @@ describe('MentorPayoutService', () => {
         update: jest.fn(),
       },
       walletTransaction: {
+        findFirst: jest.fn(),
         create: jest.fn(),
       },
     };
@@ -55,7 +56,7 @@ describe('MentorPayoutService', () => {
     } as unknown as ConfigService);
   });
 
-  it('creates a pending payout for a completed mentor booking session', async () => {
+  it('pays out a completed mentor booking session automatically', async () => {
     prisma.mockSession.findUnique.mockResolvedValue({
       id: 11,
       status: SessionStatus.COMPLETED,
@@ -70,11 +71,19 @@ describe('MentorPayoutService', () => {
         snapshotPlanPrice: 100000,
       },
     });
+    prisma.walletTransaction.findFirst.mockResolvedValue(null);
     prisma.mentorPayout.create.mockResolvedValue(payout);
+    prisma.mentorPayout.update.mockResolvedValue({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
+    prisma.user.findUnique.mockResolvedValue({ creditBalance: 50000 });
+    prisma.user.update.mockResolvedValue({ creditBalance: 140000 });
 
-    await expect(
-      service.createPendingPayoutForCompletedSession(11),
-    ).resolves.toEqual(payout);
+    await expect(service.payoutCompletedSession(11)).resolves.toEqual({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
 
     expect(prisma.mentorPayout.create).toHaveBeenCalledWith({
       data: expect.objectContaining({
@@ -88,6 +97,27 @@ describe('MentorPayoutService', () => {
         mentorEarning: 90000,
         refundableAmount: 100000,
         status: MentorPayoutStatus.PENDING,
+      }),
+    });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 2 },
+      data: { creditBalance: { increment: 90000 } },
+      select: { creditBalance: true },
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: 2,
+        type: WalletTransactionType.PAYOUT,
+        amount: 90000,
+        referenceId: 'session:11',
+      }),
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        userId: null,
+        type: WalletTransactionType.PLATFORM_FEE,
+        amount: 10000,
+        referenceId: 'session:11',
       }),
     });
     expect(prisma.booking.update).toHaveBeenCalledWith({
@@ -111,11 +141,23 @@ describe('MentorPayoutService', () => {
       },
     });
 
-    await expect(
-      service.createPendingPayoutForCompletedSession(11),
-    ).resolves.toEqual(payout);
+    prisma.walletTransaction.findFirst.mockResolvedValue({
+      id: 100,
+      type: WalletTransactionType.PAYOUT,
+      referenceId: 'session:11',
+    });
+    prisma.mentorPayout.update.mockResolvedValue({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
+
+    await expect(service.payoutCompletedSession(11)).resolves.toEqual({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
 
     expect(prisma.mentorPayout.create).not.toHaveBeenCalled();
+    expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
   it('approves a payout atomically and records payout plus platform fee transactions', async () => {
@@ -151,7 +193,7 @@ describe('MentorPayoutService', () => {
         userId: 2,
         type: WalletTransactionType.PAYOUT,
         amount: 90000,
-        referenceId: 'payout:7',
+        referenceId: 'session:11',
       }),
     });
     expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
@@ -159,7 +201,7 @@ describe('MentorPayoutService', () => {
         userId: null,
         type: WalletTransactionType.PLATFORM_FEE,
         amount: 10000,
-        referenceId: 'payout:7',
+        referenceId: 'session:11',
       }),
     });
   });
@@ -195,7 +237,7 @@ describe('MentorPayoutService', () => {
         userId: 1,
         type: WalletTransactionType.REFUND,
         amount: 100000,
-        referenceId: 'payout:7',
+        referenceId: 'session:11',
       }),
     });
   });
