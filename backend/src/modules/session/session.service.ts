@@ -36,44 +36,65 @@ export class SessionService {
   async handleOverdueSessions() {
     try {
       let hasMore = true;
-      const batchSize = 100; // Xử lý 100 bản ghi mỗi lần lặp
+      const batchSize = 100;
       let totalUpdated = 0;
+      let lastId: number | undefined = undefined;
+
+      type ActiveSessionType = {
+        id: number;
+        scheduledAt: Date;
+        durationMinutes: number | null;
+      };
 
       while (hasMore) {
-        // 1. Tìm các bản ghi quá hạn (chỉ query lấy ID để tiết kiệm RAM)
-        const overdueSessions = await this.prisma.mockSession.findMany({
+        const queryParams: Prisma.MockSessionFindManyArgs = {
           where: {
             status: SessionStatus.SCHEDULED,
             scheduledAt: { lt: new Date() },
           },
-          select: { id: true },
+          select: { id: true, scheduledAt: true, durationMinutes: true },
           take: batchSize,
-        });
+          orderBy: { id: 'asc' },
+        };
+        if (lastId) {
+          queryParams.skip = 1;
+          queryParams.cursor = { id: lastId };
+        }
 
-        // Nếu không còn bản ghi nào, thoát vòng lặp
-        if (overdueSessions.length === 0) {
+        const activeSessions = (await this.prisma.mockSession.findMany(
+          queryParams,
+        )) as ActiveSessionType[];
+
+        if (activeSessions.length === 0) {
           hasMore = false;
           break;
         }
 
-        const sessionIds = overdueSessions.map((s) => s.id);
+        lastId = activeSessions[activeSessions.length - 1].id;
+        const now = Date.now();
 
-        // 2. Cập nhật trạng thái cho lô ID vừa lấy
-        const updateResult = await this.prisma.mockSession.updateMany({
-          where: { id: { in: sessionIds } },
-          data: { status: SessionStatus.COMPLETED },
-        });
+        const overdueIds = activeSessions
+          .filter((session: ActiveSessionType) => {
+            const duration = session.durationMinutes || 60;
+            const endTime =
+              session.scheduledAt.getTime() + duration * 60 * 1000;
+            return endTime < now;
+          })
+          .map((s: ActiveSessionType) => s.id);
+        if (overdueIds.length > 0) {
+          const updateResult = await this.prisma.mockSession.updateMany({
+            where: { id: { in: overdueIds } },
+            data: { status: SessionStatus.COMPLETED },
+          });
 
-        totalUpdated += updateResult.count;
+          totalUpdated += updateResult.count;
+        }
       }
 
       if (totalUpdated > 0) {
         this.logger.log(
           `Đã quét và cập nhật thành công ${totalUpdated} sessions quá hạn thành COMPLETED.`,
         );
-
-        // Gọi lại hàm schedule của bạn nếu logic yêu cầu (giống trong onModuleInit cũ)
-        await this.scheduleAllUpcomingSessions();
       }
     } catch (error) {
       this.logger.error('Lỗi khi chạy Cron Job quét session quá hạn:', error);

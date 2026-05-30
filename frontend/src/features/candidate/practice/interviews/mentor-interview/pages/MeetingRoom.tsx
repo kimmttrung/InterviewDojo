@@ -38,10 +38,8 @@ export default function MeetingRoom() {
 
   // Khi người dùng bấm nút rời phòng (sẽ được truyền xuống VideoCallLayout)
   const handleLeaveWithFeedback = () => {
-    if (window.confirm('Bạn có chắc muốn kết thúc buổi phỏng vấn?')) {
-      setIsLeaving(true);
-      setShowFeedback(true);
-    }
+    setIsLeaving(true);
+    setShowFeedback(true);
   };
 
   // Tự động hiện feedback nếu session kết thúc do đối phương rời
