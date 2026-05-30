@@ -4,7 +4,6 @@ import { Layout } from '@/shared/components/layout/Layout';
 import { TheoryView } from '../components/QuestionDetail/TheoryView';
 import { CodingView } from '../components/QuestionDetail/CodingView';
 import { DetailSidebar } from '../components/QuestionDetail/DetailSidebar';
-import { AnswerSection } from '../components/QuestionDetail/AnswerSection';
 import { useQuestionDetail } from '../hooks/useQuestions';
 import { QuestionType } from '../types/question.types';
 import { BookmarkButton } from '@/features/bookmark/components/BookmarkButton';
@@ -51,7 +50,6 @@ export default function QuestionDetailContainer() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
           <div className="lg:col-span-8">
             <TheoryView question={question} parsedData={parsedData} />
-            <AnswerSection answersCount={0} />
           </div>
           <div className="lg:col-span-4">
             <DetailSidebar question={question} />

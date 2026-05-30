@@ -9,7 +9,7 @@ import { Loader2 } from 'lucide-react';
 import { RecommendedMentors } from '../components/RecommendedMentors';
 
 export default function MentorListPage() {
-  const [filters, setFilters] = useState({ page: 1, limit: 10 });
+  const [filters, setFilters] = useState({ page: 1, limit: 9 });
   const { data, isLoading } = useMentors(filters);
   const mentors = data?.items || [];
   const meta = data?.meta;
@@ -61,7 +61,7 @@ export default function MentorListPage() {
             ) : (
               <>
                 {mentors.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch">
                     {mentors.map((mentor: any) => (
                       <MentorCard key={mentor.id} mentor={mentor} />
                     ))}

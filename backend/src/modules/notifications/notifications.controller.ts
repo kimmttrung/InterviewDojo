@@ -48,4 +48,11 @@ export class NotificationsController {
   markAllAsRead(@CurrentUser() user: any) {
     return this.notificationsService.markAllAsRead(Number(user.sub));
   }
+
+  @Patch(':id/pin')
+  @ApiOperation({ summary: 'Ghim hoặc bỏ ghim thông báo' })
+  @ResponseMessage(Messages.NOTIFICATIONS.TOGGLE_PIN)
+  togglePin(@CurrentUser() user: any, @Param('id') id: string) {
+    return this.notificationsService.togglePin(Number(user.sub), Number(id));
+  }
 }

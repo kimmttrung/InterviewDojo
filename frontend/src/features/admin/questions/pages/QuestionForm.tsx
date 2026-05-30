@@ -39,8 +39,6 @@ import { jobRoleApi } from '../../job-roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
-// Shape returned by questionAdminApi.getOne — loosely typed since the API
-// returns a flattened DTO (categories/companies/jobRoles as string name arrays)
 interface ExistingQuestion {
   title: string;
   slug: string;

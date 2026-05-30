@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '@/prisma/prisma.service';
 import { QueryNotificationsDto } from './dto/query-notifications.dto';
 import { NotificationListResponse } from './interfaces/notification.interface';
@@ -25,7 +25,7 @@ export class NotificationsService {
         where,
         skip,
         take: limit,
-        orderBy: { createdAt: 'desc' },
+        orderBy: [{ isPinned: 'desc' }, { createdAt: 'desc' }],
       }),
       this.prisma.notification.count({ where }),
       this.prisma.notification.count({
@@ -41,6 +41,7 @@ export class NotificationsService {
         message: item.message,
         targetUrl: item.targetUrl,
         isRead: item.isRead,
+        isPinned: item.isPinned,
         createdAt: item.createdAt.toISOString(),
       })),
       meta: {
@@ -76,6 +77,22 @@ export class NotificationsService {
   }) {
     return this.prisma.notification.create({
       data,
+    });
+  }
+
+  async togglePin(userId: number, id: number) {
+    const notification = await this.prisma.notification.findFirst({
+      where: { id, userId },
+    });
+
+    if (!notification) {
+      throw new NotFoundException(
+        'Không tìm thấy thông báo hoặc bạn không có quyền',
+      );
+    }
+    return this.prisma.notification.update({
+      where: { id },
+      data: { isPinned: !notification.isPinned },
     });
   }
 }

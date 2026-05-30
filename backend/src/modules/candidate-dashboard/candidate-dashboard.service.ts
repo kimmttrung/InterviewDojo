@@ -163,6 +163,11 @@ export class DashboardService {
           select: {
             overallScore: true,
             createdAt: true,
+            session: {
+              select: {
+                source: true,
+              },
+            },
           },
 
           orderBy: {
@@ -177,6 +182,7 @@ export class DashboardService {
         this.prisma.mockSession.findMany({
           where: {
             intervieweeId: userId,
+            status: 'COMPLETED',
           },
 
           select: {
@@ -228,8 +234,8 @@ export class DashboardService {
 
     const scoreChart = feedbacks.map((feedback) => ({
       date: feedback.createdAt,
-
       score: feedback.overallScore,
+      sessionType: feedback.session?.source || 'UNKNOWN',
     }));
 
     // =====================================================
