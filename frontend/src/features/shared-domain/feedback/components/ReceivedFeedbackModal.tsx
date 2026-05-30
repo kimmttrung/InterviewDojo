@@ -85,7 +85,7 @@ export const ReceivedFeedbackModal = ({ open, onClose }: Props) => {
                     {/* Quick tags (if any) */}
                     {fb.quickTags?.length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mt-2 mb-3">
-                        {fb.quickTags.map((tag) => (
+                        {fb.quickTags.map((tag: string) => (
                           <span
                             key={tag}
                             className="inline-flex items-center gap-1 bg-indigo-50 text-indigo-700 text-xs px-2.5 py-1 rounded-full border border-indigo-100"

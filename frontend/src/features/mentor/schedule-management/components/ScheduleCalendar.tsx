@@ -5,6 +5,7 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
 import { Card } from '@/shared/components/ui/card';
+import { RefreshCw } from 'lucide-react'; // Thêm import icon RefreshCw từ lucide-react
 import { Slot } from '../types';
 
 interface ScheduleCalendarProps {
@@ -108,12 +109,19 @@ export default function ScheduleCalendar({
   const renderEventContent = (eventInfo: any) => {
     const isRecurring = eventInfo.event.extendedProps.originalSlot?.recurrentType !== 'NONE';
     return (
-      <div className="p-1 overflow-hidden">
-        <div className="font-semibold text-xs whitespace-normal line-clamp-2 flex items-center gap-1">
-          {eventInfo.event.title}
-          {isRecurring && <span title="Lịch lặp">🔄</span>} {/* Thêm icon cho dễ nhận biết */}
+      <div className="p-1 overflow-hidden flex flex-col gap-0.5">
+        <div className="font-bold text-xs whitespace-normal line-clamp-1 flex items-center gap-1">
+          <span>{eventInfo.event.title}</span>
+          {isRecurring && (
+            // Bọc icon Lucide trong thẻ span chứa title để tránh lỗi kiểm tra thuộc tính của TypeScript
+            <span title="Recurring Schedule" className="inline-flex items-center shrink-0">
+              <RefreshCw className="h-2.5 w-2.5 text-white opacity-90" />
+            </span>
+          )}
         </div>
-        <div className="text-[10px] opacity-80">{eventInfo.timeText}</div>
+        <div className="text-[10px] font-medium opacity-95 leading-tight break-words">
+          {eventInfo.timeText}
+        </div>
       </div>
     );
   };
@@ -121,15 +129,15 @@ export default function ScheduleCalendar({
   return (
     <Card className="p-6 bg-white shadow-lg w-full">
       <div className="mb-4 flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-800">Quản lý lịch rảnh</h2>
+        <h2 className="text-xl font-bold text-gray-800">Availability Settings</h2>
         <div className="flex gap-4">
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-emerald-500"></div>
-            <span className="text-sm font-medium">Active</span>
+            <span className="text-sm font-medium text-gray-600">Active</span>
           </div>
           <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full bg-gray-500"></div>
-            <span className="text-sm font-medium">Inactive</span>
+            <span className="text-sm font-medium text-gray-600">Inactive</span>
           </div>
         </div>
       </div>
@@ -153,8 +161,8 @@ export default function ScheduleCalendar({
         eventDrop={handleEventChange}
         eventResize={handleEventChange}
         eventContent={renderEventContent}
-        slotMinTime="06:00:00"
-        slotMaxTime="23:00:00"
+        slotMinTime="00:00:00"
+        slotMaxTime="24:00:00"
         height="80vh"
         eventOverlap={false}
         selectOverlap={false}

@@ -2,6 +2,7 @@ export interface SessionItem {
   id: string | number;
   type: string; // 'MENTOR', 'P2P', 'SOLO'
   status: string; // 'PENDING', 'UPCOMING', 'REJECTED', 'FINISHED'
+  durationMinutes: number;
   opponentId: number | null;
   opponentName: string | null;
   opponentAvatar: string | null;

@@ -24,8 +24,8 @@ export const bullConfig = (config: ConfigService): BullRootModuleOptions => {
     },
   });
 
-  connection.on('connect', () => console.log('✅ Redis connected'));
-  connection.on('error', (err) => console.error('Redis error:', err.message));
+  // connection.on('connect', () => console.log('✅ Redis connected'));
+  // connection.on('error', (err) => console.error('Redis error:', err.message));
 
   return {
     connection,

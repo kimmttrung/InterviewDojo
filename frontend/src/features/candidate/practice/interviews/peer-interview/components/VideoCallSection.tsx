@@ -1,11 +1,14 @@
+import { useCurrentUser } from '@/features/auth';
+import { useSocketStore } from '@/stores/useSocketStore';
 import {
-  SpeakerLayout,
   useCall,
   useCallStateHooks,
+  // ParticipantView,
   StreamVideoParticipant,
+  SpeakerLayout,
 } from '@stream-io/video-react-sdk';
 import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp } from 'lucide-react';
-
+import { useToast } from '@/hooks/use-toast';
 // 1. Tạo Component hiển thị khi tắt Cam (Avatar placeholder)
 const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParticipant }) => (
   <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center z-10">
@@ -20,25 +23,92 @@ const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParti
 
 interface VideoCallSectionProps {
   onLeave?: () => void; // callback khi người dùng xác nhận rời phòng
+  roomId: string;
 }
 
-export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
+export function VideoCallSection({ onLeave, roomId }: VideoCallSectionProps) {
   const call = useCall();
   const { useCameraState, useMicrophoneState, useLocalParticipant } = useCallStateHooks();
 
   const localParticipant = useLocalParticipant();
+  // const remoteParticipants = useRemoteParticipants();
+  // const remoteParticipant = remoteParticipants[0];
+
   const { camera } = useCameraState();
   const { microphone } = useMicrophoneState();
+  const { emit, leaveRoom } = useSocketStore();
+  const { data: currentUser } = useCurrentUser();
+  const { toast } = useToast();
 
-  const handleLeave = async () => {
-    const confirmed = window.confirm('Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn?');
-    if (confirmed && call) {
+  // const [mainIsLocal, setMainIsLocal] = useState(true);
+  // const [floatingPos, setFloatingPos] = useState<'tl' | 'tr' | 'bl' | 'br'>('tr');
+
+  // // Xác định ai là Main, ai là Floating
+  // const mainParticipant = mainIsLocal ? localParticipant : remoteParticipant;
+  // const floatingParticipant = mainIsLocal ? remoteParticipant : localParticipant;
+
+  const executeLeave = async () => {
+    if (!call) return;
+    try {
+      await Promise.all([call.camera.disable(), call.microphone.disable()]);
+
+      navigator.mediaDevices
+        .getUserMedia({ video: true, audio: true })
+        .then((stream) => {
+          stream.getTracks().forEach((track) => track.stop());
+        })
+        .catch(() => {});
+
+      document.querySelectorAll('video, audio').forEach((el) => {
+        const mediaEl = el as HTMLMediaElement;
+        if (mediaEl.srcObject) {
+          (mediaEl.srcObject as MediaStream).getTracks().forEach((track) => track.stop());
+          mediaEl.srcObject = null;
+        }
+      });
+
+      emit('end_call', { roomId, userId: String(currentUser?.id) });
+      leaveRoom(roomId);
+      await new Promise((resolve) => setTimeout(resolve, 200));
       await call.leave();
+    } catch (err) {
+      console.warn('leave failed:', err);
+    } finally {
       onLeave?.();
     }
   };
 
+  const handleLeave = () => {
+    toast({
+      title: 'Rời phòng phỏng vấn?',
+      description: 'Bạn có chắc chắn muốn rời khỏi cuộc phỏng vấn này không?',
+      // Nút hủy của shadcn thường được tích hợp sẵn (dấu X), ta chỉ cần render nút Xác nhận vào phần action
+      action: (
+        <button
+          onClick={executeLeave}
+          className="inline-flex h-8 shrink-0 items-center justify-center rounded-md bg-red-600 px-3 text-sm font-medium text-white transition-colors hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-600 focus:ring-offset-2"
+        >
+          Rời phòng
+        </button>
+      ),
+    });
+  };
+
   if (!call) return <div className="p-10 text-center text-white">Initializing...</div>;
+  // const getFloatingPositionClasses = () => {
+  //   switch (floatingPos) {
+  //     case 'tl':
+  //       return 'top-4 left-4';
+  //     case 'tr':
+  //       return 'top-4 right-4';
+  //     case 'bl':
+  //       return 'bottom-24 left-4';
+  //     case 'br':
+  //       return 'bottom-24 right-4';
+  //     default:
+  //       return 'top-4 right-4';
+  //   }
+  // };
 
   return (
     <div className="bg-black relative group overflow-hidden w-full">
@@ -70,7 +140,7 @@ export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
         </button>
 
         <button
-          onClick={handleLeave} // thay thế onClick cũ
+          onClick={handleLeave}
           className="p-2.5 rounded-lg bg-red-600 hover:bg-red-700 text-white"
         >
           <PhoneOff size={18} />
@@ -78,8 +148,10 @@ export function VideoCallSection({ onLeave }: VideoCallSectionProps) {
       </div>
 
       {/* Label tên người dùng ở góc */}
-      <div className="absolute bottom-2 left-2 z-20 bg-black/40 px-2 py-0.5 rounded text-[10px] text-slate-300 backdrop-blur-sm border border-white/5">
-        {localParticipant?.name} (You)
+      <div className="absolute bottom-4 left-4 z-20 px-3 py-1.5 bg-black/60 backdrop-blur-md rounded-md shadow-lg border border-white/10">
+        <span className="text-sm font-medium text-white drop-shadow-sm">
+          {localParticipant?.name} (You)
+        </span>
       </div>
     </div>
   );

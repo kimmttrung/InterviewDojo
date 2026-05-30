@@ -174,6 +174,7 @@ export const API_ENDPOINT = {
 
   REPORT: {
     CREATE_USER: '/reports/user',
+    CREATE_COMMENT: '/reports/comment',
     GET_LIST: '/reports',
     GET_ONE: (id: number) => `/reports/${id}`,
   },

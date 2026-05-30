@@ -1,4 +1,3 @@
-// api/reportApi.ts
 import { api } from '@/shared/lib/api';
 import { API_ENDPOINT } from '@/shared/lib/endpoints';
 import { UpdateReportStatusData } from '../types/report.types';

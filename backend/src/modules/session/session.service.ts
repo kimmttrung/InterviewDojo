@@ -1,4 +1,10 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+  Logger,
+} from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import { BulkJobOptions, Queue } from 'bullmq';
 import { PrismaService } from '../../prisma/prisma.service';
@@ -13,35 +19,89 @@ import {
   BookingStatus,
   SessionSource,
 } from '@prisma/client';
+import { StreamService } from '../stream/stream.service';
+import { Cron, CronExpression } from '@nestjs/schedule';
 import { SocketService } from '../socket/socket.service';
 @Injectable()
-export class SessionService implements OnModuleInit {
+export class SessionService {
+  private readonly logger = new Logger(SessionService.name);
   constructor(
     private prisma: PrismaService,
     @InjectQueue('session') private sessionQueue: Queue,
+    private streamService: StreamService,
     private socketService: SocketService,
   ) {}
 
-  onModuleInit() {
-    setTimeout(() => {
-      (async () => {
-        try {
-          await this.prisma.mockSession.updateMany({
-            where: {
-              status: SessionStatus.SCHEDULED,
-              scheduledAt: { lt: new Date() },
-            },
+  @Cron(CronExpression.EVERY_5_MINUTES)
+  async handleOverdueSessions() {
+    try {
+      let hasMore = true;
+      const batchSize = 100;
+      let totalUpdated = 0;
+      let lastId: number | undefined = undefined;
+
+      type ActiveSessionType = {
+        id: number;
+        scheduledAt: Date;
+        durationMinutes: number | null;
+      };
+
+      while (hasMore) {
+        const queryParams: Prisma.MockSessionFindManyArgs = {
+          where: {
+            status: SessionStatus.SCHEDULED,
+            scheduledAt: { lt: new Date() },
+          },
+          select: { id: true, scheduledAt: true, durationMinutes: true },
+          take: batchSize,
+          orderBy: { id: 'asc' },
+        };
+        if (lastId) {
+          queryParams.skip = 1;
+          queryParams.cursor = { id: lastId };
+        }
+
+        const activeSessions = (await this.prisma.mockSession.findMany(
+          queryParams,
+        )) as ActiveSessionType[];
+
+        if (activeSessions.length === 0) {
+          hasMore = false;
+          break;
+        }
+
+        lastId = activeSessions[activeSessions.length - 1].id;
+        const now = Date.now();
+
+        const overdueIds = activeSessions
+          .filter((session: ActiveSessionType) => {
+            const duration = session.durationMinutes || 60;
+            const endTime =
+              session.scheduledAt.getTime() + duration * 60 * 1000;
+            return endTime < now;
+          })
+          .map((s: ActiveSessionType) => s.id);
+        if (overdueIds.length > 0) {
+          const updateResult = await this.prisma.mockSession.updateMany({
+            where: { id: { in: overdueIds } },
             data: { status: SessionStatus.COMPLETED },
           });
-          await this.scheduleAllUpcomingSessions();
-        } catch (error) {
-          console.error('SessionService initialization failed:', error);
+
+          totalUpdated += updateResult.count;
         }
-      })();
-    }, 3000);
+      }
+
+      if (totalUpdated > 0) {
+        this.logger.log(
+          `Đã quét và cập nhật thành công ${totalUpdated} sessions quá hạn thành COMPLETED.`,
+        );
+      }
+    } catch (error) {
+      this.logger.error('Lỗi khi chạy Cron Job quét session quá hạn:', error);
+    }
   }
 
-  private async scheduleAllUpcomingSessions() {
+  public async scheduleAllUpcomingSessions() {
     const BATCH_SIZE = 10;
     let skip = 0;
     let hasMore = true;
@@ -526,6 +586,61 @@ export class SessionService implements OnModuleInit {
     return { success: true, message: 'Session canceled successfully' };
   }
 
+  async getSessionDetail(sessionId: number, userId: number) {
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: {
+          select: { mentorId: true, candidateId: true },
+        },
+        match: {
+          select: { candidateAId: true, candidateBId: true },
+        },
+      },
+    });
+    if (!session) throw new NotFoundException('Session not found');
+
+    // Kiểm tra quyền: user phải tham gia session
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    if (!isParticipant) throw new ForbiddenException('Not participant');
+    let displayStatus = session.status as string;
+    if (displayStatus === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes || 60;
+      const end = new Date(start.getTime() + duration * 60000);
+      const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+
+      if (now >= allowJoinTime && now <= end) {
+        displayStatus = 'ONGOING';
+      } else if (now > end) {
+        displayStatus = 'FINISHED';
+      } else {
+        displayStatus = 'UPCOMING';
+      }
+    } else if (displayStatus === 'COMPLETED') {
+      displayStatus = 'FINISHED';
+    }
+
+    return {
+      id: session.id,
+      source: session.source,
+      scheduledAt: session.scheduledAt,
+      durationMinutes: session.durationMinutes,
+      mentorId: session.booking?.mentorId || null,
+      candidateId: session.booking?.candidateId || null,
+      intervieweeId: session.intervieweeId,
+      status: displayStatus,
+      // thêm các field cần thiết
+    };
+  }
+
   // ==================== MAPPERS ====================
 
   private mapMockSessionToItem(session: any, userId: number): SessionItem {
@@ -557,13 +672,28 @@ export class SessionService implements OnModuleInit {
     }
 
     let status = session.status;
-    if (status === 'SCHEDULED') status = 'UPCOMING';
-    else if (status === 'COMPLETED') status = 'FINISHED';
+    if (status === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes;
+      const end = new Date(start.getTime() + duration * 60000);
+
+      if (now >= start && now <= end) {
+        status = 'ONGOING';
+      } else if (now > end) {
+        status = 'FINISHED';
+      } else {
+        status = 'UPCOMING';
+      }
+    } else if (status === 'COMPLETED') {
+      status = 'FINISHED';
+    }
 
     return {
       id: session.id,
       type,
       status: status,
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -646,6 +776,7 @@ export class SessionService implements OnModuleInit {
       id: booking.id,
       type: 'MENTOR',
       status: 'PENDING',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -672,6 +803,7 @@ export class SessionService implements OnModuleInit {
       id: booking.id,
       type: 'MENTOR',
       status: 'REJECTED',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -718,6 +850,7 @@ export class SessionService implements OnModuleInit {
       id: session.id,
       type,
       status: 'FINISHED',
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -797,6 +930,85 @@ export class SessionService implements OnModuleInit {
     }
     return condition;
   }
+
+  async getOrCreateMeetingLink(
+    sessionId: number,
+    userId: number,
+  ): Promise<string> {
+    // 1. Lấy session và kiểm tra quyền
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: { include: { mentor: true, candidate: true } },
+        match: { include: { candidateA: true, candidateB: true } },
+      },
+    });
+    if (!session) throw new Error('Session không tồn tại');
+
+    // const userId = Number(req.user.sub); // Ép sang number
+    if (isNaN(userId)) throw new BadRequestException('Invalid user');
+
+    // Kiểm tra user có tham gia session không
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    console.log(
+      'Found session:',
+      session.id,
+      'bookingId:',
+      session.bookingId,
+      'matchId:',
+      session.matchId,
+    );
+    console.log('Current userId:', userId);
+    console.log('Booking mentorId:', session.booking?.mentorId);
+    console.log('Booking candidateId:', session.booking?.candidateId);
+
+    if (!isParticipant)
+      throw new Error('Bạn không có quyền tham gia session này');
+
+    // 2. Kiểm tra thời gian cho phép (15 phút trước đến 2 giờ sau)
+    const now = new Date();
+    const start = session.scheduledAt;
+    const duration = session.durationMinutes;
+    const end = new Date(start.getTime() + duration * 60000);
+    const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+    if (now < allowJoinTime) {
+      throw new Error(
+        'Chưa đến giờ phỏng vấn. Bạn có thể vào phòng trước 15 phút!',
+      );
+    }
+    if (now > end) {
+      throw new Error('Cuộc phỏng vấn đã kết thúc, không thể tham gia nữa!');
+    }
+
+    // 3. Nếu đã có meetingLink thì trả về luôn
+    if (session.meetingLink) {
+      return session.meetingLink;
+    }
+
+    // 4. Tạo room mới (dùng bookingId hoặc sessionId làm roomId)
+    const roomId = `${sessionId}`;
+    const creatorId =
+      session.booking?.mentorId?.toString() || userId.toString();
+    const meetingLink = await this.streamService.getOrCreateMeetingLink(
+      roomId,
+      creatorId,
+    );
+
+    // 5. Cập nhật meetingLink vào session
+    await this.prisma.mockSession.update({
+      where: { id: sessionId },
+      data: { meetingLink },
+    });
+
+    return meetingLink;
+  }
+
   private buildStartJobConfig(session: any, userIds: number[]) {
     const delay = Math.max(session.scheduledAt.getTime() - Date.now(), 0);
     return {

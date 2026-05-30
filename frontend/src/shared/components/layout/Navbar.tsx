@@ -1,18 +1,7 @@
 import { useTranslation } from 'react-i18next';
-import {
-  Moon,
-  Sun,
-  Globe,
-  Search,
-  Sparkles,
-  UserIcon,
-  LogOut,
-  Wallet,
-  CreditCard,
-} from 'lucide-react';
+import { Moon, Sun, Globe, Sparkles, UserIcon, LogOut, Wallet, CreditCard } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
-import { Input } from '../ui/input';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { cn } from '../../lib/utils';
 
@@ -111,15 +100,6 @@ export function Navbar() {
           })}
         </div>
 
-        {/* SEARCH */}
-        <div className="hidden md:flex items-center relative w-64">
-          <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search..."
-            className="pl-9 bg-muted/50 border-none focus-visible:ring-1"
-          />
-        </div>
-
         {/* RIGHT SIDE */}
         <div className="flex items-center gap-3">
           {/* Upgrade */}
@@ -129,7 +109,7 @@ export function Navbar() {
             onClick={() => navigate('/wallet')}
           >
             <Sparkles className="h-4 w-4 mr-1" />
-            Upgrade
+            Top-up
           </Button>
 
           {/* Language */}
@@ -230,7 +210,7 @@ export function Navbar() {
                           onClick={() => navigate('/wallet')}
                         >
                           <CreditCard className="mr-2 h-4 w-4" />
-                          Nạp ví
+                          Wallet Top-up
                         </Button>
                       </div>
                     </div>

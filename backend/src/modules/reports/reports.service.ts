@@ -138,6 +138,7 @@ export class ReportsService {
         include: {
           reporter: { select: { id: true, name: true, email: true } },
           targetUser: { select: { id: true, name: true, email: true } },
+          targetComment: { select: { id: true, content: true } },
         },
         orderBy: { createdAt: 'desc' },
       }),
@@ -162,6 +163,7 @@ export class ReportsService {
       include: {
         reporter: { select: { id: true, name: true, email: true } },
         targetUser: { select: { id: true, name: true, email: true } },
+        targetComment: { select: { id: true, content: true } },
       },
     });
     if (!report) {
@@ -201,6 +203,32 @@ export class ReportsService {
     return this.mapToUserReportItem(updated);
   }
 
+  async reportComment(
+    reporterId: number,
+    dto: { commentId: number; reason: any },
+  ) {
+    // 1. Lấy comment và user ID của người viết comment
+    const comment = await this.prisma.comment.findUnique({
+      where: { id: dto.commentId },
+      select: { userId: true, content: true },
+    });
+
+    if (!comment) {
+      throw new NotFoundException('Không tìm thấy bình luận này');
+    }
+
+    return this.prisma.userReport.create({
+      data: {
+        reporterId,
+        targetCommentId: dto.commentId,
+        targetUserId: comment.userId, // <-- Lưu thẳng tác giả comment vào đây
+        targetType: ReportTargetType.COMMENT,
+        type: dto.reason,
+        reason: 'Báo cáo bình luận',
+      },
+    });
+  }
+
   private mapToUserReportItem(report: any): UserReportItem {
     return {
       id: report.id,
@@ -218,6 +246,10 @@ export class ReportsService {
       targetUserName: report.targetUser?.name || null,
       targetQuestionId: report.targetQuestionId,
       snapshotQuestionTitle: report.snapshotQuestionTitle,
+
+      targetCommentId: report.targetCommentId,
+      targetCommentContent:
+        report.targetComment?.content || 'Bình luận này đã bị xóa',
     };
   }
 }

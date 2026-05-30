@@ -26,17 +26,22 @@ import {
   SessionSource,
   SessionMode,
 } from '@prisma/client';
+import { StreamService } from '../stream/stream.service';
 import { SessionService } from '../session/session.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UploadedFileType } from '@/common/types/uploaded-file.type';
 
 @Injectable()
 export class BookingService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly socketService: SocketService,
+    private readonly streamService: StreamService,
     private readonly sessionService: SessionService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   private mapToBookingResponse(
@@ -114,40 +119,34 @@ export class BookingService {
       throw new BadRequestException('Không thể đặt lịch trong quá khứ');
     }
 
+    // 🚀 TỐI ƯU 1: Đẩy việc đọc Coaching Plan ra ngoài Transaction để giảm thời gian giữ connection
+    const plan = await this.prisma.coachingPlan.findUnique({
+      where: { id: coachingPlanId },
+      include: { mentor: true },
+    });
+
+    if (!plan || !plan.isActive) {
+      throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
+    }
+
+    const mentorId = plan.mentor.userId;
+
+    // Validate duration nhanh ở ngoài
+    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    if (durationMinutes !== plan.duration) {
+      throw new BadRequestException('Duration không khớp coaching plan');
+    }
+
+    // 🚀 TỐI ƯU 2: Bắt đầu Transaction ngắn gọn (Chỉ chứa logic cần tính nguyên tố)
     return this.prisma.$transaction(
       async (tx) => {
-        // 1. Lấy coaching plan
-        const plan = await tx.coachingPlan.findUnique({
-          where: { id: coachingPlanId },
-          include: {
-            mentor: true,
-          },
-        });
-
-        if (!plan || !plan.isActive) {
-          throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
-        }
-
-        const mentorId = plan.mentor.userId;
-
-        // 2. Validate duration
-        const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-
-        if (durationMinutes !== plan.duration) {
-          throw new BadRequestException('Duration không khớp coaching plan');
-        }
-
-        // 3. Resolve slot
+        // 1. Resolve slot (Tìm slot khả dụng của mentor)
         const slot = await tx.slot.findFirst({
           where: {
             mentorId,
             isActive: true,
-            startTime: {
-              lte: start,
-            },
-            endTime: {
-              gte: end,
-            },
+            startTime: { lte: start },
+            endTime: { gte: end },
           },
         });
 
@@ -155,11 +154,10 @@ export class BookingService {
           throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
         }
 
-        // 4. Check overlap booking
+        // 2. Kiểm tra trùng lịch hẹn (Overlap booking)
         const conflicting = await tx.booking.findFirst({
           where: {
             mentorId,
-
             OR: [
               {
                 status: {
@@ -171,19 +169,11 @@ export class BookingService {
               },
               {
                 status: BookingStatus.PENDING_PAYMENT,
-                holdExpiresAt: {
-                  gt: new Date(),
-                },
+                holdExpiresAt: { gt: new Date() },
               },
             ],
-
-            startTime: {
-              lt: end,
-            },
-
-            endTime: {
-              gt: start,
-            },
+            startTime: { lt: end },
+            endTime: { gt: start },
           },
         });
 
@@ -191,28 +181,21 @@ export class BookingService {
           throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
         }
 
-        // 5. Create booking
+        // 3. Tiến hành tạo đơn Booking mới
         const booking = await tx.booking.create({
           data: {
             candidateId,
             mentorId,
-
             slotId: slot.id,
-
             coachingPlanId,
-
             startTime: start,
             endTime: end,
-
             status: BookingStatus.PENDING_PAYMENT,
-
-            holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
-
+            holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 phút giữ chỗ thanh toán
             snapshotPlanTitle: plan.title,
             snapshotPlanDescription: plan.description,
             snapshotPlanPrice: plan.price,
             snapshotPlanDuration: plan.duration,
-
             answers: answers?.length
               ? {
                   create: answers.map((a) => ({
@@ -223,10 +206,8 @@ export class BookingService {
                 }
               : undefined,
           },
-
           include: {
             coachingPlan: true,
-
             candidate: {
               select: {
                 id: true,
@@ -240,9 +221,10 @@ export class BookingService {
 
         return this.mapToBookingResponse(booking);
       },
-
       {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        // 🚀 T2ỐI ƯU 3: Đổi Isolation sang RepeatableRead. Postgres/Neon xử lý nó nhanh hơn hẳn Serializable
+        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        timeout: 20000, // Giữ nguyên 20 giây để bù đắp Latency mạng
       },
     );
   }
@@ -323,15 +305,15 @@ export class BookingService {
           {
             userId: updatedBooking.mentorId,
             type: NotificationType.BOOKING_CREATED,
-            title: 'Có lịch hẹn mới',
-            message: 'Một candidate vừa đặt lịch hẹn với bạn.',
+            title: 'New booking received',
+            message: 'A candidate has just booked an appointment with you.',
             targetUrl: `/mentor/bookings?bookingId=${bookingId}`,
           },
           {
             userId: updatedBooking.candidateId,
             type: NotificationType.TRANSACTION_SUCCESS,
-            title: 'Thanh toán thành công',
-            message: 'Bạn đã thanh toán thành công cho lịch phỏng vấn.',
+            title: 'Payment successful',
+            message: 'You have successfully paid for the interview schedule.',
             targetUrl: '/wallet',
           },
         ],
@@ -341,8 +323,31 @@ export class BookingService {
     });
   }
 
+  async uploadAttachment(file: UploadedFileType) {
+    try {
+      const uploadResult = await this.cloudinaryService.uploadRawFile(
+        file,
+        'interview_dojo/booking_attachments',
+      );
+      return {
+        secure_url: uploadResult.secure_url,
+        public_id: uploadResult.public_id,
+      };
+    } catch (error: any) {
+      throw new BadRequestException(error.message || 'Lỗi upload Cloudinary');
+    }
+  }
+
   async accept(bookingId: number, mentorId: number): Promise<BookingResponse> {
-    return this.prisma.$transaction(async (tx) => {
+    // 1. Sử dụng 'let' để có thể tái gán giá trị từ bên trong transaction ra ngoài
+    let updatedBooking: any = null;
+    let mockSessionId: number = 0;
+    let startTime: Date = new Date();
+    let durationMinutes: number = 60;
+    let meetingLink: string = '';
+    let savedMockSession: any = null;
+
+    await this.prisma.$transaction(async (tx) => {
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking || booking.mentorId !== mentorId) {
         throw new NotFoundException(Messages.BOOKING.NOT_FOUND);
@@ -353,7 +358,7 @@ export class BookingService {
         );
       }
 
-      // Kiểm tra lại conflict (phòng trường hợp có booking khác vừa được accept)
+      // Kiểm tra conflict khung giờ
       const conflicting = await tx.booking.findFirst({
         where: {
           mentorId,
@@ -369,45 +374,47 @@ export class BookingService {
         throw new BadRequestException('Khung giờ đã bị trùng với booking khác');
       }
 
-      const updated = await tx.booking.update({
+      // Update trạng thái booking
+      updatedBooking = await tx.booking.update({
         where: { id: bookingId },
         data: { status: BookingStatus.ACCEPTED },
         include: { coachingPlan: true, candidate: true },
       });
 
-      let mockSession = await tx.mockSession.findFirst({
-        where: { bookingId: booking.id },
+      // Gán các giá trị cần dùng sau transaction
+      startTime = booking.startTime;
+      durationMinutes = booking.snapshotPlanDuration || 60;
+
+      // Tạo mock session
+      const mockSession = await tx.mockSession.create({
+        data: {
+          bookingId: booking.id,
+          intervieweeId: booking.candidateId,
+          scheduledAt: startTime,
+          durationMinutes: durationMinutes,
+          status: SessionStatus.SCHEDULED,
+          source: SessionSource.MENTOR_BOOKING,
+          mode: SessionMode.MEET,
+          meetingLink: null,
+        },
       });
-      if (!mockSession) {
-        mockSession = await tx.mockSession.create({
-          data: {
-            bookingId: booking.id,
-            intervieweeId: booking.candidateId,
-            scheduledAt: booking.startTime,
-            durationMinutes: booking.snapshotPlanDuration || 60,
-            status: SessionStatus.SCHEDULED,
-            source: SessionSource.MENTOR_BOOKING,
-            mode: SessionMode.MEET,
-            meetingLink: null,
-          },
-        });
-      }
 
-      const meetingLink = `/interview/mentor-booking-${mockSession.id}?sessionId=${mockSession.id}`;
-      if (mockSession.meetingLink !== meetingLink) {
-        mockSession = await tx.mockSession.update({
-          where: { id: mockSession.id },
-          data: { meetingLink },
-        });
-      }
+      mockSessionId = mockSession.id;
 
-      const userIds = [updated.mentorId, updated.candidateId];
-      await this.sessionService.scheduleSessionEnd(mockSession, userIds);
-      await this.sessionService.scheduleSessionStartNotification(
-        mockSession,
-        userIds,
+      // Tạo Stream call và lấy meeting link
+      const roomId = `mentor-booking-${mockSession.id}`;
+      meetingLink = await this.streamService.getOrCreateMeetingLink(
+        roomId,
+        mentorId.toString(),
       );
 
+      // Cập nhật meetingLink vào mockSession vừa tạo
+      savedMockSession = await tx.mockSession.update({
+        where: { id: mockSession.id },
+        data: { meetingLink },
+      });
+
+      // Log action lịch sử hành động
       await tx.bookingActionLog.create({
         data: {
           bookingId,
@@ -418,41 +425,66 @@ export class BookingService {
         },
       });
 
+      // Tạo thông báo cho Candidate
       await tx.notification.create({
         data: {
-          userId: updated.candidateId,
+          userId: updatedBooking.candidateId,
           type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Lịch phỏng vấn đã được xác nhận',
-          message: 'Mentor đã xác nhận lịch phỏng vấn của bạn.',
+          title: 'Interview schedule confirmed',
+          message: 'The mentor has confirmed your interview schedule.',
           targetUrl: '/sessions',
         },
       });
-      await tx.notification.create({
-        data: {
-          userId: updated.mentorId,
-          type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Lịch phỏng vấn sắp tới',
-          message: 'Bạn có một lịch phỏng vấn đã được xác nhận.',
-          targetUrl: '/mentor/sessions',
-        },
-      });
-      this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
-      this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
-        bookingId,
-      });
-      // Nếu muốn emit thêm event riêng SESSION_ACCEPTED (frontend cũng đang lắng nghe)
-      this.socketService.emitToUser(mentorId, 'SESSION_ACCEPTED', {
-        bookingId,
-      });
-      this.socketService.emitToUser(updated.candidateId, 'SESSION_ACCEPTED', {
-        bookingId,
-      });
-
-      this.eventEmitter.emit('booking.completed', {
-        candidateId: booking.candidateId,
-      });
-      return this.mapToBookingResponse(updated);
     });
+
+    // Kiểm tra tính toàn vẹn sau Transaction
+    if (!updatedBooking || !savedMockSession) {
+      throw new BadRequestException('Transaction failed');
+    }
+
+    // 2. Các tác vụ bất đồng bộ nằm ngoài transaction (Redis queue / Socket)
+    try {
+      const userIds = [updatedBooking.mentorId, updatedBooking.candidateId];
+
+      await this.sessionService.scheduleSessionEnd(savedMockSession, userIds);
+      await this.sessionService.scheduleSessionStartNotification(
+        savedMockSession,
+        userIds,
+      );
+    } catch (error) {
+      console.error(
+        `Failed to schedule session jobs for booking ${bookingId}:`,
+        error,
+      );
+    }
+
+    // 3. Emit các sự kiện Realtime qua Socket gán về Client
+    this.socketService.emitToUser(mentorId, 'SESSION_UPDATED', { bookingId });
+    this.socketService.emitToUser(
+      updatedBooking.candidateId,
+      'SESSION_UPDATED',
+      { bookingId },
+    );
+    this.socketService.emitToUser(mentorId, 'SESSION_ACCEPTED', {
+      bookingId,
+      sessionId: mockSessionId,
+      startTime,
+    });
+    this.socketService.emitToUser(
+      updatedBooking.candidateId,
+      'SESSION_ACCEPTED',
+      {
+        bookingId,
+        sessionId: mockSessionId,
+        startTime,
+      },
+    );
+
+    this.eventEmitter.emit('booking.completed', {
+      candidateId: updatedBooking.candidateId,
+    });
+
+    return this.mapToBookingResponse(updatedBooking);
   }
 
   async reject(
@@ -474,7 +506,6 @@ export class BookingService {
         );
       }
 
-      // Hoàn tiền nếu đã thanh toán (thực tế booking đã được thanh toán trước khi vào PENDING_ACCEPTANCE)
       const price = booking.snapshotPlanPrice;
       if (price) {
         const user = await tx.user.findUnique({
@@ -527,7 +558,7 @@ export class BookingService {
       this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
         bookingId,
       });
-      // Có thể emit thêm SESSION_REJECTED nếu frontend cần
+
       this.socketService.emitToUser(mentorId, 'SESSION_REJECTED', {
         bookingId,
         reason,

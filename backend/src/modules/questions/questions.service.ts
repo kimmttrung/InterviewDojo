@@ -369,7 +369,7 @@ export class QuestionsService {
 
     const total = await this.prisma.question.count({ where });
     if (total === 0) {
-      throw new NotFoundException('Không có câu hỏi nào phù hợp với bộ lọc');
+      throw new NotFoundException('No questions found matching the criteria');
     }
 
     const randomOffset = Math.floor(Math.random() * total);
@@ -389,7 +389,7 @@ export class QuestionsService {
     });
 
     if (!randomQuestion) {
-      throw new NotFoundException('Không tìm thấy câu hỏi ngẫu nhiên');
+      throw new NotFoundException('No random question found');
     }
 
     return this.mapToQuestionDetail(randomQuestion, userRole);

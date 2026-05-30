@@ -30,8 +30,8 @@ export const mapAnalyticsOverview = (data: any): AnalyticsOverviewData => {
     scoreChart: Array.isArray(data?.scoreChart)
       ? data.scoreChart.map((item: any) => ({
           date: item?.date ?? '',
-
           score: Number(item?.score) || 0,
+          sessionType: item?.sessionType ?? 'UNKNOWN',
         }))
       : [],
   };

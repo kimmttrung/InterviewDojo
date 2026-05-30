@@ -163,6 +163,11 @@ export class DashboardService {
           select: {
             overallScore: true,
             createdAt: true,
+            session: {
+              select: {
+                source: true,
+              },
+            },
           },
 
           orderBy: {
@@ -177,6 +182,7 @@ export class DashboardService {
         this.prisma.mockSession.findMany({
           where: {
             intervieweeId: userId,
+            status: 'COMPLETED',
           },
 
           select: {
@@ -228,24 +234,24 @@ export class DashboardService {
 
     const scoreChart = feedbacks.map((feedback) => ({
       date: feedback.createdAt,
-
       score: feedback.overallScore,
+      sessionType: feedback.session?.source || 'UNKNOWN',
     }));
 
     // =====================================================
     // SESSION BREAKDOWN
     // =====================================================
 
-    const mentorSessions = mockSessions.filter(
-      (session) => session.source === SessionSource.MENTOR_BOOKING,
+    const mentorSessions = feedbacks.filter(
+      (f) => f.session?.source === SessionSource.MENTOR_BOOKING,
     ).length;
 
-    const p2pSessions = mockSessions.filter(
-      (session) => session.source === SessionSource.P2P_MATCH,
+    const p2pSessions = feedbacks.filter(
+      (f) => f.session?.source === SessionSource.P2P_MATCH,
     ).length;
 
-    const soloSessions = mockSessions.filter(
-      (session) => session.source === SessionSource.SOLO,
+    const soloSessions = feedbacks.filter(
+      (f) => f.session?.source === SessionSource.SOLO,
     ).length;
 
     return {

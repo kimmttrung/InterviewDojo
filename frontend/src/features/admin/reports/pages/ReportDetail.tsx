@@ -5,10 +5,12 @@ import { EvidenceGallery } from '../components/EvidenceGallery';
 import { UpdateStatusDialog } from '../components/UpdateStatusDialog';
 import { Button } from '@/shared/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
 import { formatICTDateTime } from '@/shared/utils/date';
-import { ArrowLeft, User, FileText, AlertCircle, CheckCircle } from 'lucide-react';
+import { ArrowLeft, Trash2, MessageSquare } from 'lucide-react';
 import { useState } from 'react';
+import { api } from '@/shared/lib/api';
+import { showToast } from '@/shared/lib/toast';
+import { useQueryClient } from '@tanstack/react-query';
 
 const REPORT_TYPE_LABEL: Record<string, string> = {
   HARASSMENT: 'Quấy rối',
@@ -25,6 +27,9 @@ const REPORT_TYPE_LABEL: Record<string, string> = {
   INAPPROPRIATE_CONTENT: 'Nội dung không phù hợp',
   DUPLICATE: 'Trùng lặp',
   OTHER_QUESTION: 'Khác',
+  SPAM: 'Spam/Quảng cáo',
+  HATE_SPEECH: 'Ngôn từ thù ghét',
+  HARASSMENT_COMMENT: 'Công kích cá nhân',
 };
 
 export const ReportDetail = () => {
@@ -33,12 +38,32 @@ export const ReportDetail = () => {
   const { data: report, isLoading } = useReportDetail(Number(id));
   const updateMutation = useUpdateReportStatus();
   const [dialogOpen, setDialogOpen] = useState(false);
-
+  const [isDeletingComment, setIsDeletingComment] = useState(false);
+  const queryClient = useQueryClient();
   if (isLoading) return <div>Đang tải...</div>;
   if (!report) return <div>Không tìm thấy report</div>;
 
   const handleUpdate = (data: { status: 'RESOLVED' | 'REJECTED'; adminNote?: string }) => {
     updateMutation.mutate({ id: Number(id), data });
+  };
+
+  const handleDeleteComment = async () => {
+    if (!report.targetCommentId) return;
+    if (!confirm('Bạn có chắc chắn muốn xóa bình luận này khỏi hệ thống?')) return;
+
+    try {
+      setIsDeletingComment(true);
+      await api.delete(`/comments/${report.targetCommentId}`);
+      showToast.success('Đã xóa bình luận thành công!');
+
+      // Tự động chuyển report này sang trạng thái Đã giải quyết
+      handleUpdate({ status: 'RESOLVED', adminNote: 'Đã xóa bình luận vi phạm.' });
+      queryClient.invalidateQueries({ queryKey: ['admin', 'reportDetail', Number(id)] });
+    } catch (error) {
+      showToast.error('Không thể xóa bình luận. Vui lòng kiểm tra quyền Admin.');
+    } finally {
+      setIsDeletingComment(false);
+    }
   };
 
   return (
@@ -72,6 +97,32 @@ export const ReportDetail = () => {
               <strong>Lý do:</strong> {report.reason}
             </div>
           </div>
+          {/* KHU VỰC HIỂN THỊ NỘI DUNG COMMENT NẾU TARGET LÀ COMMENT */}
+          {report.targetType === 'COMMENT' && (
+            <div className="mt-4 p-4 bg-rose-50 border border-rose-100 rounded-xl">
+              <strong className="text-rose-800 flex items-center gap-2 mb-2">
+                <MessageSquare className="w-4 h-4" /> Nội dung bình luận bị báo cáo:
+              </strong>
+              <p className="text-slate-800 italic bg-white p-3 rounded border border-rose-100 shadow-sm">
+                "{report.targetCommentContent}"
+              </p>
+
+              {report.status === 'PENDING' && (
+                <div className="mt-4 flex gap-2">
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteComment}
+                    disabled={isDeletingComment}
+                    className="flex items-center gap-2"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                    {isDeletingComment ? 'Đang xóa...' : 'Xóa bình luận vi phạm'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
           {report.evidenceUrls?.length > 0 && (
             <div>
               <strong>Bằng chứng:</strong>

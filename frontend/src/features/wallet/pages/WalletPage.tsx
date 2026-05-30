@@ -18,11 +18,13 @@ import { WalletTransactionType } from '@/shared/types/enum';
 // ==================== HELPERS ====================
 
 function formatAmount(amount: number) {
-  return new Intl.NumberFormat('vi-VN').format(amount);
+  // Đổi sang 'en-US' để hiển thị định dạng số chuẩn tiếng Anh (ví dụ: 100,000 thay vì 100.000)
+  return new Intl.NumberFormat('en-US').format(amount);
 }
 
 function formatDate(date: string) {
-  return new Intl.DateTimeFormat('vi-VN', {
+  // Đổi sang 'en-US' cho đồng bộ ngôn ngữ hiển thị thời gian
+  return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
   }).format(new Date(date));
@@ -31,15 +33,15 @@ function formatDate(date: string) {
 function getTransactionLabel(type: WalletTransactionType) {
   switch (type) {
     case WalletTransactionType.DEPOSIT:
-      return 'Nạp credits';
+      return 'Deposit credits';
     case WalletTransactionType.PAYMENT:
-      return 'Thanh toán booking';
+      return 'Booking payment';
     case WalletTransactionType.REFUND:
-      return 'Hoàn tiền booking';
+      return 'Booking refund';
     case WalletTransactionType.PAYOUT:
-      return 'Rút tiền';
+      return 'Withdrawal';
     case WalletTransactionType.PLATFORM_FEE:
-      return 'Phí nền tảng';
+      return 'Platform fee';
     default:
       return type;
   }
@@ -91,8 +93,8 @@ export default function WalletPage() {
       <div className="mx-auto max-w-5xl p-6 space-y-6">
         {/* HEADER */}
         <div>
-          <h1 className="text-3xl font-bold">Ví Credits</h1>
-          <p className="mt-1 text-muted-foreground">Quản lý số dư và lịch sử giao dịch của bạn</p>
+          <h1 className="text-3xl font-bold">Credits Wallet</h1>
+          <p className="mt-1 text-muted-foreground">Manage your balance and transaction history</p>
         </div>
 
         {/* WALLET CARD */}
@@ -100,7 +102,7 @@ export default function WalletPage() {
           <CardContent className="p-8">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-white/80">Số dư hiện tại</p>
+                <p className="text-sm text-white/80">Current Balance</p>
                 {walletLoading ? (
                   <Skeleton className="mt-3 h-14 w-40 bg-white/20" />
                 ) : (
@@ -122,7 +124,7 @@ export default function WalletPage() {
                 onClick={() => setDepositOpen(true)}
               >
                 <Plus className="mr-2 h-4 w-4" />
-                Nạp Credits
+                Top Up Credits
               </Button>
 
               <Button
@@ -130,7 +132,7 @@ export default function WalletPage() {
                 className="border-white/30 bg-white/10 text-white hover:bg-white/20"
               >
                 <Receipt className="mr-2 h-4 w-4" />
-                {transactionsData?.meta.total ?? 0} giao dịch
+                {transactionsData?.meta.total ?? 0} transactions
               </Button>
             </div>
           </CardContent>
@@ -140,13 +142,13 @@ export default function WalletPage() {
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-lg font-semibold">Lịch sử giao dịch</h3>
+              <h3 className="text-lg font-semibold">Transaction History</h3>
               <p className="text-sm text-muted-foreground">
-                Các giao dịch gần đây trong ví credits
+                Recent transactions in your credits wallet
               </p>
             </div>
             {transactionsData?.meta && (
-              <Badge variant="secondary">{transactionsData.meta.total} giao dịch</Badge>
+              <Badge variant="secondary">{transactionsData.meta.total} transactions</Badge>
             )}
           </div>
 
@@ -173,9 +175,9 @@ export default function WalletPage() {
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12 text-center">
                 <Wallet className="mb-3 h-10 w-10 text-muted-foreground" />
-                <h4 className="font-semibold">Chưa có giao dịch nào</h4>
+                <h4 className="font-semibold">No transactions yet</h4>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Các giao dịch ví sẽ xuất hiện tại đây
+                  Your wallet transactions will appear here
                 </p>
               </CardContent>
             </Card>
@@ -209,7 +211,7 @@ export default function WalletPage() {
                               )}
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground">
-                              Số dư: {formatAmount(tx.balanceBefore)} →{' '}
+                              Balance: {formatAmount(tx.balanceBefore)} →{' '}
                               {formatAmount(tx.balanceAfter)}
                             </div>
                           </div>

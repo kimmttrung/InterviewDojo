@@ -9,7 +9,6 @@ import { Input } from '@/shared/components/ui/input';
 import { Button } from '@/shared/components/ui/button';
 import { Badge } from '@/shared/components/ui/badge';
 import ApprovalGuard from '@/shared/components/layout/ApprovalGuard';
-import { useAuthStore } from '@/stores/useAuthStore';
 import { useMentorProfile } from '../../profile-management/hooks/useMentorProfile';
 import {
   useMentorBookings,
@@ -20,9 +19,8 @@ import {
 import { Booking } from '../types';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
-import { toast } from 'sonner';
-import { bookingService } from '../services/booking.service';
 import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 
 const getStatusUI = (status: Booking['status']) => {
   switch (status) {
@@ -79,11 +77,7 @@ export default function MentorBookings() {
     }
   }, [searchParams]);
 
-  const {
-    data: selectedBooking,
-    isLoading: isDetailLoading,
-    refetch,
-  } = useBookingDetail(selectedBookingId);
+  const { data: selectedBooking, isLoading: isDetailLoading } = useBookingDetail(selectedBookingId);
 
   const handleViewDetail = (booking: Booking) => {
     setSelectedBookingId(booking.id);
@@ -184,9 +178,7 @@ export default function MentorBookings() {
               <div className="text-center py-12 text-muted-foreground">No bookings found</div>
             )}
             {filteredBookings.map((booking) => {
-              console.log('status booking', booking);
               const statusUI = getStatusUI(booking.status);
-              console.log('status', statusUI);
               const canAction = statusUI.actionable;
 
               return (
@@ -197,17 +189,6 @@ export default function MentorBookings() {
                   {/* Left info */}
                   <div className="flex-1 flex items-start gap-3">
                     {/* Avatar */}
-                    {/* {booking.candidate.avatarUrl ? (
-                      <img
-                        src={booking.candidate.avatarUrl}
-                        alt={booking.candidate.name}
-                        className="w-10 h-10 rounded-full object-cover"
-                      />
-                    ) : (
-                      <div className="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center">
-                        <User className="w-5 h-5 text-slate-500" />
-                      </div>
-                    )} */}
 
                     <UserAvatar
                       userId={booking.candidate.id}
@@ -277,7 +258,7 @@ export default function MentorBookings() {
         </div>
 
         {/* Booking Detail Modal */}
-        {selectedBooking && (
+        {/* {selectedBooking && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
             <div className="bg-background rounded-xl w-full max-w-lg p-6 shadow-xl animate-in fade-in zoom-in-95">
               <div className="flex justify-between items-center mb-4">
@@ -329,7 +310,6 @@ export default function MentorBookings() {
                   </p>
                 </div>
 
-                {/* Hiển thị câu trả lời */}
                 {selectedBooking.answers && selectedBooking.answers.length > 0 && (
                   <div>
                     <p className="text-muted-foreground mb-2">Câu trả lời của candidate:</p>
@@ -392,6 +372,125 @@ export default function MentorBookings() {
               )}
             </div>
           </div>
+        )} */}
+
+        {selectedBooking && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
+            <div className="bg-background rounded-xl w-full max-w-lg p-6 shadow-xl animate-in fade-in zoom-in-95 flex flex-col max-h-[90vh]">
+              {/* Header (Cố định ở trên) */}
+              <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                <h2 className="text-lg font-semibold">Booking Detail</h2>
+                <button
+                  onClick={() => setSelectedBookingId(null)}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  ✕
+                </button>
+              </div>
+              {/* THÊM THẺ DIV NÀY: Chứa nội dung và cho phép cuộn tự nhiên */}
+              <div className="space-y-4 text-sm overflow-y-auto pr-2 flex-1 max-h-[65vh] scrollbar-thin">
+                <div>
+                  <p className="text-muted-foreground">Candidate</p>
+                  <p className="font-medium">{selectedBooking.candidate.name}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Email</p>
+                  <p>{selectedBooking.candidate.email}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Plan</p>
+                  <p>{selectedBooking.planDetails.title}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Duration</p>
+                  <p>{selectedBooking.planDetails.duration} minutes</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Time</p>
+                  <p>
+                    {formatDateTime(selectedBooking.startTime)} →{' '}
+                    {formatDateTime(selectedBooking.endTime)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Price</p>
+                  <p className="font-medium text-green-600">${selectedBooking.planDetails.price}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Created At</p>
+                  <p>{formatDateTime(selectedBooking.createdAt)}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground">Status</p>
+                  <p className="capitalize">
+                    {selectedBooking.status.replace('_', ' ').toLowerCase()}
+                  </p>
+                </div>
+
+                {/* Hiển thị câu trả lời */}
+                {selectedBooking.answers && selectedBooking.answers.length > 0 && (
+                  <div>
+                    <p className="text-muted-foreground mb-2">Câu trả lời của candidate:</p>
+                    {/* Bạn có thể bỏ bớt max-h-60 ở đây vì thẻ div cha bên ngoài đã gánh việc cuộn toàn bộ rồi */}
+                    <div className="space-y-3 bg-muted/30 p-3 rounded-md">
+                      {selectedBooking.answers.map((ans) => (
+                        <div key={ans.questionId} className="border-b pb-2 last:border-0">
+                          <p className="font-medium text-sm">{ans.questionText}</p>
+                          {ans.answerText && (
+                            <p className="text-sm whitespace-pre-wrap mt-1">{ans.answerText}</p>
+                          )}
+                          {ans.fileUrl && (
+                            <a
+                              href={ans.fileUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-blue-500 text-sm underline mt-1 inline-block"
+                            >
+                              📎 Xem file đính kèm
+                            </a>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedBooking.status === 'REJECTED' && selectedBooking.rejectionReason && (
+                  <div>
+                    <p className="text-muted-foreground">Lý do từ chối</p>
+                    <p className="text-sm text-red-600 bg-red-50 p-2 rounded-md">
+                      {selectedBooking.rejectionReason}
+                    </p>
+                  </div>
+                )}
+              </div>{' '}
+              {/* ĐÓNG THẺ DIV NỘI DUNG CUỘN */}
+              {getStatusUI(selectedBooking.status).actionable && (
+                <div className="flex gap-2 mt-6 flex-shrink-0">
+                  <Button
+                    className="w-full bg-green-500 hover:bg-green-600 text-white"
+                    onClick={() => {
+                      handleAccept(selectedBooking.id);
+                      setSelectedBookingId(null);
+                    }}
+                    disabled={acceptMutation.isPending}
+                  >
+                    Accept
+                  </Button>
+                  <Button
+                    className="w-full bg-red-500 hover:bg-red-600 text-white"
+                    onClick={() => {
+                      handleReject(selectedBooking.id);
+                      setSelectedBookingId(null);
+                    }}
+                    disabled={rejectMutation.isPending}
+                  >
+                    Reject
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
         )}
 
         {rejectModalOpen && (
@@ -425,6 +524,7 @@ export default function MentorBookings() {
             </div>
           </div>
         )}
+        <UserProfileModal />
       </ApprovalGuard>
     </MentorLayout>
   );

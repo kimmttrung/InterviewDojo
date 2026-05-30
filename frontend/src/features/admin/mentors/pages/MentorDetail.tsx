@@ -25,7 +25,6 @@ import {
   User,
   DollarSign,
   AlertCircle,
-  MapPin,
   HelpCircle,
 } from 'lucide-react';
 
@@ -322,7 +321,7 @@ export const MentorDetail = () => {
                 </span>
                 <span className="flex items-center gap-1">
                   <Briefcase className="h-3.5 w-3.5" />
-                  {mentor.experienceYears} năm KN
+                  {mentor.experienceYears} năm kinh nghiệm
                 </span>
                 <span className="flex items-center gap-1">
                   <CalendarDays className="h-3.5 w-3.5" />

@@ -17,7 +17,7 @@ import {
   Play,
 } from 'lucide-react';
 import { soloRecordingService } from '../services/solo-recording.service';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Layout } from '../../../../../../shared/components/layout/Layout';
 import { Card } from '../../../../../../shared/components/ui/card';
@@ -27,12 +27,31 @@ import { useCurrentUser } from '@/features/auth';
 type QuestionItem = {
   id: number;
   title: string;
+  description?: string;
   difficulty: string;
-  type: string;
+  type?: string;
+  questionType?: string;
+  data?: {
+    question?: string;
+  };
 };
+
+const SOLO_QUESTION_TYPES = [
+  { value: 'SYSTEM_DESIGN', label: 'System Design' },
+  { value: 'BEHAVIORAL', label: 'Behavioral' },
+  { value: 'TECHNICAL', label: 'Technical' },
+] as const;
+
+const getQuestionType = (question: QuestionItem) => question.type ?? question.questionType ?? '';
+const getQuestionText = (question: QuestionItem) =>
+  question.data?.question ?? question.description ?? question.title;
 
 export default function SoloRecording() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedQuestion = (location.state as any)?.preselectedQuestion as
+    | QuestionItem
+    | undefined;
   const { data: currentUser } = useCurrentUser();
   const [step, setStep] = useState<'setup' | 'recording' | 'preview' | 'analysis'>('setup');
 
@@ -47,14 +66,24 @@ export default function SoloRecording() {
 
   // State
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
-  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
+    preselectedQuestion?.id ?? null,
+  );
+  // Khi có câu hỏi từ "Thử ngay", bỏ qua màn setup
+  const [isPreselected] = useState(!!preselectedQuestion);
 
   const [typeFilter, setTypeFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
 
-  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
-  const selectedQuestionTitle = selectedQuestion?.title ?? '';
+  const selectedQuestion =
+    preselectedQuestion ?? questions.find((q) => q.id === selectedQuestionId);
+  const selectedQuestionTitle = selectedQuestion ? getQuestionText(selectedQuestion) : '';
+
+  const resetQuestionSelection = useCallback(() => {
+    setQuestions([]);
+    setSelectedQuestionId(null);
+  }, []);
 
   const [seconds, setSeconds] = useState(0);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -73,8 +102,12 @@ export default function SoloRecording() {
   const [showTranscript, setShowTranscript] = useState(true);
 
   useEffect(() => {
+    let isCurrentRequest = true;
+
     const fetchQuestions = async () => {
       try {
+        resetQuestionSelection();
+
         const res = await soloRecordingService.getQuestions({
           page: 1,
           limit: 50,
@@ -83,7 +116,15 @@ export default function SoloRecording() {
         });
 
         const payload = res.data?.data ?? res.data;
-        const items = payload?.items ?? [];
+        const items = (payload?.items ?? []).filter((q: QuestionItem) => {
+          const questionType = getQuestionType(q);
+          const matchesType = !typeFilter || questionType === typeFilter;
+          const matchesDifficulty = !difficultyFilter || q.difficulty === difficultyFilter;
+
+          return questionType !== 'CODING' && matchesType && matchesDifficulty;
+        });
+
+        if (!isCurrentRequest) return;
 
         setQuestions(items);
 
@@ -94,21 +135,25 @@ export default function SoloRecording() {
         }
       } catch (error) {
         console.error('Fetch questions failed:', error);
-        toast.error('Không tải được danh sách câu hỏi');
+        toast.error('Failed to load questions list');
       }
     };
 
     fetchQuestions();
-  }, [typeFilter, difficultyFilter]);
 
-  //AUTO-SCROLL TRANSCRIPT
+    return () => {
+      isCurrentRequest = false;
+    };
+  }, [typeFilter, difficultyFilter, resetQuestionSelection]);
+
+  // AUTO-SCROLL TRANSCRIPT
   useEffect(() => {
     if (transcriptScrollRef.current) {
       transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
     }
   }, [liveTranscript, isInterim]);
 
-  //FULLSCREEN CỦA TRÌNH DUYỆT
+  // FULLSCREEN CHANGE LISTENER
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -167,22 +212,19 @@ export default function SoloRecording() {
     if (step !== 'recording' || !mediaRecorderRef.current) return;
 
     if (mediaRecorderRef.current.state === 'recording') {
-      // TẠM DỪNG
       mediaRecorderRef.current.pause();
       recognitionRef.current?.stop();
       clearInterval((window as any).recordingTimer);
       setIsPaused(true);
-      toast.warning('Đã tạm dừng ghi hình', { description: 'Nhấn Space để tiếp tục' });
+      toast.warning('Recording paused', { description: 'Press Space to resume' });
     } else if (mediaRecorderRef.current.state === 'paused') {
-      // TIẾP TỤC
       mediaRecorderRef.current.resume();
-
       recognitionRef.current?.start();
 
       const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
       (window as any).recordingTimer = timer;
       setIsPaused(false);
-      toast.success('Đã tiếp tục ghi hình', { description: 'Hệ thống đang thu âm...' });
+      toast.success('Recording resumed', { description: 'The system is recording audio...' });
     }
   }, [step]);
 
@@ -209,12 +251,10 @@ export default function SoloRecording() {
     recognitionRef.current?.start();
   };
 
-  // Stop stream
   useEffect(() => {
     return () => stopStream();
   }, []);
 
-  // Start stream
   useEffect(() => {
     if (step === 'recording' && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -230,7 +270,7 @@ export default function SoloRecording() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'vi-VN'; // Đặt ngôn ngữ tiếng Việt
+      recognition.lang = 'vi-VN';
 
       recognition.onresult = (event: any) => {
         if (isPaused) return;
@@ -271,10 +311,9 @@ export default function SoloRecording() {
     };
   }, [step, isPaused]);
 
-  // Space pause
+  // Space pause key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Chặn cuộn trang khi bấm Space lúc đang record
       if (e.code === 'Space' && step === 'recording') {
         e.preventDefault();
         togglePauseResume();
@@ -286,9 +325,7 @@ export default function SoloRecording() {
 
   // Try Again
   const handleTryAgain = () => {
-    //stopStream();
     recognitionRef.current?.abort();
-
     setLiveTranscript('');
     setIsInterim('');
     setStep('setup');
@@ -297,18 +334,16 @@ export default function SoloRecording() {
     chunksRef.current = [];
   };
 
-  //  Start Interview
+  // Start Interview
   const handleStartInterview = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       setIsCamOn(true);
       setIsMicOn(true);
-
-      // Đổi sang màn hình recording -> Tự động kích hoạt useEffect số 2 để đếm giờ
       setStep('recording');
     } catch (err) {
-      alert('Không thể truy cập Camera/Mic. Vui lòng kiểm tra quyền trên trình duyệt.');
+      alert('Unable to access Camera/Microphone. Please verify permissions in your browser.');
     }
   };
 
@@ -317,27 +352,20 @@ export default function SoloRecording() {
       mediaRecorderRef.current.stop();
     }
     clearInterval((window as any).recordingTimer);
-
     recognitionRef.current?.abort();
-
     stopStream();
     setStep('preview');
   };
 
-  // Hàm tách audio từ video blob một cách đúng chuẩn (sử dụng Web Audio API)
+  // Audio extraction using Web Audio API
   const extractAudioFromVideoBlob = async (videoBlob: Blob): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
       const reader = new FileReader();
       reader.onload = async () => {
         try {
           const arrayBuffer = reader.result as ArrayBuffer;
-
-          // Decode video blob thành AudioBuffer (chỉ lấy phần audio)
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-          // Tạo OfflineAudioContext để render lại audio
           const offlineContext = new OfflineAudioContext(
             audioBuffer.numberOfChannels,
             audioBuffer.length,
@@ -350,13 +378,10 @@ export default function SoloRecording() {
           source.start(0);
 
           const renderedBuffer = await offlineContext.startRendering();
-
-          // Convert AudioBuffer thành WAV (dễ upload và Azure Speech xử lý tốt)
           const wavBlob = audioBufferToWav(renderedBuffer);
           resolve(wavBlob);
         } catch (err) {
           console.error('Extract audio failed:', err);
-          // Fallback: thử gửi video blob với type audio/webm
           resolve(new Blob([videoBlob], { type: 'audio/webm' }));
         }
       };
@@ -365,7 +390,7 @@ export default function SoloRecording() {
     });
   };
 
-  // Helper: Convert AudioBuffer → WAV Blob (rất cần cho Azure Speech)
+  // AudioBuffer → WAV Blob Converter
   const audioBufferToWav = (buffer: AudioBuffer): Blob => {
     const numChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
@@ -375,17 +400,14 @@ export default function SoloRecording() {
     const bytesPerSample = bitDepth / 8;
     const blockAlign = numChannels * bytesPerSample;
     const dataSize = buffer.length * blockAlign;
-    const bufferSize = 44 + dataSize; // WAV header 44 bytes
+    const bufferSize = 44 + dataSize;
 
     const arrayBuffer = new ArrayBuffer(bufferSize);
     const view = new DataView(arrayBuffer);
 
-    // RIFF header
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataSize, true);
     writeString(view, 8, 'WAVE');
-
-    // fmt subchunk
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
     view.setUint16(20, format, true);
@@ -394,12 +416,9 @@ export default function SoloRecording() {
     view.setUint32(28, sampleRate * blockAlign, true);
     view.setUint16(32, blockAlign, true);
     view.setUint16(34, bitDepth, true);
-
-    // data subchunk
     writeString(view, 36, 'data');
     view.setUint32(40, dataSize, true);
 
-    // Write PCM samples
     let offset = 44;
     for (let i = 0; i < buffer.length; i++) {
       for (let channel = 0; channel < numChannels; channel++) {
@@ -418,27 +437,22 @@ export default function SoloRecording() {
     }
   };
 
-  // ==========================================
-  // HÀM CHÍNH: ĐIỀU PHỐI LUỒNG CHẠY
-  // Ver 5: Chạy ngầm upload video, song song với AI analysis
   const handleUploadAndAnalyze = async () => {
     if (!currentUser) return alert('Please log in to continue');
     const finalTranscriptText = (liveTranscript + ' ' + isInterim).trim();
     if (!finalTranscriptText) {
-      return alert('Không nhận diện được giọng nói của bạn. Vui lòng thử thu âm lại!');
+      return alert('Your speech could not be recognized. Please try recording again!');
     }
     setIsUploading(true);
 
     try {
-      // 1. Chuẩn bị file
       const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
       const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
 
-      console.log('Bắt đầu tách audio từ video...');
+      console.log('Starting audio extraction from video...');
       const audioBlob = await extractAudioFromVideoBlob(videoBlob);
       const audioFile = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
 
-      // 2. CHUẨN BỊ FORM DATA CHO CẢ HAI
       const analyzePayload = {
         userId: Number(currentUser.id),
         duration: seconds,
@@ -449,76 +463,67 @@ export default function SoloRecording() {
       const videoFormData = new FormData();
       videoFormData.append('file', videoFile, 'video.webm');
 
-      console.log('🚀 Bắn TEXT (JSON) và Video (FormData) đi cùng lúc...');
+      console.log('Sending JSON text and Video FormData concurrently...');
       const audioPromise = soloRecordingService.uploadAudioAndAnalyze(analyzePayload);
       const videoPromise = soloRecordingService.uploadVideo(videoFormData);
 
-      // 4. CHỈ CHỜ AUDIO & AI PHÂN TÍCH (Ưu tiên UX - Trả kết quả ngay)
       const analyzeRes = await audioPromise;
       let analysisData = analyzeRes?.data || analyzeRes;
       if (analysisData?.data) analysisData = analysisData.data;
       if (analysisData?.data) analysisData = analysisData.data;
 
-      // Bắt chính xác ID của bản ghi để tý nữa gắn Video vào
       const currentRecordingId = analysisData?.sessionId || analysisData?.id;
 
-      console.log('✅ Dữ liệu bóc được:', analysisData);
-      console.log('✅ ID Bản ghi hiện tại:', currentRecordingId);
-      console.log('✅ Phân tích AI hoàn tất! ID Bản ghi hiện tại:', currentRecordingId);
+      console.log('Parsed data:', analysisData);
+      console.log('Current record ID:', currentRecordingId);
+      console.log('AI Analysis complete! Current record ID:', currentRecordingId);
 
       if (!currentRecordingId) {
-        alert('Không lấy được ID bản ghi từ Backend! Hãy kiểm tra console log.');
+        alert('Could not retrieve record ID from Backend! Please check the console log.');
         setIsUploading(false);
         return;
       }
 
       navigate(`/ai-analysis/${currentRecordingId}`);
-
       setIsUploading(false);
 
-      // 5. XỬ LÝ VIDEO CHẠY NGẦM DƯỚI BACKGROUND
+      // Background video processing
       videoPromise
         .then(async (videoRes: any) => {
-          console.group('--- 🔍 DEBUG LUỒNG VIDEO NGẦM ---');
-          console.log('1. Phản hồi gốc từ API Upload Video:', videoRes);
+          console.group('--- DEBUG BACKGROUND VIDEO FLOW ---');
+          console.log('Raw response from Upload Video API:', videoRes);
 
-          // Bóc tách lớp dữ liệu (Quét mọi ngóc ngách của Axios)
           let vPayload = videoRes?.data || videoRes;
           if (vPayload?.data) vPayload = vPayload.data;
           if (vPayload?.data) vPayload = vPayload.data;
 
-          // Lấy URL: Ưu tiên 'videoUrl' do Backend trả về, phòng hờ 'secure_url' của Cloudinary
           const finalVideoUrl = vPayload?.videoUrl || vPayload?.secure_url;
           const finalPublicId = vPayload?.publicId || vPayload?.public_id;
 
-          console.log('2. URL bóc được:', finalVideoUrl);
-          console.log('3. ID Bản ghi chuẩn bị ghép:', currentRecordingId);
+          console.log('Extracted URL:', finalVideoUrl);
+          console.log('Record ID to bind:', currentRecordingId);
 
           if (finalVideoUrl && finalPublicId && currentRecordingId) {
-            console.log('4. 🚀 Đang bắn lệnh PATCH lên server để lưu Database...');
-
-            // Gọi API PATCH cập nhật URL
+            console.log('Sending PATCH command to update server database...');
             const patchRes = await soloRecordingService.updateVideoUrl(
               currentRecordingId,
               finalVideoUrl,
               finalPublicId,
             );
-
-            console.log('5. 🎉 Server trả lời PATCH thành công:', patchRes?.data || 'OK');
+            console.log('Server PATCH call succeeded:', patchRes?.data || 'OK');
           } else {
-            console.warn('⚠️ THẤT BẠI: Thiếu URL Video hoặc Thiếu ID Bản ghi! Không thể cập nhật.');
+            console.warn('FAILED: Missing Video URL or Record ID! Update skipped.');
           }
           console.groupEnd();
         })
         .catch((err) => {
-          console.error('❌ Upload video ngầm bị lỗi:', err.response?.data || err);
+          console.error('Background video upload error:', err.response?.data || err);
         });
     } catch (err: any) {
-      console.error('Lỗi nghiêm trọng trong luồng AI:', err.response?.data || err);
-      // Hiển thị thông báo thân thiện nếu lỗi 422 (Không có tiếng)
+      console.error('Critical failure in AI flow:', err.response?.data || err);
       const errorMessage =
         err.response?.data?.message ||
-        'Không thể thực hiện phân tích AI. Vui lòng kiểm tra lại mic.';
+        'Unable to perform AI analysis. Please verify your microphone connection.';
       alert(errorMessage);
       setIsUploading(false);
     }
@@ -540,85 +545,131 @@ export default function SoloRecording() {
                 </p>
               </div>
 
-              <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
-                <div className="text-left space-y-4">
-                  <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
-                    Filter Questions
-                  </label>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                    <select
-                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={typeFilter}
-                      onChange={(e) => setTypeFilter(e.target.value)}
+              {isPreselected ? (
+                /* === PRESELECTED: Hiển thị câu hỏi confirm, bỏ filter === */
+                <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
+                  <div className="text-left space-y-3">
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Câu hỏi đã chọn
+                    </label>
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-900 font-medium text-[15px] leading-relaxed">
+                      {selectedQuestionTitle}
+                    </div>
+                    <button
+                      onClick={() => navigate('/practice/solo-recording', { replace: true })}
+                      className="text-xs text-slate-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
                     >
-                      <option value="">All categories</option>
-                      <option value="SYSTEM_DESIGN">System Design</option>
-                      <option value="BEHAVIORAL">Behavioral</option>
-                      <option value="TECHNICAL">Technical</option>
-                      <option value="CODING">Coding</option>
-                    </select>
-
-                    <select
-                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={difficultyFilter}
-                      onChange={(e) => setDifficultyFilter(e.target.value)}
-                    >
-                      <option value="">All difficulty</option>
-                      <option value="EASY">Easy</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HARD">Hard</option>
-                    </select>
-
-                    <select
-                      className="w-full p-4 rounded-lg border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      value={companyFilter}
-                      onChange={(e) => setCompanyFilter(e.target.value)}
-                      disabled
-                    >
-                      <option value="">All companies</option>
-                    </select>
+                      Chọn câu hỏi khác
+                    </button>
                   </div>
 
-                  <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
-                    Choose a Question
-                  </label>
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Camera className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">Auto Camera On</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Mic className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">HD Audio Recording</span>
+                    </div>
+                  </div>
 
-                  <select
-                    className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={selectedQuestionId ?? ''}
-                    onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
+                    onClick={handleStartInterview}
                   >
-                    {questions.length === 0 && <option value="">Không có câu hỏi phù hợp</option>}
+                    Start Practice Session
+                  </Button>
+                </Card>
+              ) : (
+                /* === NORMAL: Full filter UI === */
+                <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
+                  <div className="text-left space-y-4">
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Filter Questions
+                    </label>
 
-                    {questions.map((q) => (
-                      <option key={q.id} value={q.id}>
-                        {q.title} - {q.type} - {q.difficulty}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <select
+                        className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        value={typeFilter}
+                        onChange={(e) => {
+                          setTypeFilter(e.target.value);
+                          resetQuestionSelection();
+                        }}
+                      >
+                        <option value="">All categories</option>
+                        {SOLO_QUESTION_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
 
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
-                    <Camera className="text-indigo-600" size={20} />
-                    <span className="text-sm font-medium">Auto Camera On</span>
+                      <select
+                        className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        value={difficultyFilter}
+                        onChange={(e) => {
+                          setDifficultyFilter(e.target.value);
+                          resetQuestionSelection();
+                        }}
+                      >
+                        <option value="">All difficulty</option>
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                      </select>
+
+                      <select
+                        className="w-full p-4 rounded-lg border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        value={companyFilter}
+                        onChange={(e) => setCompanyFilter(e.target.value)}
+                        disabled
+                      >
+                        <option value="">All companies</option>
+                      </select>
+                    </div>
+
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Choose a Question
+                    </label>
+
+                    <select
+                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                      value={selectedQuestionId ?? ''}
+                      onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
+                    >
+                      {questions.length === 0 && <option value="">No matching questions</option>}
+                      {questions.map((q) => (
+                        <option key={q.id} value={q.id}>
+                          {getQuestionText(q)}
+                        </option>
+                      ))}
+                    </select>
                   </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
-                    <Mic className="text-indigo-600" size={20} />
-                    <span className="text-sm font-medium">HD Audio Recording</span>
-                  </div>
-                </div>
 
-                <Button
-                  size="lg"
-                  className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
-                  onClick={handleStartInterview}
-                  disabled={!selectedQuestionId}
-                >
-                  Start Practice Session
-                </Button>
-              </Card>
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Camera className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">Auto Camera On</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Mic className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">HD Audio Recording</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
+                    onClick={handleStartInterview}
+                    disabled={!selectedQuestionId}
+                  >
+                    Start Practice Session
+                  </Button>
+                </Card>
+              )}
             </div>
           )}
 
@@ -627,7 +678,6 @@ export default function SoloRecording() {
             <div
               className={`space-y-6 animate-in slide-in-from-bottom-4 duration-500 ${isFullscreen ? 'h-screen flex flex-col justify-center' : ''}`}
             >
-              {/* Thanh Header: Ẩn đi khi đang Fullscreen */}
               {!isFullscreen && (
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
                   <div className="flex items-center gap-4">
@@ -656,7 +706,6 @@ export default function SoloRecording() {
                 </div>
               )}
 
-              {/* KHUNG VIDEO CHÍNH */}
               <div
                 ref={videoContainerRef}
                 className={`relative group bg-black rounded-3xl overflow-hidden ${isFullscreen ? 'w-full h-full border-0 rounded-none' : 'aspect-video border-4 border-white shadow-2xl'}`}
@@ -678,20 +727,16 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* Màn hình mờ khi Paused */}
                 {isPaused && (
                   <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-in fade-in">
                     <div className="bg-amber-500/20 p-6 rounded-full mb-4">
                       <Pause size={48} className="text-amber-400" />
                     </div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Đã tạm dừng</h2>
-                    <p className="text-amber-200 text-lg font-medium">
-                      Nhấn phím SPACE để tiếp tục
-                    </p>
+                    <h2 className="text-3xl font-bold text-white mb-2">Paused</h2>
+                    <p className="text-amber-200 text-lg font-medium">Press SPACE to continue</p>
                   </div>
                 )}
 
-                {/* Subtitle STT (Có thể ẩn/hiện và cuộn) */}
                 {showTranscript && (
                   <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-4/5 max-w-3xl pointer-events-none z-0">
                     <div className="bg-black/70 backdrop-blur-md p-5 rounded-xl border border-white/10 text-white shadow-lg flex flex-col h-[140px]">
@@ -715,7 +760,6 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* Câu hỏi (Có thể ẩn/hiện) */}
                 {showQuestion && (
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-12 pointer-events-none z-0">
                     <div className="bg-indigo-600/95 backdrop-blur-md py-3 px-6 rounded-full border border-white/20 text-center text-white shadow-xl inline-block max-w-full truncate">
@@ -727,7 +771,6 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* CỤM NÚT BẤM (Floating Controls) */}
                 <div
                   className={`absolute right-6 flex flex-col gap-3 z-20 transition-all ${isFullscreen ? 'top-1/2 -translate-y-1/2' : 'top-6'}`}
                 >
@@ -764,7 +807,6 @@ export default function SoloRecording() {
 
                   <div className="w-12 border-t border-white/20 my-1" />
 
-                  {/* Tạm dừng */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -774,7 +816,6 @@ export default function SoloRecording() {
                     {isPaused ? <Play size={20} className="ml-1" /> : <Pause size={20} />}
                   </Button>
 
-                  {/* Ẩn/hiện chữ */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -784,7 +825,6 @@ export default function SoloRecording() {
                     <Subtitles size={20} />
                   </Button>
 
-                  {/* Ẩn/hiện câu hỏi */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -794,7 +834,6 @@ export default function SoloRecording() {
                     {showQuestion ? <MessageSquare size={20} /> : <MessageSquareOff size={20} />}
                   </Button>
 
-                  {/* Phóng to */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -804,7 +843,6 @@ export default function SoloRecording() {
                     {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
                   </Button>
 
-                  {/* Nút Kết thúc dời vào trong khi Fullscreen */}
                   {isFullscreen && (
                     <Button
                       variant="destructive"
@@ -872,21 +910,5 @@ export default function SoloRecording() {
         </div>
       </div>
     </Layout>
-  );
-}
-
-// Custom Zap Icon
-function Zap({ className, size }: { className?: string; size?: number }) {
-  return (
-    <svg
-      className={className}
-      width={size}
-      height={size}
-      viewBox="0 0 24 24"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-    >
-      <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" />
-    </svg>
   );
 }

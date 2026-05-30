@@ -39,7 +39,7 @@ export function QuestionPanel({
     : null;
 
   return (
-    <aside className="w-[30%] min-w-[350px] border-r border-slate-200 bg-white flex flex-col h-full">
+    <aside className="w-[30%] min-w-[350px] border-r border-slate-200 bg-white flex flex-col h-full max-h-full overflow-hidden">
       {/* 1. Filter Section (Giống QuestionFilters) */}
       <div className="p-4 border-b bg-slate-50/50 space-y-3">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">
@@ -94,7 +94,7 @@ export function QuestionPanel({
       </div>
 
       {/* 2. Content Area */}
-      <div className="flex-1 overflow-y-auto p-5 custom-scrollbar">
+      <div className="flex-1 h-0 overflow-y-auto p-5 custom-scrollbar min-h-0">
         {isLoading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="animate-spin text-indigo-600" />
@@ -104,17 +104,14 @@ export function QuestionPanel({
           question.type === QuestionType.CODING ? (
             <CodingDescription question={question} />
           ) : (
-            <div className="scale-95 origin-top-left w-[105%]">
-              <TheoryView question={question} parsedData={parsedData} />
+            /* BỎ class scale-95 origin-top-left w-[105%] nguy hiểm gây vỡ layout scroll dọc */
+            <div className="w-full">
+              <TheoryView question={question} parsedData={parsedData} isP2P={true} />
             </div>
           )
         ) : (
-          // TRẠNG THÁI 2: KHÔNG CÓ DỮ LIỆU (Phân biệt giữa mới vào và lọc sai)
+          // TRẠNG THÁI 2: KHÔNG CÓ DỮ LIỆU
           <div className="h-full flex flex-col items-center justify-center text-slate-400">
-            {/* 
-          Nếu selectedType hoặc selectedDifficulty có giá trị 
-          mà question vẫn null sau khi load => Nghĩa là lọc không ra kết quả 
-      */}
             {selectedType || selectedDifficulty ? (
               <div className="text-center space-y-3 animate-in fade-in zoom-in duration-300">
                 <div className="bg-amber-50 p-4 rounded-full inline-block">
@@ -128,7 +125,6 @@ export function QuestionPanel({
                 </div>
               </div>
             ) : (
-              /* Trạng thái mặc định khi mới vào phòng */
               <div className="opacity-30 text-center space-y-3">
                 <Shuffle size={40} strokeWidth={1} className="mx-auto" />
                 <p className="text-xs font-medium uppercase tracking-widest">

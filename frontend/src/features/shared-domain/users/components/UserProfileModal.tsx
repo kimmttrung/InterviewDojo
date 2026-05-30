@@ -84,6 +84,7 @@ export const UserProfileModal = () => {
       closeModal();
     } catch (error) {
       // Error already handled in hook
+      return error;
     }
   };
 

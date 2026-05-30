@@ -314,26 +314,41 @@ export const QuestionForm = () => {
 
   // validate + narrow raw form values → CreateQuestionPayload
   const onSubmit = (rawData: FormValues) => {
-    // Normalize tags/hints: CodingSection uses comma-string inputs
+    const isCoding = rawData.type === 'CODING';
+
+    // Xử lý codingData chỉ khi là coding, đảm bảo các trường bắt buộc luôn tồn tại
+    let codingDataForPayload: FormValues['codingData'] = undefined;
+    if (isCoding) {
+      const existingCoding = rawData.codingData ?? {
+        description: '',
+        constraints: '',
+        tags: [],
+        hints: [],
+        timeLimit: 2000,
+        memoryLimit: 256000,
+        codeforcesLink: '',
+        testCases: [],
+      };
+      codingDataForPayload = {
+        ...existingCoding,
+        tags: Array.isArray(existingCoding.tags)
+          ? existingCoding.tags
+          : String(existingCoding.tags ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+        hints: Array.isArray(existingCoding.hints)
+          ? existingCoding.hints
+          : String(existingCoding.hints ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+      };
+    }
+
     const normalizedData: FormValues = {
       ...rawData,
-      codingData: rawData.codingData
-        ? {
-            ...rawData.codingData,
-            tags: Array.isArray(rawData.codingData.tags)
-              ? rawData.codingData.tags
-              : String(rawData.codingData.tags ?? '')
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-            hints: Array.isArray(rawData.codingData.hints)
-              ? rawData.codingData.hints
-              : String(rawData.codingData.hints ?? '')
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-          }
-        : undefined,
+      codingData: codingDataForPayload, // undefined nếu không phải coding
     };
 
     const result = questionSchema.safeParse(normalizedData);

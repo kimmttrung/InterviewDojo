@@ -12,8 +12,10 @@ import { SessionTab } from '../modules/session/dto/get-sessions.dto';
 import { SessionService } from '../modules/session/session.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
+import { StreamService } from '../modules/stream/stream.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 
 describe('Booking Wallet Session Integration', () => {
   let bookingService: BookingService;
@@ -55,13 +57,20 @@ describe('Booking Wallet Session Integration', () => {
   };
 
   const socketService = { emitToUser: jest.fn() };
-  // Mock API cơ bản vẫn tương thích tốt giữa Bull và BullMQ trong unit test
   const queue = {
     getJob: jest.fn(),
     add: jest.fn(),
     removeJobs: jest.fn(),
     addBulk: jest.fn(),
     remove: jest.fn(),
+  };
+
+  const streamServiceMock = {
+    getOrCreateMeetingLink: jest
+      .fn()
+      .mockResolvedValue('/interview/mentor-booking-30?sessionId=30'),
+    createCall: jest.fn(),
+    createMeetingRoom: jest.fn(),
   };
 
   const prisma: any = {
@@ -171,6 +180,9 @@ describe('Booking Wallet Session Integration', () => {
     state.notifications = [];
     jest.clearAllMocks();
     queue.getJob.mockResolvedValue(null);
+    streamServiceMock.getOrCreateMeetingLink.mockResolvedValue(
+      '/interview/mentor-booking-30?sessionId=30',
+    );
 
     const moduleRef = await Test.createTestingModule({
       imports: [EventEmitterModule.forRoot()],
@@ -181,6 +193,16 @@ describe('Booking Wallet Session Integration', () => {
         { provide: PrismaService, useValue: prisma },
         { provide: SocketService, useValue: socketService },
         { provide: getQueueToken('session'), useValue: queue },
+        { provide: StreamService, useValue: streamServiceMock },
+        {
+          provide: CloudinaryService,
+          useValue: {
+            uploadRawFile: jest.fn().mockResolvedValue({
+              secure_url: 'https://mock-url.com/file.pdf',
+              public_id: 'mock_id',
+            }),
+          },
+        },
       ],
     }).compile();
     bookingService = moduleRef.get(BookingService);
@@ -266,12 +288,8 @@ describe('Booking Wallet Session Integration', () => {
           userId: candidate.id,
           targetUrl: '/sessions',
         }),
-        expect.objectContaining({
-          userId: mentor.id,
-          targetUrl: '/mentor/sessions',
-        }),
       ]),
     );
-    expect(state.notifications).toHaveLength(4);
+    expect(state.notifications).toHaveLength(3);
   });
 });
