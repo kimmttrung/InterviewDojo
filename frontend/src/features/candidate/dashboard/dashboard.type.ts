@@ -5,6 +5,7 @@
 export type ScoreChartItem = {
   date: string;
   score: number;
+  sessionType: string;
 };
 
 export type SessionBreakdown = {
@@ -31,6 +32,7 @@ export type AnalyticsOverviewData = {
   scoreChart: {
     date: string;
     score: number;
+    sessionType: string;
   }[];
 };
 

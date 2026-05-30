@@ -366,6 +366,7 @@ model Notification {
   message   String
   targetUrl String?
   isRead    Boolean          @default(false)
+  isPinned  Boolean          @default(false)
   createdAt DateTime         @default(now())
   updatedAt DateTime         @updatedAt
 

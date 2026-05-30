@@ -1,20 +1,22 @@
 // features/questions/components/QuestionDetail/TheoryView.tsx
-import { KeyRound, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide-react';
 import { QuestionDetail } from '../../types/question.types';
 import { CommentSection } from '@/features/comment/components/CommentSection';
+import { AnswerSection } from './AnswerSection';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
 interface TheoryViewProps {
   question: QuestionDetail;
   parsedData: any;
+  isP2P?: boolean;
 }
 
-export function TheoryView({ question, parsedData }: TheoryViewProps) {
+export function TheoryView({ question, parsedData, isP2P = false }: TheoryViewProps) {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.hash === '#comments') {
+    if (!isP2P && location.hash === '#comments') {
       const element = document.getElementById('comments');
       if (element) {
         setTimeout(() => {
@@ -22,7 +24,7 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
         }, 100);
       }
     }
-  }, [location]);
+  }, [location, isP2P]);
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -66,10 +68,34 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
             </ul>
           </SectionBox>
         )}
+
+        {parsedData?.followUps?.length > 0 && (
+          <SectionBox
+            icon={<MessageCircleQuestion className="w-5 h-5 text-indigo-500" />}
+            title="Follow-up Questions"
+            colorClass="bg-indigo-50/40 border-indigo-100 text-indigo-800"
+          >
+            <ul className="space-y-2.5 text-sm">
+              {parsedData.followUps.map((q: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span>{q}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionBox>
+        )}
       </div>
-      <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
-        <CommentSection questionId={question.id} />
-      </div>
+      {!isP2P && (
+        <>
+          <AnswerSection question={question} />
+          <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
+            <CommentSection questionId={question.id} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

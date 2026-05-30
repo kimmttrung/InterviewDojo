@@ -199,7 +199,7 @@ export default function InterviewRoom() {
         <StreamCall call={call}>
           <div className="h-screen flex flex-col bg-white overflow-hidden">
             <InterviewHeader roomId={roomId!} />
-            <main ref={mainContainerRef} className="flex-1 flex">
+            <main ref={mainContainerRef} className="flex-1 flex h-full min-h-0 overflow-hidden">
               <QuestionPanel
                 question={displayedQuestion}
                 onRandom={handleRandom}

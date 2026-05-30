@@ -446,7 +446,6 @@ export class BookingService {
     try {
       const userIds = [updatedBooking.mentorId, updatedBooking.candidateId];
 
-      // SỬA LỖI TS2554: Truyền đúng 2 đối số theo thiết kế của SessionService
       await this.sessionService.scheduleSessionEnd(savedMockSession, userIds);
       await this.sessionService.scheduleSessionStartNotification(
         savedMockSession,
@@ -507,7 +506,6 @@ export class BookingService {
         );
       }
 
-      // Hoàn tiền nếu đã thanh toán (thực tế booking đã được thanh toán trước khi vào PENDING_ACCEPTANCE)
       const price = booking.snapshotPlanPrice;
       if (price) {
         const user = await tx.user.findUnique({
@@ -560,7 +558,7 @@ export class BookingService {
       this.socketService.emitToUser(updated.candidateId, 'SESSION_UPDATED', {
         bookingId,
       });
-      // Có thể emit thêm SESSION_REJECTED nếu frontend cần
+
       this.socketService.emitToUser(mentorId, 'SESSION_REJECTED', {
         bookingId,
         reason,

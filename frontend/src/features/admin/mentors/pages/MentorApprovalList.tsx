@@ -212,7 +212,9 @@ export const MentorApprovalList = () => {
                           <Clock className="h-3.5 w-3.5" />
                           <span>{formatDate(mentor.createdAt)}</span>
                         </div>
-                        <span className="text-foreground/50">{mentor.experienceYears} năm KN</span>
+                        <span className="text-foreground/50">
+                          {mentor.experienceYears} năm kinh nghiệm
+                        </span>
                       </div>
 
                       <ChevronRight className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0" />

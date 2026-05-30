@@ -16,14 +16,11 @@ export function BookmarkButton({
 
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
-    // Optimistic update
     const newState = !isBookmarked;
     setIsBookmarked(newState);
     toggleBookmark(questionId, isBookmarked);
-    // Nếu API thất bại, có thể rollback nhưng tạm thời bỏ qua
   };
 
-  // Đồng bộ khi prop thay đổi (do cache update)
   useEffect(() => {
     setIsBookmarked(initialBookmarked);
   }, [initialBookmarked]);

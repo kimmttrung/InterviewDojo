@@ -10,7 +10,6 @@ export const useCancelSession = () => {
     mutationFn: cancelSession,
     onSuccess: () => {
       toast({ title: 'Thành công', description: 'Đã huỷ phiên học' });
-      // Vô hiệu hoá cache để TanStack Query tự động gọi lại API lấy danh sách mới
       queryClient.invalidateQueries({ queryKey: ['sessions'] });
     },
     onError: (error: any) => {

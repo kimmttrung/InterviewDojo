@@ -1,4 +1,3 @@
-// src/features/session/pages/MentorSessionsPage.tsx
 import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
 import { SessionFilters } from '../components/SessionFilters';
 import { SessionListByType } from '../components/SessionListByType';

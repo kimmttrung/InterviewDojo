@@ -5,6 +5,7 @@ export type NotificationItem = {
   message: string;
   targetUrl: string | null;
   isRead: boolean;
+  isPinned?: boolean;
   createdAt: string;
 };
 
