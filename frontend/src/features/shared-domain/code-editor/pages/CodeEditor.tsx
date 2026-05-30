@@ -26,6 +26,8 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   const [loading, setLoading] = useState(false);
   const [selectedLang, setSelectedLang] = useState('63');
 
+  const [consoleHeight, setConsoleHeight] = useState(150);
+
   const { connect, joinRoom, emit, socket } = useSocketStore();
 
   const isPeerMode = mode === 'peer';
@@ -83,12 +85,12 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
   // ====================== SUBMIT CODE ======================
   const submitCode = async () => {
     if (!code.trim() || !currentQuestion) {
-      setOutput('❌ Vui lòng chọn câu hỏi và viết code trước');
+      setOutput('Please select a question and write code before submitting');
       return;
     }
 
     setLoading(true);
-    setOutput('📤 Đang nộp bài...');
+    setOutput('Evaluating...');
 
     try {
       const payload = {
@@ -99,13 +101,13 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
       const submission = await codingService.submitCode(payload);
 
-      const initialMsg = `✅ Nộp bài thành công!\nSubmission ID: ${submission.id}\nĐang chờ hệ thống chấm...`;
+      const initialMsg = `Code submitted successfully!\nSubmission ID: ${submission.id}\nWaiting for system evaluation...`;
       setOutput(initialMsg);
 
       pollSubmission(submission.id);
     } catch (err: any) {
-      const msg = err.response?.data?.message || err.message || 'Lỗi không xác định';
-      const errorMsg = `❌ Nộp bài thất bại: ${msg}`;
+      const msg = err.response?.data?.message || err.message || 'Undefined error';
+      const errorMsg = ` Submission failed: ${msg}`;
       setOutput(errorMsg);
       emit('send_submit_result', { roomId, result: errorMsg }); // Gửi lỗi cho người kia
     } finally {
@@ -130,7 +132,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         text += `Passed: ${data.passedTestCases || 0} / ${data.totalTestCases || '?'}\n`;
         text += `Thời gian: ${data.executionTime || 0}ms | Memory: ${data.memoryUsed || 0}KB\n`;
 
-        if (data.errorMessage) text += `\n❌ Error: ${data.errorMessage}`;
+        if (data.errorMessage) text += `\n Error: ${data.errorMessage}`;
 
         setOutput(text);
 
@@ -148,9 +150,9 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
           let finalResult = text;
           if (data.status === 'ACCEPTED') {
-            finalResult += '\n\n🎉 CHÚC MỪNG! Bạn đã giải đúng tất cả test cases.';
+            finalResult += '\n\n CONGRATULATIONS! You have solved all test cases.';
           } else {
-            finalResult += `\n\nKết quả: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`;
+            finalResult += `\n\nResult: Pass ${data.passedTestCases || 0}/${data.totalTestCases} test cases`;
           }
 
           setOutput(finalResult);
@@ -161,7 +163,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
 
         if (attempts >= maxAttempts) {
           clearInterval(interval);
-          const timeoutMsg = '⏰ Quá thời gian chờ kết quả.';
+          const timeoutMsg = 'Timeout: Exceeded maximum attempts to fetch results.';
           setOutput((prev) => prev + '\n\n' + timeoutMsg);
           emit('send_submit_result', { roomId, result: timeoutMsg });
         }
@@ -170,6 +172,31 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
       }
     }, 1800);
   };
+
+  // 2. KHAI BÁO HÀM KÉO THẢ (RESIZE)
+  const startResizing = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      const startY = e.clientY;
+      const startHeight = consoleHeight;
+
+      const onMouseMove = (moveEvent: MouseEvent) => {
+        const deltaY = moveEvent.clientY - startY;
+
+        const newHeight = Math.max(100, startHeight - deltaY);
+        setConsoleHeight(newHeight);
+      };
+
+      const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+      };
+
+      document.addEventListener('mousemove', onMouseMove);
+      document.addEventListener('mouseup', onMouseUp);
+    },
+    [consoleHeight],
+  );
 
   const currentMonacoLang = languages.find((l) => l.value === selectedLang)?.monaco || 'javascript';
 
@@ -193,7 +220,7 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
           disabled={loading || !currentQuestion}
           className="bg-emerald-600 hover:bg-emerald-700 disabled:bg-gray-600 px-6 py-1.5 rounded text-sm font-semibold flex-1"
         >
-          {loading ? 'ĐANG CHẤM BÀI...' : '🚀 SUBMIT CODE'}
+          {loading ? 'EVALUATING...' : ' SUBMIT CODE'}
         </button>
       </div>
 
@@ -213,17 +240,25 @@ const CodeEditor: React.FC<CodeEditorProps> = ({
         />
       </div>
 
+      {/* 2. Thanh kéo thay đổi chiều cao (Custom Handle) */}
       <div
-        className="bg-black border-t-2 border-gray-700 flex flex-col overflow-hidden"
-        style={{ height: '35%', minHeight: '120px', resize: 'vertical' }}
+        onMouseDown={startResizing}
+        className="w-full h-1.5 bg-gray-700 hover:bg-emerald-500 cursor-row-resize transition-colors shrink-0"
+        title="Drag to resize"
+      />
+
+      <div
+        className="bg-black flex flex-col overflow-hidden shrink-0"
+        style={{ height: `${consoleHeight}px` }}
       >
         <div className="bg-[#252526] px-4 py-2 text-xs font-bold text-gray-400 flex justify-between">
-          <span>CONSOLE / KẾT QUẢ CHẤM BÀI (Chia sẻ với đối phương)</span>
-          <span className="opacity-50">(kéo để thay đổi chiều cao)</span>
+          <span>CONSOLE / RESULTS </span>
         </div>
-        <pre className="p-4 font-mono text-sm whitespace-pre-wrap flex-1 overflow-y-auto text-green-400 leading-relaxed">
-          {output || '> Nhấn SUBMIT CODE để nộp bài và xem kết quả...'}
-        </pre>
+        <div className="flex-1 overflow-auto">
+          <pre className="p-4 font-mono text-sm whitespace-pre-wrap text-green-400 leading-relaxed min-h-full">
+            {output || '> Press SUBMIT CODE to submit your code and view the results...'}
+          </pre>
+        </div>
       </div>
     </div>
   );

@@ -1,10 +1,5 @@
 // src/components/interview/ChatAndNotes.tsx
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '../../../../../../shared/components/ui/tabs';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/shared/components/ui/tabs';
 import { useState } from 'react';
 import { Paperclip, Send } from 'lucide-react';
 
@@ -15,8 +10,7 @@ export function ChatAndNotes() {
     const file = e.target.files?.[0];
     if (file) {
       setSelectedFile(file);
-      alert(`Bạn đã chọn file: ${file.name}`);
-      // Xử lý gửi file qua Socket ở đây
+      alert(`You have selected file: ${file.name}`);
     }
   };
 

@@ -1,5 +1,4 @@
 // src/pages/InterviewRoom/components/QuestionPanel.tsx
-import { useState } from 'react';
 import { Loader2, Shuffle, ChevronDown, Layers, SearchX } from 'lucide-react';
 import { QuestionType } from '../../../../../shared-domain/question-bank/types/question.types';
 import { TheoryView } from '../../../../../shared-domain/question-bank/components/QuestionDetail/TheoryView';
@@ -39,7 +38,7 @@ export function QuestionPanel({
     : null;
 
   return (
-    <aside className="w-[30%] min-w-[350px] border-r border-slate-200 bg-white flex flex-col h-full max-h-full overflow-hidden">
+    <aside className="w-full h-full border-r border-slate-200 bg-white flex flex-col overflow-hidden">
       {/* 1. Filter Section (Giống QuestionFilters) */}
       <div className="p-4 border-b bg-slate-50/50 space-y-3">
         <h3 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">

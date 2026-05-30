@@ -30,7 +30,11 @@ export function VideoCallLayout({ onLeave }: VideoCallLayoutProps) {
   }, [call]);
 
   if (!call) {
-    return <div className="text-white">Đang tải cuộc gọi...</div>;
+    return (
+      <div className="flex items-center justify-center h-screen w-full bg-black text-white">
+        Please wait...
+      </div>
+    );
   }
 
   const handleShare = async () => {
@@ -38,11 +42,10 @@ export function VideoCallLayout({ onLeave }: VideoCallLayoutProps) {
       await call.screenShare.toggle();
     } catch (err) {
       console.error('Share screen error:', err);
-      alert('Không thể chia sẻ màn hình. Vui lòng cho phép quyền truy cập.');
+      alert('Cannot share screen. Please allow access permissions.');
     }
   };
 
-  // Xử lý rời phòng: tắt camera, mic, rời gọi
   const handleLeave = async () => {
     try {
       if (call) {
@@ -52,23 +55,26 @@ export function VideoCallLayout({ onLeave }: VideoCallLayoutProps) {
       }
       onLeave();
     } catch (err) {
-      console.error('Lỗi khi rời phòng:', err);
+      console.error('Error leaving room:', err);
       onLeave();
     }
   };
 
   return (
-    <div className="relative h-screen w-full bg-black">
-      <div className="absolute inset-0 z-0">
-        <SpeakerLayout />
+    // Thêm overflow-hidden để tránh xuất hiện thanh cuộn không mong muốn
+    <div className="relative h-screen w-full bg-black overflow-hidden flex flex-col">
+      {/* Vùng chứa Layout chính. Thêm padding-bottom (pb-24) để video không bị che bởi thanh công cụ */}
+      <div className="flex-1 w-full h-full p-4 pb-24 z-0">
+        <SpeakerLayout participantsBarPosition="right" />
       </div>
 
       {isSharing && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm">
-          🔴 Bạn đang chia sẻ màn hình
+        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-20 bg-black/70 text-white px-4 py-2 rounded-full text-sm backdrop-blur-sm border border-white/10">
+          🔴 You are sharing your screen
         </div>
       )}
 
+      {/* Thanh công cụ điều khiển */}
       <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex gap-3 p-2 bg-gray-900/80 backdrop-blur-md rounded-full border border-white/20 shadow-lg z-30">
         <button
           onClick={() => call.microphone.toggle()}
@@ -95,7 +101,7 @@ export function VideoCallLayout({ onLeave }: VideoCallLayoutProps) {
           className={`p-3 rounded-full transition-all ${
             isSharing ? 'bg-green-600 hover:bg-green-700' : 'bg-gray-700 hover:bg-gray-600'
           } text-white`}
-          title="Chia sẻ màn hình"
+          title="Share Screen"
         >
           <MonitorUp size={20} />
         </button>
