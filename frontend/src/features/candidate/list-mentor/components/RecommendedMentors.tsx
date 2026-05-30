@@ -1,4 +1,4 @@
-import { Loader2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, ChevronLeft, ChevronRight, Sparkle } from 'lucide-react';
 import { useRef, useEffect } from 'react';
 
 import { Button } from '@/shared/components/ui/button';
@@ -70,7 +70,7 @@ export const RecommendedMentors = () => {
       <div className="mb-6">
         <div className="flex items-center gap-2.5">
           {/* Tăng kích thước icon cúp phù hợp với chữ tiêu đề mới */}
-          <span className="text-2xl">🏆</span>
+          <Sparkle className="h-6 w-6 text-amber-500 animate-pulse" />
 
           {/* Thay text-xl (20px) thành text-2xl (24px) để tiêu đề to, nổi bật rõ ràng */}
           <h2 className="text-2xl font-extrabold tracking-tight text-slate-900">

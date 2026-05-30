@@ -39,13 +39,13 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
       if (q.type === 'TEXT') {
         const answer = answers[String(q.id)];
         if (!answer || answer.trim() === '') {
-          toast.error(`Vui lòng trả lời câu hỏi: ${q.question}`);
+          toast.error(`Please answer the question: ${q.question}`);
           return false;
         }
       } else if (q.type === 'FILE') {
         const file = fileAnswers[String(q.id)];
         if (!file) {
-          toast.error(`Vui lòng tải lên file cho câu hỏi: ${q.question}`);
+          toast.error(`Please upload a file for the question: ${q.question}`);
           return false;
         }
       }
@@ -55,7 +55,7 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
 
   const handleContinue = () => {
     if (!session) {
-      toast.error('Vui lòng chọn khung giờ');
+      toast.error('Please select a time slot');
       return;
     }
     if (!validateQuestions()) return;
@@ -83,10 +83,10 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
         queryClient.invalidateQueries({ queryKey: ['bookings'] }),
         queryClient.invalidateQueries({ queryKey: ['current-user'] }),
       ]);
-      toast.success('Đặt lịch thành công');
+      toast.success('Booking successful');
       onClose();
     } catch (error: any) {
-      toast.error(error?.response?.data?.message || 'Có lỗi xảy ra');
+      toast.error(error?.response?.data?.message || 'An error occurred');
     }
   };
 
@@ -111,7 +111,7 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
       <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-2xl bg-white p-6 shadow-xl">
         <div className="mb-6 flex items-center justify-between">
           <h2 className="text-2xl font-bold">
-            {step === 'CONFIRM' ? 'Xác nhận thanh toán' : `Đặt lịch: ${plan.title}`}
+            {step === 'CONFIRM' ? 'Confirm Payment' : `Book Appointment: ${plan.title}`}
           </h2>
           <button
             disabled={isProcessing}
@@ -132,7 +132,7 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
             />
             {plan.questions.length > 0 && (
               <div className="mt-6 space-y-4">
-                <h3 className="font-medium">Thông tin bổ sung</h3>
+                <h3 className="font-medium">Additional Information</h3>
                 {plan.questions.map((q) => (
                   <div key={q.id}>
                     <label className="mb-1 block text-sm font-medium">
@@ -165,18 +165,18 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
                 disabled={!session}
                 className="bg-indigo-600 hover:bg-indigo-700"
               >
-                Tiếp tục
+                Continue
               </Button>
             </div>
           </>
         ) : (
           <div className="space-y-4">
             <div className="flex justify-between">
-              <span className="text-gray-600">Dịch vụ</span>
+              <span className="text-gray-600">Service</span>
               <span className="font-medium">{plan.title}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Thời gian</span>
+              <span className="text-gray-600">Time</span>
               <span className="font-medium">
                 {session &&
                   `${formatICTTime(session.startTime)} - ${formatICTTime(session.endTime)}`}
@@ -184,35 +184,35 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
             </div>
             <hr />
             <div className="flex justify-between">
-              <span className="text-gray-600">Giá</span>
+              <span className="text-gray-600">Price</span>
               <span className="font-semibold">{plan.price} credits</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Số dư hiện tại</span>
+              <span className="text-gray-600">Current Balance</span>
               <span>{balance} credits</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-gray-600">Còn lại sau thanh toán</span>
+              <span className="text-gray-600">Remaining Balance</span>
               <span className={insufficient ? 'text-red-500' : 'text-green-600'}>
                 {remaining} credits
               </span>
             </div>
             {insufficient && (
-              <div className="text-sm text-red-500">Số dư không đủ để thanh toán</div>
+              <div className="text-sm text-red-500">Insufficient balance to complete payment</div>
             )}
             <div className="mt-6 flex justify-end gap-3">
               <Button variant="outline" disabled={isProcessing} onClick={() => setStep('FORM')}>
-                Quay lại
+                Back
               </Button>
               {insufficient ? (
-                <Button variant="outline">Nạp thêm credits</Button>
+                <Button variant="outline">Top up credits</Button>
               ) : (
                 <Button
                   onClick={handleConfirmPayment}
                   disabled={isProcessing}
                   className="bg-indigo-600 hover:bg-indigo-700"
                 >
-                  {isProcessing ? 'Đang xử lý...' : 'Xác nhận thanh toán'}
+                  {isProcessing ? 'Processing...' : 'Confirm Payment'}
                 </Button>
               )}
             </div>

@@ -186,7 +186,7 @@ export const CommentItem: React.FC<Props> = ({
               className={`prose prose-sm max-w-none ${comment.isDeleted ? 'text-gray-400 italic' : 'text-gray-700'}`}
             >
               {comment.isDeleted ? (
-                <p>Bình luận này đã bị xóa.</p>
+                <p>The comment has been deleted.</p>
               ) : (
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>{comment.content}</ReactMarkdown>
               )}
@@ -200,7 +200,7 @@ export const CommentItem: React.FC<Props> = ({
                 onClick={() => setReplyingTo(comment.id)}
                 className="hover:text-indigo-600 transition-colors"
               >
-                Trả lời
+                Answer
               </button>
 
               <button
@@ -221,7 +221,7 @@ export const CommentItem: React.FC<Props> = ({
                 onSubmit={handleReplySubmit}
                 onCancel={() => setReplyingTo(null)}
                 isLoading={createMutation.isPending}
-                placeholder={`Trả lời ${comment.user.name}...`}
+                placeholder={`Reply to ${comment.user.name}...`}
                 autoFocus={true}
               />
             </div>

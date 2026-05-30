@@ -9,7 +9,7 @@ interface PlanSelectorProps {
 export function PlanSelector({ plans, selectedPlanId, onSelect }: PlanSelectorProps) {
   return (
     <div className="space-y-4">
-      <h2 className="text-xl font-semibold">Chọn dịch vụ</h2>
+      <h2 className="text-xl font-semibold">Select a service</h2>
       <div className="grid gap-4 md:grid-cols-2">
         {plans.map((plan) => (
           <div
@@ -26,7 +26,7 @@ export function PlanSelector({ plans, selectedPlanId, onSelect }: PlanSelectorPr
               <p className="text-sm text-gray-600 mt-1 line-clamp-2">{plan.description}</p>
             )}
             <div className="mt-3 flex justify-between items-center">
-              <span className="text-sm font-medium">{plan.duration} phút</span>
+              <span className="text-sm font-medium">{plan.duration} minutes</span>
               <span className="text-lg font-bold">{plan.price.toLocaleString('vi-VN')} credit</span>
             </div>
           </div>

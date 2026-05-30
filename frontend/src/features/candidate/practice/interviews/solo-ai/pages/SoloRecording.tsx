@@ -135,7 +135,7 @@ export default function SoloRecording() {
         }
       } catch (error) {
         console.error('Fetch questions failed:', error);
-        toast.error('Không tải được danh sách câu hỏi');
+        toast.error('Failed to load questions list');
       }
     };
 
@@ -146,14 +146,14 @@ export default function SoloRecording() {
     };
   }, [typeFilter, difficultyFilter, resetQuestionSelection]);
 
-  //AUTO-SCROLL TRANSCRIPT
+  // AUTO-SCROLL TRANSCRIPT
   useEffect(() => {
     if (transcriptScrollRef.current) {
       transcriptScrollRef.current.scrollTop = transcriptScrollRef.current.scrollHeight;
     }
   }, [liveTranscript, isInterim]);
 
-  //FULLSCREEN CỦA TRÌNH DUYỆT
+  // FULLSCREEN CHANGE LISTENER
   useEffect(() => {
     const handleFullscreenChange = () => {
       setIsFullscreen(!!document.fullscreenElement);
@@ -212,22 +212,19 @@ export default function SoloRecording() {
     if (step !== 'recording' || !mediaRecorderRef.current) return;
 
     if (mediaRecorderRef.current.state === 'recording') {
-      // TẠM DỪNG
       mediaRecorderRef.current.pause();
       recognitionRef.current?.stop();
       clearInterval((window as any).recordingTimer);
       setIsPaused(true);
-      toast.warning('Đã tạm dừng ghi hình', { description: 'Nhấn Space để tiếp tục' });
+      toast.warning('Recording paused', { description: 'Press Space to resume' });
     } else if (mediaRecorderRef.current.state === 'paused') {
-      // TIẾP TỤC
       mediaRecorderRef.current.resume();
-
       recognitionRef.current?.start();
 
       const timer = setInterval(() => setSeconds((s) => s + 1), 1000);
       (window as any).recordingTimer = timer;
       setIsPaused(false);
-      toast.success('Đã tiếp tục ghi hình', { description: 'Hệ thống đang thu âm...' });
+      toast.success('Recording resumed', { description: 'The system is recording audio...' });
     }
   }, [step]);
 
@@ -254,12 +251,10 @@ export default function SoloRecording() {
     recognitionRef.current?.start();
   };
 
-  // Stop stream
   useEffect(() => {
     return () => stopStream();
   }, []);
 
-  // Start stream
   useEffect(() => {
     if (step === 'recording' && videoRef.current && streamRef.current) {
       videoRef.current.srcObject = streamRef.current;
@@ -275,7 +270,7 @@ export default function SoloRecording() {
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
-      recognition.lang = 'vi-VN'; // Đặt ngôn ngữ tiếng Việt
+      recognition.lang = 'vi-VN';
 
       recognition.onresult = (event: any) => {
         if (isPaused) return;
@@ -316,10 +311,9 @@ export default function SoloRecording() {
     };
   }, [step, isPaused]);
 
-  // Space pause
+  // Space pause key handler
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Chặn cuộn trang khi bấm Space lúc đang record
       if (e.code === 'Space' && step === 'recording') {
         e.preventDefault();
         togglePauseResume();
@@ -331,9 +325,7 @@ export default function SoloRecording() {
 
   // Try Again
   const handleTryAgain = () => {
-    //stopStream();
     recognitionRef.current?.abort();
-
     setLiveTranscript('');
     setIsInterim('');
     setStep('setup');
@@ -342,18 +334,16 @@ export default function SoloRecording() {
     chunksRef.current = [];
   };
 
-  //  Start Interview
+  // Start Interview
   const handleStartInterview = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
       streamRef.current = stream;
       setIsCamOn(true);
       setIsMicOn(true);
-
-      // Đổi sang màn hình recording -> Tự động kích hoạt useEffect số 2 để đếm giờ
       setStep('recording');
     } catch (err) {
-      alert('Không thể truy cập Camera/Mic. Vui lòng kiểm tra quyền trên trình duyệt.');
+      alert('Unable to access Camera/Microphone. Please verify permissions in your browser.');
     }
   };
 
@@ -362,27 +352,20 @@ export default function SoloRecording() {
       mediaRecorderRef.current.stop();
     }
     clearInterval((window as any).recordingTimer);
-
     recognitionRef.current?.abort();
-
     stopStream();
     setStep('preview');
   };
 
-  // Hàm tách audio từ video blob một cách đúng chuẩn (sử dụng Web Audio API)
+  // Audio extraction using Web Audio API
   const extractAudioFromVideoBlob = async (videoBlob: Blob): Promise<Blob> => {
     return new Promise((resolve, reject) => {
       const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
-
       const reader = new FileReader();
       reader.onload = async () => {
         try {
           const arrayBuffer = reader.result as ArrayBuffer;
-
-          // Decode video blob thành AudioBuffer (chỉ lấy phần audio)
           const audioBuffer = await audioContext.decodeAudioData(arrayBuffer);
-
-          // Tạo OfflineAudioContext để render lại audio
           const offlineContext = new OfflineAudioContext(
             audioBuffer.numberOfChannels,
             audioBuffer.length,
@@ -395,13 +378,10 @@ export default function SoloRecording() {
           source.start(0);
 
           const renderedBuffer = await offlineContext.startRendering();
-
-          // Convert AudioBuffer thành WAV (dễ upload và Azure Speech xử lý tốt)
           const wavBlob = audioBufferToWav(renderedBuffer);
           resolve(wavBlob);
         } catch (err) {
           console.error('Extract audio failed:', err);
-          // Fallback: thử gửi video blob với type audio/webm
           resolve(new Blob([videoBlob], { type: 'audio/webm' }));
         }
       };
@@ -410,7 +390,7 @@ export default function SoloRecording() {
     });
   };
 
-  // Helper: Convert AudioBuffer → WAV Blob (rất cần cho Azure Speech)
+  // AudioBuffer → WAV Blob Converter
   const audioBufferToWav = (buffer: AudioBuffer): Blob => {
     const numChannels = buffer.numberOfChannels;
     const sampleRate = buffer.sampleRate;
@@ -420,17 +400,14 @@ export default function SoloRecording() {
     const bytesPerSample = bitDepth / 8;
     const blockAlign = numChannels * bytesPerSample;
     const dataSize = buffer.length * blockAlign;
-    const bufferSize = 44 + dataSize; // WAV header 44 bytes
+    const bufferSize = 44 + dataSize;
 
     const arrayBuffer = new ArrayBuffer(bufferSize);
     const view = new DataView(arrayBuffer);
 
-    // RIFF header
     writeString(view, 0, 'RIFF');
     view.setUint32(4, 36 + dataSize, true);
     writeString(view, 8, 'WAVE');
-
-    // fmt subchunk
     writeString(view, 12, 'fmt ');
     view.setUint32(16, 16, true);
     view.setUint16(20, format, true);
@@ -439,12 +416,9 @@ export default function SoloRecording() {
     view.setUint32(28, sampleRate * blockAlign, true);
     view.setUint16(32, blockAlign, true);
     view.setUint16(34, bitDepth, true);
-
-    // data subchunk
     writeString(view, 36, 'data');
     view.setUint32(40, dataSize, true);
 
-    // Write PCM samples
     let offset = 44;
     for (let i = 0; i < buffer.length; i++) {
       for (let channel = 0; channel < numChannels; channel++) {
@@ -463,27 +437,22 @@ export default function SoloRecording() {
     }
   };
 
-  // ==========================================
-  // HÀM CHÍNH: ĐIỀU PHỐI LUỒNG CHẠY
-  // Ver 5: Chạy ngầm upload video, song song với AI analysis
   const handleUploadAndAnalyze = async () => {
     if (!currentUser) return alert('Please log in to continue');
     const finalTranscriptText = (liveTranscript + ' ' + isInterim).trim();
     if (!finalTranscriptText) {
-      return alert('Không nhận diện được giọng nói của bạn. Vui lòng thử thu âm lại!');
+      return alert('Your speech could not be recognized. Please try recording again!');
     }
     setIsUploading(true);
 
     try {
-      // 1. Chuẩn bị file
       const videoBlob = new Blob(chunksRef.current, { type: 'video/webm' });
       const videoFile = new File([videoBlob], 'video.webm', { type: 'video/webm' });
 
-      console.log('Bắt đầu tách audio từ video...');
+      console.log('Starting audio extraction from video...');
       const audioBlob = await extractAudioFromVideoBlob(videoBlob);
       const audioFile = new File([audioBlob], 'audio.wav', { type: 'audio/wav' });
 
-      // 2. CHUẨN BỊ FORM DATA CHO CẢ HAI
       const analyzePayload = {
         userId: Number(currentUser.id),
         duration: seconds,
@@ -494,76 +463,67 @@ export default function SoloRecording() {
       const videoFormData = new FormData();
       videoFormData.append('file', videoFile, 'video.webm');
 
-      console.log('🚀 Bắn TEXT (JSON) và Video (FormData) đi cùng lúc...');
+      console.log('Sending JSON text and Video FormData concurrently...');
       const audioPromise = soloRecordingService.uploadAudioAndAnalyze(analyzePayload);
       const videoPromise = soloRecordingService.uploadVideo(videoFormData);
 
-      // 4. CHỈ CHỜ AUDIO & AI PHÂN TÍCH (Ưu tiên UX - Trả kết quả ngay)
       const analyzeRes = await audioPromise;
       let analysisData = analyzeRes?.data || analyzeRes;
       if (analysisData?.data) analysisData = analysisData.data;
       if (analysisData?.data) analysisData = analysisData.data;
 
-      // Bắt chính xác ID của bản ghi để tý nữa gắn Video vào
       const currentRecordingId = analysisData?.sessionId || analysisData?.id;
 
-      console.log('✅ Dữ liệu bóc được:', analysisData);
-      console.log('✅ ID Bản ghi hiện tại:', currentRecordingId);
-      console.log('✅ Phân tích AI hoàn tất! ID Bản ghi hiện tại:', currentRecordingId);
+      console.log('Parsed data:', analysisData);
+      console.log('Current record ID:', currentRecordingId);
+      console.log('AI Analysis complete! Current record ID:', currentRecordingId);
 
       if (!currentRecordingId) {
-        alert('Không lấy được ID bản ghi từ Backend! Hãy kiểm tra console log.');
+        alert('Could not retrieve record ID from Backend! Please check the console log.');
         setIsUploading(false);
         return;
       }
 
       navigate(`/ai-analysis/${currentRecordingId}`);
-
       setIsUploading(false);
 
-      // 5. XỬ LÝ VIDEO CHẠY NGẦM DƯỚI BACKGROUND
+      // Background video processing
       videoPromise
         .then(async (videoRes: any) => {
-          console.group('--- 🔍 DEBUG LUỒNG VIDEO NGẦM ---');
-          console.log('1. Phản hồi gốc từ API Upload Video:', videoRes);
+          console.group('--- DEBUG BACKGROUND VIDEO FLOW ---');
+          console.log('Raw response from Upload Video API:', videoRes);
 
-          // Bóc tách lớp dữ liệu (Quét mọi ngóc ngách của Axios)
           let vPayload = videoRes?.data || videoRes;
           if (vPayload?.data) vPayload = vPayload.data;
           if (vPayload?.data) vPayload = vPayload.data;
 
-          // Lấy URL: Ưu tiên 'videoUrl' do Backend trả về, phòng hờ 'secure_url' của Cloudinary
           const finalVideoUrl = vPayload?.videoUrl || vPayload?.secure_url;
           const finalPublicId = vPayload?.publicId || vPayload?.public_id;
 
-          console.log('2. URL bóc được:', finalVideoUrl);
-          console.log('3. ID Bản ghi chuẩn bị ghép:', currentRecordingId);
+          console.log('Extracted URL:', finalVideoUrl);
+          console.log('Record ID to bind:', currentRecordingId);
 
           if (finalVideoUrl && finalPublicId && currentRecordingId) {
-            console.log('4. 🚀 Đang bắn lệnh PATCH lên server để lưu Database...');
-
-            // Gọi API PATCH cập nhật URL
+            console.log('Sending PATCH command to update server database...');
             const patchRes = await soloRecordingService.updateVideoUrl(
               currentRecordingId,
               finalVideoUrl,
               finalPublicId,
             );
-
-            console.log('5. 🎉 Server trả lời PATCH thành công:', patchRes?.data || 'OK');
+            console.log('Server PATCH call succeeded:', patchRes?.data || 'OK');
           } else {
-            console.warn('⚠️ THẤT BẠI: Thiếu URL Video hoặc Thiếu ID Bản ghi! Không thể cập nhật.');
+            console.warn('FAILED: Missing Video URL or Record ID! Update skipped.');
           }
           console.groupEnd();
         })
         .catch((err) => {
-          console.error('❌ Upload video ngầm bị lỗi:', err.response?.data || err);
+          console.error('Background video upload error:', err.response?.data || err);
         });
     } catch (err: any) {
-      console.error('Lỗi nghiêm trọng trong luồng AI:', err.response?.data || err);
-      // Hiển thị thông báo thân thiện nếu lỗi 422 (Không có tiếng)
+      console.error('Critical failure in AI flow:', err.response?.data || err);
       const errorMessage =
         err.response?.data?.message ||
-        'Không thể thực hiện phân tích AI. Vui lòng kiểm tra lại mic.';
+        'Unable to perform AI analysis. Please verify your microphone connection.';
       alert(errorMessage);
       setIsUploading(false);
     }
@@ -584,6 +544,7 @@ export default function SoloRecording() {
                   Practice your interview answers and receive AI-powered feedback.
                 </p>
               </div>
+
               {isPreselected ? (
                 /* === PRESELECTED: Hiển thị câu hỏi confirm, bỏ filter === */
                 <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
@@ -679,8 +640,7 @@ export default function SoloRecording() {
                       value={selectedQuestionId ?? ''}
                       onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
                     >
-                      {questions.length === 0 && <option value="">Không có câu hỏi phù hợp</option>}
-
+                      {questions.length === 0 && <option value="">No matching questions</option>}
                       {questions.map((q) => (
                         <option key={q.id} value={q.id}>
                           {getQuestionText(q)}
@@ -709,8 +669,7 @@ export default function SoloRecording() {
                     Start Practice Session
                   </Button>
                 </Card>
-              )}{' '}
-              {/* end isPreselected else */}
+              )}
             </div>
           )}
 
@@ -719,7 +678,6 @@ export default function SoloRecording() {
             <div
               className={`space-y-6 animate-in slide-in-from-bottom-4 duration-500 ${isFullscreen ? 'h-screen flex flex-col justify-center' : ''}`}
             >
-              {/* Thanh Header: Ẩn đi khi đang Fullscreen */}
               {!isFullscreen && (
                 <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border">
                   <div className="flex items-center gap-4">
@@ -748,7 +706,6 @@ export default function SoloRecording() {
                 </div>
               )}
 
-              {/* KHUNG VIDEO CHÍNH */}
               <div
                 ref={videoContainerRef}
                 className={`relative group bg-black rounded-3xl overflow-hidden ${isFullscreen ? 'w-full h-full border-0 rounded-none' : 'aspect-video border-4 border-white shadow-2xl'}`}
@@ -770,20 +727,16 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* Màn hình mờ khi Paused */}
                 {isPaused && (
                   <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center z-10 animate-in fade-in">
                     <div className="bg-amber-500/20 p-6 rounded-full mb-4">
                       <Pause size={48} className="text-amber-400" />
                     </div>
-                    <h2 className="text-3xl font-bold text-white mb-2">Đã tạm dừng</h2>
-                    <p className="text-amber-200 text-lg font-medium">
-                      Nhấn phím SPACE để tiếp tục
-                    </p>
+                    <h2 className="text-3xl font-bold text-white mb-2">Paused</h2>
+                    <p className="text-amber-200 text-lg font-medium">Press SPACE to continue</p>
                   </div>
                 )}
 
-                {/* Subtitle STT (Có thể ẩn/hiện và cuộn) */}
                 {showTranscript && (
                   <div className="absolute bottom-24 left-1/2 -translate-x-1/2 w-4/5 max-w-3xl pointer-events-none z-0">
                     <div className="bg-black/70 backdrop-blur-md p-5 rounded-xl border border-white/10 text-white shadow-lg flex flex-col h-[140px]">
@@ -807,7 +760,6 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* Câu hỏi (Có thể ẩn/hiện) */}
                 {showQuestion && (
                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-12 pointer-events-none z-0">
                     <div className="bg-indigo-600/95 backdrop-blur-md py-3 px-6 rounded-full border border-white/20 text-center text-white shadow-xl inline-block max-w-full truncate">
@@ -819,7 +771,6 @@ export default function SoloRecording() {
                   </div>
                 )}
 
-                {/* CỤM NÚT BẤM (Floating Controls) */}
                 <div
                   className={`absolute right-6 flex flex-col gap-3 z-20 transition-all ${isFullscreen ? 'top-1/2 -translate-y-1/2' : 'top-6'}`}
                 >
@@ -856,7 +807,6 @@ export default function SoloRecording() {
 
                   <div className="w-12 border-t border-white/20 my-1" />
 
-                  {/* Tạm dừng */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -866,7 +816,6 @@ export default function SoloRecording() {
                     {isPaused ? <Play size={20} className="ml-1" /> : <Pause size={20} />}
                   </Button>
 
-                  {/* Ẩn/hiện chữ */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -876,7 +825,6 @@ export default function SoloRecording() {
                     <Subtitles size={20} />
                   </Button>
 
-                  {/* Ẩn/hiện câu hỏi */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -886,7 +834,6 @@ export default function SoloRecording() {
                     {showQuestion ? <MessageSquare size={20} /> : <MessageSquareOff size={20} />}
                   </Button>
 
-                  {/* Phóng to */}
                   <Button
                     variant="outline"
                     size="icon"
@@ -896,7 +843,6 @@ export default function SoloRecording() {
                     {isFullscreen ? <Minimize size={20} /> : <Maximize size={20} />}
                   </Button>
 
-                  {/* Nút Kết thúc dời vào trong khi Fullscreen */}
                   {isFullscreen && (
                     <Button
                       variant="destructive"

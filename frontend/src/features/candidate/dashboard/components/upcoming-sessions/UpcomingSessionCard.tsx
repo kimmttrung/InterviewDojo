@@ -48,7 +48,7 @@ export const UpcomingSessionCard = ({ session }: UpcomingSessionCardProps) => {
         {/* Cụm bên phải giờ chỉ còn duy nhất nút Xem chi tiết */}
         <div className="flex items-center">
           <Button variant="outline" asChild>
-            <Link to={`/sessions`}>Xem chi tiết</Link>
+            <Link to={`/sessions`}>View details</Link>
           </Button>
         </div>
       </div>

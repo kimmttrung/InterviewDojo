@@ -48,7 +48,7 @@ export default function MentorDetailPage() {
           className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline mb-2"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại danh sách mentor
+          Back to mentors list
         </button>
         <MentorProfileSection mentor={mentor} />
         <MentorSkillsSection skills={mentor.skills ?? []} />

@@ -13,14 +13,6 @@ import { useCurrentUser } from '@/features/auth';
 
 import type { AnalyticsOverviewData as Analytics } from '../../dashboard.type';
 
-// const getScoreLabel = (score: number) => {
-//   if (score >= 9.0) return { text: 'Excellent', className: 'text-emerald-500' };
-//   if (score >= 8.0) return { text: 'Very Good', className: 'text-teal-500' };
-//   if (score >= 6.5) return { text: 'Good', className: 'text-indigo-500' };
-//   if (score >= 5.0) return { text: 'Average', className: 'text-amber-500' };
-//   return { text: 'Need Improvement', className: 'text-rose-500' };
-// };
-
 type StatCardProps = {
   title: string;
   value: number | string;
@@ -74,7 +66,14 @@ const AnalyticsOverview = ({ analytics }: { analytics: Analytics }) => {
     if (activeFilter === 'ALL') {
       return analytics.overallScore;
     }
-    const targetType = activeFilter === 'MENTORING' ? 'MENTOR_BOOKING' : activeFilter;
+
+    let targetType = activeFilter;
+    if (activeFilter === 'MENTORING') {
+      targetType = 'MENTOR_BOOKING';
+    } else if (activeFilter === 'P2P') {
+      targetType = 'P2P_MATCH';
+    }
+
     const filtered = chartData.filter((d: any) => d.sessionType === targetType);
 
     if (filtered.length === 0) return 0;
@@ -82,8 +81,6 @@ const AnalyticsOverview = ({ analytics }: { analytics: Analytics }) => {
     const sum = filtered.reduce((acc: number, cur: any) => acc + cur.score, 0);
     return Number((sum / filtered.length).toFixed(1));
   }, [analytics, activeFilter]);
-
-  // const scoreInfo = getScoreLabel(dynamicAverageScore);
 
   return (
     <div className="space-y-6">
@@ -120,9 +117,6 @@ const AnalyticsOverview = ({ analytics }: { analytics: Analytics }) => {
                   <span className="text-3xl font-bold leading-none">
                     {dynamicAverageScore.toFixed(1)}
                   </span>
-                  {/* <span className={`pb-0.5 text-sm font-semibold ${scoreInfo.className}`}>
-                    {scoreInfo.text}
-                  </span> */}
                 </div>
               </div>
             </div>
@@ -133,7 +127,7 @@ const AnalyticsOverview = ({ analytics }: { analytics: Analytics }) => {
       {/* STATS */}
       <AnalyticsStats analytics={analytics} />
 
-      {/* CHART (Được truyền state filter để đồng bộ nút bấm và biểu đồ) */}
+      {/* CHART */}
       <ScoreLineChart
         data={analytics.scoreChart}
         activeFilter={activeFilter}
