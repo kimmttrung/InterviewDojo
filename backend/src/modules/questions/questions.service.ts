@@ -76,6 +76,7 @@ export class QuestionsService {
       slug: rawQ.slug,
       difficulty: rawQ.difficulty,
       type: rawQ.type,
+      questionType: rawQ.type,
       isPublished: rawQ.isPublished,
       createdAt: rawQ.createdAt,
       updatedAt: rawQ.updated_at,
@@ -197,8 +198,14 @@ export class QuestionsService {
     userRole?: string,
     userId?: number,
   ): Promise<QuestionDetail> {
+    // 🔥 Chỉ admin mới được xem câu hỏi chưa publish
+    const where: any = { id };
+    if (userRole !== 'ADMIN') {
+      where.isPublished = true;
+    }
+
     const rawQ = await this.prisma.question.findFirst({
-      where: { id },
+      where,
       include: {
         categories: { include: { category: true } },
         companies: { include: { company: true } },

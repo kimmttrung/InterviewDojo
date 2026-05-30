@@ -1,10 +1,7 @@
+// backend/src/modules/questions/questions.controller.ts
 import {
   Controller,
   Get,
-  Post,
-  Put,
-  Delete,
-  Body,
   Param,
   Query,
   HttpCode,
@@ -14,8 +11,6 @@ import {
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { QuestionsService } from './questions.service';
-import { CreateQuestionDto } from './dto/create-question.dto';
-import { UpdateQuestionDto } from './dto/update-question.dto';
 import { GetQuestionsDto } from './dto/get-questions.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
@@ -41,7 +36,7 @@ export class QuestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy danh sách câu hỏi' })
   @ResponseMessage(Messages.QUESTIONS.FETCHED)
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR)
   async findAll(
     @Query() query: GetQuestionsDto,
     @CurrentUser() user: JwtPayload,
@@ -54,7 +49,7 @@ export class QuestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy câu hỏi ngẫu nhiên theo bộ lọc' })
   @ResponseMessage(Messages.QUESTIONS.RANDOM_FETCHED)
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR)
   async getRandomQuestion(
     @Query() filter: RandomQuestionDto,
     @CurrentUser() user: JwtPayload,
@@ -66,42 +61,12 @@ export class QuestionsController {
   @HttpCode(HttpStatus.OK)
   @ApiOperation({ summary: 'Lấy chi tiết 1 câu hỏi' })
   @ResponseMessage(Messages.QUESTIONS.FETCH_ONE)
-  @Roles(Role.CANDIDATE, Role.MENTOR, Role.ADMIN)
+  @Roles(Role.CANDIDATE, Role.MENTOR)
   async findOne(
     @Param('id', ParseIntPipe) id: number,
     @CurrentUser() user: JwtPayload,
   ): Promise<QuestionDetail> {
     const userId = user ? Number(user.sub) : undefined;
     return this.questionsService.findOne(id, user?.role, userId);
-  }
-
-  @Post()
-  @HttpCode(HttpStatus.CREATED)
-  @ApiOperation({ summary: 'Tạo câu hỏi mới' })
-  @ResponseMessage(Messages.QUESTIONS.CREATED)
-  @Roles(Role.ADMIN)
-  async create(@Body() createQuestionDto: CreateQuestionDto) {
-    return this.questionsService.create(createQuestionDto);
-  }
-
-  @Put(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Cập nhật câu hỏi' })
-  @ResponseMessage(Messages.QUESTIONS.UPDATED)
-  @Roles(Role.ADMIN)
-  async update(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateQuestionDto: UpdateQuestionDto,
-  ) {
-    return this.questionsService.update(id, updateQuestionDto);
-  }
-
-  @Delete(':id')
-  @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Xóa câu hỏi' })
-  @ResponseMessage(Messages.QUESTIONS.DELETED)
-  @Roles(Role.ADMIN)
-  async remove(@Param('id', ParseIntPipe) id: number) {
-    return this.questionsService.remove(id);
   }
 }
