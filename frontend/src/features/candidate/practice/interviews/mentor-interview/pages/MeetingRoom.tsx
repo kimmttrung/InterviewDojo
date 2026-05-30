@@ -9,17 +9,19 @@ import { FeedbackModal } from '@/features/shared-domain/feedback/components/Feed
 import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
 import { useSessionDetail } from '@/features/session/hooks/useSessionDetail';
 import { useCurrentUser } from '@/features/auth';
+import { useToast } from '@/hooks/use-toast';
+import { Timer } from 'lucide-react';
 
 export default function MeetingRoom() {
   const { client, call, isLoading, error } = useMeeting();
   const navigate = useNavigate();
   const { roomId } = useParams();
   const sessionIdNum = roomId ? parseInt(roomId.split('-').pop() || '', 10) : NaN;
+  const { toast } = useToast();
 
   const { data: user } = useCurrentUser();
-  const { data: session, isLoading: sessionLoading } = useSessionDetail(sessionIdNum);
+  const { data: session } = useSessionDetail(sessionIdNum);
 
-  // Xác định mode dựa vào user.id và session.mentorId / candidateId
   const getFeedbackMode = () => {
     if (!session || !user) return null;
     if (user.id === session.mentorId) return 'MENTOR_TO_CANDIDATE';
@@ -32,16 +34,19 @@ export default function MeetingRoom() {
   const [showFeedback, setShowFeedback] = useState(false);
   const [isLeaving, setIsLeaving] = useState(false);
 
+  // Các state cho đồng hồ đếm ngược
+  const [timeLeftDisplay, setTimeLeftDisplay] = useState<string>('');
+  const [isTimeUp, setIsTimeUp] = useState(false);
+  const [isWarning, setIsWarning] = useState(false);
+
   // Kiểm tra xem đã gửi feedback chưa
   const { data: myFeedback, isLoading: feedbackLoading } = useMyFeedback(Number(sessionIdNum));
-  const isSessionEnded = useSessionEnded(); // nếu có hook phát hiện call ended
+  const isSessionEnded = useSessionEnded();
 
   // Khi người dùng bấm nút rời phòng (sẽ được truyền xuống VideoCallLayout)
   const handleLeaveWithFeedback = () => {
-    if (window.confirm('Bạn có chắc muốn kết thúc buổi phỏng vấn?')) {
-      setIsLeaving(true);
-      setShowFeedback(true);
-    }
+    setIsLeaving(true);
+    setShowFeedback(true);
   };
 
   // Tự động hiện feedback nếu session kết thúc do đối phương rời
@@ -50,6 +55,57 @@ export default function MeetingRoom() {
       setShowFeedback(true);
     }
   }, [isSessionEnded, feedbackLoading, myFeedback, isLeaving]);
+
+  useEffect(() => {
+    if (!session?.scheduledAt) return;
+
+    const duration = session.durationMinutes;
+    const start = new Date(session.scheduledAt).getTime();
+    const end = start + duration * 60 * 1000;
+
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remaining = end - now;
+
+      if (remaining <= 0) {
+        clearInterval(interval);
+        setIsTimeUp(true);
+        setTimeLeftDisplay('00:00');
+      } else {
+        setIsWarning(remaining <= 300000);
+        const minutes = Math.floor(remaining / 60000);
+        const seconds = Math.floor((remaining % 60000) / 1000);
+        setTimeLeftDisplay(
+          `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`,
+        );
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [session]);
+
+  useEffect(() => {
+    if ((isTimeUp || isSessionEnded) && !isLeaving) {
+      setIsLeaving(true);
+      toast({
+        title: 'Đã hết giờ phỏng vấn!',
+        description: 'Hệ thống đang đóng phòng và lưu kết quả...',
+        variant: 'destructive',
+      });
+
+      if (call) {
+        // Tắt cưỡng chế phần cứng
+        call.camera.disable();
+        call.microphone.disable();
+        // Rời phòng Stream-io
+        call.leave().then(() => {
+          setShowFeedback(true);
+        });
+      } else {
+        setShowFeedback(true);
+      }
+    }
+  }, [isTimeUp, isSessionEnded, isLeaving, call, toast]);
 
   const handleFeedbackSuccess = () => {
     setShowFeedback(false);
@@ -83,7 +139,21 @@ export default function MeetingRoom() {
     <>
       <StreamVideo client={client}>
         <StreamCall call={call}>
-          <VideoCallLayout onLeave={handleLeaveWithFeedback} />
+          <div className="relative h-screen w-full bg-black">
+            <VideoCallLayout onLeave={handleLeaveWithFeedback} />
+            {timeLeftDisplay && (
+              <div
+                className={`absolute top-4 right-4 z-50 px-4 py-2 rounded-lg font-mono text-xl font-bold shadow-2xl border backdrop-blur-md transition-all duration-500 ${
+                  isWarning
+                    ? 'bg-red-600/90 text-white border-red-400 animate-pulse'
+                    : 'bg-slate-900/70 text-white border-slate-600'
+                }`}
+              >
+                <Timer size={20} className={isWarning ? 'animate-bounce' : ''} />
+                <span>{timeLeftDisplay}</span>
+              </div>
+            )}
+          </div>
         </StreamCall>
       </StreamVideo>
 
