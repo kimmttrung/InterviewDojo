@@ -1,10 +1,10 @@
 // features/questions/components/QuestionDetail/TheoryView.tsx
 import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide-react';
 import { QuestionDetail } from '../../types/question.types';
-import { CommentSection } from '@/features/comment/components/CommentSection';
-import { AnswerSection } from './AnswerSection';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AnswerSection } from './AnswerSection';
+import { CommentSection } from '@/features/comment/components/CommentSection';
 
 interface TheoryViewProps {
   question: QuestionDetail;

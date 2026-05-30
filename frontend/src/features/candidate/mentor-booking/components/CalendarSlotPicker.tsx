@@ -75,7 +75,7 @@ export function CalendarSlotPicker({
       <Card className="p-4 border-0 shadow-none bg-transparent">
         <div className="flex items-center gap-2 mb-3">
           <CalendarDays className="h-5 w-5 text-indigo-600" />
-          <h3 className="font-semibold text-slate-800">Chọn ngày</h3>
+          <h3 className="font-semibold text-slate-800">Select date</h3>
         </div>
         <Calendar
           mode="single"
@@ -111,16 +111,18 @@ export function CalendarSlotPicker({
         <div className="flex items-center gap-2 mb-3">
           <Clock className="h-5 w-5 text-indigo-600" />
           <h3 className="font-semibold text-slate-800">
-            {selectedDate ? `Khung giờ - ${formatICTFullDate(selectedDate)}` : 'Chọn ngày trước'}
+            {selectedDate
+              ? `Time slots - ${formatICTFullDate(selectedDate)}`
+              : 'Select a date first'}
           </h3>
         </div>
         {!selectedDate ? (
           <div className="h-[300px] flex items-center justify-center text-sm text-gray-400">
-            Vui lòng chọn một ngày để xem khung giờ khả dụng
+            Please select a date to view available time slots
           </div>
         ) : sessions.length === 0 ? (
           <div className="h-[300px] flex items-center justify-center text-sm text-gray-400">
-            Không có khung giờ khả dụng cho ngày này
+            No available slots for this date
           </div>
         ) : (
           <div className="grid grid-cols-2 gap-2 max-h-[300px] overflow-y-auto pr-2">

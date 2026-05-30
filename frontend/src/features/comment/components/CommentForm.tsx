@@ -82,7 +82,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({
                 // Nút thu nhỏ lại thành text-xs, padding nhỏ
                 className="px-3 py-1 text-xs font-semibold text-slate-500 hover:text-slate-800 hover:bg-slate-200 rounded-md transition-colors"
               >
-                Hủy
+                Cancel
               </button>
             )}
             <button
@@ -91,7 +91,7 @@ export const CommentForm: React.FC<CommentFormProps> = ({
               // Nút thu nhỏ lại thành text-xs, padding nhỏ
               className="px-4 py-1 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-md disabled:opacity-50 disabled:bg-indigo-400 transition-all shadow-sm"
             >
-              {isLoading ? 'Đang gửi...' : 'Gửi'}
+              {isLoading ? 'Sending...' : 'Send'}
             </button>
           </div>
         )}

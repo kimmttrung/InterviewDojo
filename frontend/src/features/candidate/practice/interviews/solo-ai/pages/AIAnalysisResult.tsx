@@ -55,7 +55,7 @@ export default function AIAnalysisResult() {
         setData(finalData);
       } catch (err: any) {
         if (!isRefreshing) {
-          setError(err?.response?.data?.message || 'Không tải được kết quả AI analysis');
+          setError(err?.response?.data?.message || 'Failed to load AI analysis');
         }
       } finally {
         setLoading(false);
@@ -75,7 +75,7 @@ export default function AIAnalysisResult() {
         <div className="bg-white rounded-3xl shadow-sm border px-8 py-10 text-center">
           <Brain className="mx-auto h-10 w-10 mb-4 text-violet-600 animate-pulse" />
           <h2 className="text-2xl font-semibold">Loading AI analysis...</h2>
-          <p className="text-slate-500 mt-2">Hệ thống đang lấy kết quả đánh giá.</p>
+          <p className="text-slate-500 mt-2">System is fetching AI analysis results.</p>
         </div>
       </div>
     );
@@ -86,13 +86,13 @@ export default function AIAnalysisResult() {
       <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4">
         <div className="bg-white rounded-3xl shadow-sm border p-8 max-w-lg w-full text-center">
           <CircleAlert className="mx-auto h-10 w-10 text-red-500 mb-4" />
-          <h2 className="text-2xl font-semibold">Không tải được kết quả</h2>
+          <h2 className="text-2xl font-semibold">Failed to load AI analysis</h2>
           <p className="text-slate-500 mt-2">{error}</p>
           <button
             onClick={() => navigate(-1)}
             className="mt-6 px-5 py-3 rounded-xl bg-violet-600 text-white font-medium hover:bg-violet-700"
           >
-            Quay lại
+            <ArrowLeft className="h-4 w-4 mr-2" /> Back to Recordings
           </button>
         </div>
       </div>
@@ -105,7 +105,7 @@ export default function AIAnalysisResult() {
   const strengths = Array.isArray(mainFeedback?.strengths) ? mainFeedback.strengths : [];
   const weaknesses = Array.isArray(mainFeedback?.weaknesses) ? mainFeedback.weaknesses : [];
   const suggestions = Array.isArray(mainFeedback?.suggestions) ? mainFeedback.suggestions : [];
-  const transcript = mainFeedback?.comment || 'Không có transcript';
+  const transcript = mainFeedback?.comment || 'No transcript available';
   const videoUrl = data.recordingUrl;
 
   return (
@@ -115,7 +115,7 @@ export default function AIAnalysisResult() {
           onClick={() => navigate(-1)}
           className="inline-flex items-center gap-2 text-slate-600 hover:text-slate-900 mb-6"
         >
-          <ArrowLeft className="h-4 w-4" /> Quay lại
+          <ArrowLeft className="h-4 w-4" /> Back to Recordings
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -128,7 +128,7 @@ export default function AIAnalysisResult() {
                     <Sparkles className="h-4 w-4" /> AI Interview Review
                   </div>
                   <h1 className="text-3xl md:text-4xl font-bold text-slate-900">
-                    Kết quả đánh giá
+                    AI Analysis Result
                   </h1>
                 </div>
 
@@ -142,7 +142,7 @@ export default function AIAnalysisResult() {
 
             {/* TRANSCRIPT */}
             <div className="bg-white border rounded-3xl shadow-sm p-6 md:p-8">
-              <h2 className="text-2xl font-semibold text-slate-900 mb-4">Nội dung trả lời</h2>
+              <h2 className="text-2xl font-semibold text-slate-900 mb-4">Transcript</h2>
               <div className="rounded-2xl bg-slate-50 border p-5 text-slate-700 leading-7 whitespace-pre-wrap italic">
                 "{transcript}"
               </div>
@@ -163,9 +163,9 @@ export default function AIAnalysisResult() {
                   <div className="bg-violet-100 p-4 rounded-full mb-4">
                     <Video className="h-8 w-8 text-violet-600 opacity-70" />
                   </div>
-                  <h3 className="text-lg font-bold text-slate-800 mb-2">Video chưa sẵn sàng</h3>
+                  <h3 className="text-lg font-bold text-slate-800 mb-2">Video not available</h3>
                   <p className="text-slate-500 mb-6 max-w-sm">
-                    Hệ thống đang đồng bộ video từ Cloudinary.
+                    System is syncing video from Cloudinary.
                   </p>
                   <button
                     onClick={() => fetchAnalysis(true)}
@@ -173,7 +173,7 @@ export default function AIAnalysisResult() {
                     className="flex items-center gap-2 bg-white border shadow-sm px-6 py-3 rounded-full text-sm font-medium text-slate-700 hover:bg-slate-50"
                   >
                     <RefreshCw className={`h-4 w-4 ${isRefreshingVideo ? 'animate-spin' : ''}`} />
-                    Tải lại Video
+                    Reload Video
                   </button>
                 </div>
               )}
@@ -233,7 +233,7 @@ function Section({
             </div>
           ))
         ) : (
-          <p className="text-slate-400 italic">Không có dữ liệu</p>
+          <p className="text-slate-400 italic">No data available</p>
         )}
       </div>
     </div>

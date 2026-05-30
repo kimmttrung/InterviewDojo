@@ -77,24 +77,13 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
     }
   };
 
-  // Dev only — gọi mock rồi để polling tự phát hiện PAID
-  // const handleMockSuccess = async () => {
-  //   if (!paymentId) return;
-  //   try {
-  //     await paymentApi.mockSuccess(paymentId);
-  //     // Không cần setStep ở đây — polling sẽ phát hiện status PAID trong ≤3s
-  //   } catch (err) {
-  //     console.error(err);
-  //     showToast.error('Mock thất bại');
-  //   }
-  // };
-
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
-    showToast.success('Đã sao chép');
+    showToast.success('Copied to clipboard');
   };
 
-  const formatVND = (n: number) => n.toLocaleString('vi-VN') + 'đ';
+  // Chuẩn hóa định dạng hiển thị tiền tệ tiếng Anh (Ví dụ: 100,000 VND)
+  const formatVND = (n: number) => n.toLocaleString('en-US') + ' VND';
 
   const qrImageUrl =
     orderCode && bankAccountNumber
@@ -108,15 +97,17 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
     <Dialog open={open} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Nạp tiền vào ví</DialogTitle>
-          <DialogDescription>Chuyển khoản theo hướng dẫn để nạp credits vào ví</DialogDescription>
+          <DialogTitle>Top Up Wallet</DialogTitle>
+          <DialogDescription>
+            Transfer money according to the instructions below to add credits
+          </DialogDescription>
         </DialogHeader>
 
-        {/* ── STEP 1: Nhập số tiền ── */}
+        {/* ── STEP 1: Nhập số tiền (Form Step) ── */}
         {step === 'form' && (
           <div className="space-y-4 py-2">
             <div>
-              <Label>Số tiền (VNĐ)</Label>
+              <Label>Amount (VND)</Label>
               <Input
                 type="number"
                 value={amount}
@@ -125,7 +116,7 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
                 step={10_000}
                 className="mt-1"
               />
-              <p className="text-xs text-muted-foreground mt-1">Tối thiểu 10,000đ</p>
+              <p className="text-xs text-muted-foreground mt-1">Minimum 10,000 VND</p>
             </div>
 
             <div className="flex gap-2 flex-wrap">
@@ -137,7 +128,7 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
                   onClick={() => setAmount(preset)}
                   className={amount === preset ? 'border-primary text-primary' : ''}
                 >
-                  {preset.toLocaleString('vi-VN')}
+                  {preset.toLocaleString('en-US')}
                 </Button>
               ))}
             </div>
@@ -150,16 +141,16 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
               {depositMutation.isPending ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Đang xử lý...
+                  Processing...
                 </>
               ) : (
-                'Tạo QR thanh toán'
+                'Generate Payment QR'
               )}
             </Button>
           </div>
         )}
 
-        {/* ── STEP 2: Hiển thị QR + polling chạy ngầm ── */}
+        {/* ── STEP 2: Hiển thị QR (QR & Polling Step) ── */}
         {step === 'qr' && orderCode && (
           <div className="space-y-4 py-2 text-center">
             {/* Indicator polling đang chạy */}
@@ -168,7 +159,7 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
                 <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                 <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
               </span>
-              Đang chờ xác nhận thanh toán...
+              Waiting for payment confirmation...
             </div>
 
             {/* QR Image từ VietQR */}
@@ -185,11 +176,11 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
             {/* Thông tin chuyển khoản thủ công */}
             <div className="text-left space-y-2 text-sm bg-gray-50 p-3 rounded-lg">
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Ngân hàng</span>
+                <span className="text-muted-foreground">Bank</span>
                 <span className="font-medium">MB Bank</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Số tài khoản</span>
+                <span className="text-muted-foreground">Account Number</span>
                 <div className="flex items-center gap-1.5">
                   <span className="font-mono font-medium">{bankAccountNumber}</span>
                   <button
@@ -202,16 +193,16 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
               </div>
               {bankAccountName && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Chủ tài khoản</span>
+                  <span className="text-muted-foreground">Account Holder</span>
                   <span className="font-medium">{bankAccountName}</span>
                 </div>
               )}
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Số tiền</span>
+                <span className="text-muted-foreground">Amount</span>
                 <span className="font-bold text-primary">{formatVND(amount)}</span>
               </div>
               <div className="flex justify-between items-center">
-                <span className="text-muted-foreground">Nội dung CK</span>
+                <span className="text-muted-foreground">Transfer Content</span>
                 <div className="flex items-center gap-1.5">
                   <code className="bg-gray-200 px-1.5 py-0.5 rounded text-xs font-mono font-semibold">
                     {orderCode}
@@ -226,10 +217,10 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
               </div>
               {expiredAt && (
                 <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Hết hạn</span>
+                  <span className="text-muted-foreground">Expires At</span>
                   <div className="flex items-center gap-1 text-yellow-600 text-xs">
                     <Clock className="h-3.5 w-3.5" />
-                    {new Date(expiredAt).toLocaleTimeString('vi-VN')}
+                    {new Date(expiredAt).toLocaleTimeString('en-US')}
                   </div>
                 </div>
               )}
@@ -237,25 +228,13 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
 
             <div className="bg-yellow-50 border border-yellow-200 p-3 rounded-lg text-xs text-yellow-800 text-left">
               <AlertCircle className="inline h-4 w-4 mr-1 shrink-0" />
-              <strong>Quan trọng:</strong> Nhập <strong>chính xác</strong> nội dung chuyển khoản để
-              hệ thống tự động cập nhật số dư.
+              <strong>Important:</strong> Please enter the <strong>exact</strong> transfer content
+              above so the system can automatically update your credit balance.
             </div>
-
-            {/* Chỉ hiện trong môi trường dev */}
-            {/* {import.meta.env.DEV && (
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-muted-foreground"
-                onClick={handleMockSuccess}
-              >
-                [Dev] Giả lập thanh toán thành công
-              </Button>
-            )} */}
           </div>
         )}
 
-        {/* ── STEP 3: Thành công (polling phát hiện PAID) ── */}
+        {/* ── STEP 3: Thành công (Success Step) ── */}
         {step === 'success' && (
           <div className="text-center py-10 space-y-3">
             <div className="flex justify-center">
@@ -263,16 +242,16 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
                 <CheckCircle className="h-12 w-12 text-green-500" />
               </div>
             </div>
-            <p className="font-semibold text-xl">Nạp tiền thành công!</p>
+            <p className="font-semibold text-xl">Deposit Successful!</p>
             <p className="text-muted-foreground text-sm">
-              <span className="font-medium text-foreground">{formatVND(amount)}</span> đã được cộng
-              vào ví của bạn.
+              <span className="font-medium text-foreground">{formatVND(amount)}</span> has been
+              credited to your wallet.
             </p>
-            <p className="text-xs text-muted-foreground">Tự động đóng sau 2 giây...</p>
+            <p className="text-xs text-muted-foreground">Automatically closing in 2 seconds...</p>
           </div>
         )}
 
-        {/* ── STEP 4: Hết hạn ── */}
+        {/* ── STEP 4: Hết hạn (Expired Step) ── */}
         {step === 'expired' && (
           <div className="text-center py-10 space-y-3">
             <div className="flex justify-center">
@@ -280,12 +259,12 @@ export const DepositModal = ({ open, onClose, onSuccess }: DepositModalProps) =>
                 <Clock className="h-12 w-12 text-gray-400" />
               </div>
             </div>
-            <p className="font-semibold text-xl">QR đã hết hạn</p>
+            <p className="font-semibold text-xl">QR Code Expired</p>
             <p className="text-muted-foreground text-sm">
-              Đơn nạp tiền đã hết thời gian 15 phút. Vui lòng tạo đơn mới.
+              This deposit request has expired after the 15-minute limit. Please generate a new one.
             </p>
             <Button className="w-full" onClick={() => setStep('form')}>
-              Tạo lại
+              Try Again
             </Button>
           </div>
         )}

@@ -19,7 +19,7 @@ import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { CreateAdminDto } from './dto/create-admin.dto';
 import { JwtPayload } from './interfaces/jwt-payload.interface';
 
-// ─── Type cho kết quả checkBanStatus ────────────────────────────────────────
+// ─── Ban check result types ───────────────────────────────────────────
 type BanAllowed = { allowed: true };
 type BanDenied = {
   allowed: false;
@@ -32,7 +32,7 @@ type BanDenied = {
 };
 type BanCheckResult = BanAllowed | BanDenied;
 
-// ─── Shape truyền vào checkBanStatus ────────────────────────────────────────
+// ─── Ban check input shape ────────────────────────────────────────────
 interface BanCheckInput {
   id: number;
   status: UserStatus;
@@ -57,11 +57,13 @@ export class AuthService {
       });
 
       if (existingUser) {
-        throw new BadRequestException('Email đã tồn tại');
+        throw new BadRequestException('Email already exists');
       }
 
       if (dto.role === Role.ADMIN) {
-        throw new BadRequestException('Không được phép đăng ký ADMIN');
+        throw new BadRequestException(
+          'Registration for ADMIN role is not allowed',
+        );
       }
 
       const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -97,10 +99,10 @@ export class AuthService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // LOGIN — 1 DB query, check ban từ data đã có, không query lại
+  // LOGIN — 1 DB query, check ban from retrieved data, no re-querying
   // ══════════════════════════════════════════════════════════════════
   async login(dto: LoginDto) {
-    // 1 query duy nhất, lấy đủ fields cần thiết
+    // Single query to retrieve all necessary fields
     const user = await this.prisma.user.findUnique({
       where: { email: dto.email },
       select: {
@@ -117,15 +119,15 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Sai email hoặc mật khẩu');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
     const isPasswordValid = await bcrypt.compare(dto.password, user.password);
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Sai email hoặc mật khẩu');
+      throw new UnauthorizedException('Invalid email or password');
     }
 
-    // checkBanStatus nhận thẳng object user — không query DB lần 2
+    // checkBanStatus consumes the user object directly — no second DB query
     const banCheck = await this.checkBanStatus(user);
     if (!banCheck.allowed) {
       throw new ForbiddenException(this.buildBanPayload(banCheck));
@@ -144,10 +146,10 @@ export class AuthService {
   }
 
   // ══════════════════════════════════════════════════════════════════
-  // REFRESH — try/catch chỉ bao quanh verifyAsync, KHÔNG nuốt ForbiddenException
+  // REFRESH — try/catch wraps verifyAsync only, does NOT swallow ForbiddenException
   // ══════════════════════════════════════════════════════════════════
   async refresh(dto: RefreshTokenDto) {
-    // Chỉ wrap phần verify — để ForbiddenException bên dưới propagate đúng
+    // Wrap token verification only — allows subsequent ForbiddenException to propagate correctly
     let payload: JwtPayload;
     try {
       payload = await this.jwtService.verifyAsync<JwtPayload>(
@@ -157,12 +159,10 @@ export class AuthService {
         },
       );
     } catch {
-      throw new UnauthorizedException(
-        'Refresh token không hợp lệ hoặc đã hết hạn',
-      );
+      throw new UnauthorizedException('Invalid or expired refresh token');
     }
 
-    // Phần này NGOÀI try/catch → ForbiddenException sẽ propagate lên đúng
+    // Outside the try/catch block → ForbiddenException propagates seamlessly
     const user = await this.prisma.user.findUnique({
       where: { id: payload.sub },
       select: {
@@ -176,12 +176,12 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Người dùng không tồn tại');
+      throw new UnauthorizedException('User does not exist');
     }
 
     const banCheck = await this.checkBanStatus(user);
     if (!banCheck.allowed) {
-      // Throw ForbiddenException NGOÀI try/catch → không bị nuốt
+      // Thrown outside try/catch -> will not be swallowed
       throw new ForbiddenException(this.buildBanPayload(banCheck));
     }
 
@@ -196,7 +196,7 @@ export class AuthService {
       where: { email: dto.email },
     });
     if (existingUser) {
-      throw new BadRequestException('Email đã tồn tại');
+      throw new BadRequestException('Email already exists');
     }
 
     const hashedPassword = await bcrypt.hash(dto.password, 10);
@@ -209,8 +209,6 @@ export class AuthService {
       },
     });
   }
-
-  // validateUser đã bị XÓA — JwtStrategy stateless, không cần nữa
 
   // ══════════════════════════════════════════════════════════════════
   // PRIVATE — generateTokens
@@ -230,53 +228,40 @@ export class AuthService {
     return { accessToken, refreshToken, user: { id: userId, email, role } };
   }
 
-  //đang để lazy nên để stateless, tin tưởng hoàn toàn payload, nếu phát sinh bug thì vào cần check luc login
-
-  // async validateUser(userId: number) {
-  //   const user = await this.prisma.user.findUnique({
-  //     where: { id: userId },
-  //     select: { id: true, email: true, name: true, role: true },
-  //   });
-  //   if (!user) {
-  //     throw new UnauthorizedException('Người dùng không tồn tại');
-  //   }
-  //   return { sub: user.id, ...user };
-  // }
-
   // ══════════════════════════════════════════════════════════════════
   // PRIVATE — checkBanStatus
-  // Nhận object user đã có sẵn, KHÔNG query DB lần 2.
-  // Chỉ query DB khi cần auto-unban (update).
+  // Accepts already fetched user object, NO secondary DB queries.
+  // Performs DB mutation ONLY on explicit lazy auto-unban condition.
   // ══════════════════════════════════════════════════════════════════
   private async checkBanStatus(user: BanCheckInput): Promise<BanCheckResult> {
-    // Không bị ban → cho qua ngay
+    // If user is not banned, skip immediately
     if (user.status !== UserStatus.BANNED) {
       return { allowed: true };
     }
 
-    // Ban vĩnh viễn (bannedUntil = null)
+    // Permanent ban handling (bannedUntil = null)
     if (!user.bannedUntil) {
       return {
         allowed: false,
         code: 'PERMANENT_BAN',
         message:
-          'Tài khoản của bạn đã bị khóa vĩnh viễn. Vui lòng liên hệ hỗ trợ.',
+          'Your account has been permanently suspended. Please contact support.',
         banReason: user.banReason,
       };
     }
 
     const now = new Date();
 
-    // Ban tạm thời đã hết hạn → tự động unban (idempotent với updateMany)
+    // Expired temporary ban -> execution of lazy automatic unban
     if (user.bannedUntil <= now) {
       await this.prisma.user.updateMany({
-        where: { id: user.id, status: UserStatus.BANNED }, // chỉ update nếu vẫn BANNED
+        where: { id: user.id, status: UserStatus.BANNED }, // ensure idempotent status shift
         data: { status: UserStatus.ACTIVE, banReason: null, bannedUntil: null },
       });
       return { allowed: true };
     }
 
-    // Ban tạm thời còn hiệu lực → tính thời gian còn lại
+    // Active temporary ban -> evaluate remaining penalty scope
     const diffMs = user.bannedUntil.getTime() - now.getTime();
     const remainingDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     const remainingHours = Math.floor(
@@ -290,7 +275,7 @@ export class AuthService {
     return {
       allowed: false,
       code: 'TEMPORARY_BAN',
-      message: `Tài khoản bị khóa tạm thời. Còn ${remainingDays} ngày ${remainingHours} giờ (đến ${bannedUntilLocal}).`,
+      message: `Your account is temporarily suspended. Remaining time: ${remainingDays} day(s) ${remainingHours} hour(s) (until ${bannedUntilLocal}).`,
       banReason: user.banReason,
       bannedUntilLocal,
       remainingDays,
@@ -300,8 +285,7 @@ export class AuthService {
 
   // ══════════════════════════════════════════════════════════════════
   // PRIVATE — buildBanPayload
-  // Tạo payload flat cho ForbiddenException.
-  // AllExceptionsFilter sẽ flatten object này vào field `data`.
+  // Configures flattened error structure bound for AllExceptionsFilter handling.
   // ══════════════════════════════════════════════════════════════════
   private buildBanPayload(ban: BanDenied) {
     return {

@@ -305,15 +305,15 @@ export class BookingService {
           {
             userId: updatedBooking.mentorId,
             type: NotificationType.BOOKING_CREATED,
-            title: 'Có lịch hẹn mới',
-            message: 'Một candidate vừa đặt lịch hẹn với bạn.',
+            title: 'New booking received',
+            message: 'A candidate has just booked an appointment with you.',
             targetUrl: `/mentor/bookings?bookingId=${bookingId}`,
           },
           {
             userId: updatedBooking.candidateId,
             type: NotificationType.TRANSACTION_SUCCESS,
-            title: 'Thanh toán thành công',
-            message: 'Bạn đã thanh toán thành công cho lịch phỏng vấn.',
+            title: 'Payment successful',
+            message: 'You have successfully paid for the interview schedule.',
             targetUrl: '/wallet',
           },
         ],
@@ -430,8 +430,8 @@ export class BookingService {
         data: {
           userId: updatedBooking.candidateId,
           type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Lịch phỏng vấn đã được xác nhận',
-          message: 'Mentor đã xác nhận lịch phỏng vấn của bạn.',
+          title: 'Interview schedule confirmed',
+          message: 'The mentor has confirmed your interview schedule.',
           targetUrl: '/sessions',
         },
       });
