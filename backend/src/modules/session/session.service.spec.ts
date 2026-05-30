@@ -6,6 +6,7 @@ import { GetSessionsDto, SessionTab } from './dto/get-sessions.dto';
 import { SessionService } from './session.service';
 import { SocketService } from '../socket/socket.service';
 import { StreamService } from '../stream/stream.service';
+import { MentorPayoutService } from '../mentor-payout/mentor-payout.service';
 
 describe('SessionService', () => {
   let service: SessionService;
@@ -46,6 +47,10 @@ describe('SessionService', () => {
     createMeetingRoom: jest.fn(),
   };
 
+  const mockMentorPayoutService = {
+    payoutCompletedSessionSafely: jest.fn(),
+  };
+
   beforeEach(async () => {
     consoleLogSpy = jest.spyOn(console, 'log').mockImplementation();
     consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation();
@@ -57,6 +62,7 @@ describe('SessionService', () => {
         { provide: getQueueToken('session'), useValue: sessionQueue },
         { provide: SocketService, useValue: mockSocketService },
         { provide: StreamService, useValue: mockStreamService },
+        { provide: MentorPayoutService, useValue: mockMentorPayoutService },
       ],
     }).compile();
 
