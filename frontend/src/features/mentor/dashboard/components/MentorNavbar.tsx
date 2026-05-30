@@ -1,5 +1,5 @@
 // features/mentor/dashboard/components/MentorNavbar.tsx
-import { Moon, Sun, LogOut, UserIcon } from 'lucide-react';
+import { BanknoteArrowDown, LogOut, Moon, Sun, UserIcon, Wallet } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '@/contexts/ThemeContext';
@@ -77,7 +77,32 @@ export function MentorNavbar() {
               </Button>
             </DropdownMenuTrigger>
 
-            <DropdownMenuContent align="end" className="z-50 bg-background border shadow-md">
+            <DropdownMenuContent align="end" className="z-50 w-72 bg-background border shadow-xl">
+              <div className="flex flex-col space-y-1 p-2">
+                <p className="text-sm font-medium leading-none">{user?.name || 'Mentor'}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+              </div>
+              <div className="px-2 pb-2">
+                <div className="mt-3 rounded-xl bg-muted/60 p-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Wallet className="h-4 w-4 text-indigo-500" />
+                      <span className="text-sm font-medium">Credits</span>
+                    </div>
+                    <span className="font-bold">{user?.creditBalance ?? 0}</span>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="mt-3 w-full bg-indigo-600 hover:bg-indigo-700"
+                    onClick={() => navigate('/mentor/wallet')}
+                  >
+                    <BanknoteArrowDown className="mr-2 h-4 w-4" />
+                    Mentor Wallet
+                  </Button>
+                </div>
+              </div>
+              <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => navigate('/mentor/profile')}>
                 <UserIcon className="mr-2 h-4 w-4" />
                 Profile
