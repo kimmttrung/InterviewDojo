@@ -10,6 +10,8 @@ import {
   ParseIntPipe,
   UseGuards,
   BadRequestException,
+  UseInterceptors,
+  UploadedFile,
 } from '@nestjs/common';
 import { BookingService } from './booking.service';
 import {
@@ -27,6 +29,8 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../auth/guards/roles.guard';
 import { Role } from '@prisma/client';
 import { JwtPayload } from '../auth/interfaces/jwt-payload.interface';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { UploadedFileType } from '@/common/types/uploaded-file.type';
 
 @Controller('bookings')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -56,6 +60,22 @@ export class BookingController {
     }
     // TODO: Thêm các cổng thanh toán khác
     throw new BadRequestException('Phương thức thanh toán chưa hỗ trợ');
+  }
+
+  @Post('upload-attachment')
+  @Roles(Role.CANDIDATE)
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadBookingAttachment(@UploadedFile() file: UploadedFileType) {
+    if (!file) {
+      throw new BadRequestException('Không tìm thấy tệp tin tải lên');
+    }
+
+    // Giới hạn dung lượng 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      throw new BadRequestException('Kích thước file vượt quá giới hạn 10MB');
+    }
+
+    return this.bookingService.uploadAttachment(file);
   }
 
   @Patch(':id/accept')

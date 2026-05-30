@@ -20,6 +20,7 @@ import { Booking } from '../types';
 import { format } from 'date-fns';
 import { vi } from 'date-fns/locale';
 import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
+import { UserProfileModal } from '@/features/shared-domain/users/components/UserProfileModal';
 
 const getStatusUI = (status: Booking['status']) => {
   switch (status) {
@@ -179,6 +180,9 @@ export default function MentorBookings() {
             {filteredBookings.map((booking) => {
               const statusUI = getStatusUI(booking.status);
               const canAction = statusUI.actionable;
+
+              console.log('check status', statusUI);
+              console.log('check booking', booking);
 
               return (
                 <div
@@ -405,6 +409,7 @@ export default function MentorBookings() {
             </div>
           </div>
         )}
+        <UserProfileModal />
       </ApprovalGuard>
     </MentorLayout>
   );
