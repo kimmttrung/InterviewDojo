@@ -11,7 +11,6 @@ import CandidateDashboardPage from '../features/candidate/dashboard/pages/Candid
 import Home from '../features/candidate/home/pages/HomePage';
 import Practice from '../features/candidate/practice/PracticePage';
 import Profile from '../features/candidate/profile/pages/Profile';
-import MentorSetup from '../features/mentor/dashboard/components/MentorSetup';
 import MentorDashboard from '../features/mentor/dashboard/pages/MentorDashboard';
 import MentorBookings from '../features/mentor/booking-management/pages/MentorBookings';
 import MentorSchedule from '../features/mentor/schedule-management/pages/MentorSchedulePage';
@@ -115,14 +114,6 @@ export function App() {
 
             {/* Target Role Setup */}
             <Route path="/candidate/setup" element={<SelectRoleGuard />} />
-            <Route
-              path="/mentor/setup"
-              element={
-                <ProtectedRoute roles={['MENTOR']}>
-                  <MentorSetup />
-                </ProtectedRoute>
-              }
-            />
 
             {/* Interview Room */}
             <Route
