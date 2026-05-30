@@ -1,5 +1,5 @@
 // src/features/admin/questions/pages/QuestionForm.tsx
-import { useEffect, useRef, useMemo } from 'react';
+import { useEffect, useRef, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useForm, Controller } from 'react-hook-form';
 import { z } from 'zod';
@@ -39,6 +39,7 @@ import { jobRoleApi } from '../../job-roles';
 import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Loader2 } from 'lucide-react';
 
+// Flat shape returned by GET /questions/:id
 interface ExistingQuestion {
   title: string;
   slug: string;
@@ -48,25 +49,26 @@ interface ExistingQuestion {
   categories?: string[];
   companies?: string[];
   jobRoles?: string[];
+  // theory
   data?: { question: string; tips: string[]; followUps: string[]; keyPoints: string[] };
-  codingData?: {
-    description: string;
-    constraints?: string;
-    hints: string[];
-    tags: string[];
-    timeLimit: number;
-    memoryLimit: number;
-    codeforcesLink?: string;
-    testCases: Array<{
-      input: string;
-      expectedOutput: string;
-      isSample: boolean;
-      isHidden: boolean;
-      points: number;
-      order: number;
-      explanation?: string;
-    }>;
-  };
+  // coding — flat fields from mapToQuestionDetail
+  description?: string;
+  constraints?: string;
+  hints?: string[];
+  tags?: string[];
+  timeLimit?: number;
+  memoryLimit?: number;
+  codeforcesLink?: string;
+  testCases?: Array<{
+    id?: number;
+    input: string;
+    output: string; // backend maps expectedOutput → output
+    isSample: boolean;
+    isHidden: boolean;
+    order: number;
+    explanation?: string;
+    points?: number;
+  }>;
 }
 
 // ==================== SCHEMAS ====================
@@ -129,6 +131,7 @@ export const QuestionForm = () => {
   const isEdit = !!id;
   const slugTouched = useRef(false);
   const lastResetId = useRef<string | undefined>(undefined);
+  const [resetKey, setResetKey] = useState(0);
 
   const { data: existing, isLoading: loadingDetail } = useAdminQuestionDetail(Number(id));
   const createMutation = useCreateQuestion();
@@ -195,6 +198,7 @@ export const QuestionForm = () => {
 
   const titleValue = watch('title');
   const typeValue = watch('type');
+  const displayType = typeValue || (isEdit ? (existing as any)?.type : undefined) || 'TECHNICAL';
 
   // Auto-generate slug from title (only when user hasn't manually edited slug)
   useEffect(() => {
@@ -224,31 +228,52 @@ export const QuestionForm = () => {
 
     const q = existing as ExistingQuestion;
 
+    const isCoding = q.type === 'CODING';
     reset({
       title: q.title,
       slug: q.slug,
       difficulty: q.difficulty,
       isPublished: q.isPublished,
       type: q.type,
-      // Resolve relations to empty arrays for now — phase 2 will fill them in
       categoryIds: [],
       companyIds: [],
       jobRoleIds: [],
       theoryData: q.data || { question: '', tips: [], followUps: [], keyPoints: [] },
-      codingData: q.codingData || {
-        description: '',
-        constraints: '',
-        hints: [],
-        tags: [],
-        timeLimit: 2000,
-        memoryLimit: 256000,
-        codeforcesLink: '',
-        testCases: [],
-      },
+      codingData: isCoding
+        ? {
+            description: q.description || '',
+            constraints: q.constraints || '',
+            hints: q.hints || [],
+            tags: q.tags || [],
+            timeLimit: q.timeLimit || 2000,
+            memoryLimit: q.memoryLimit || 256000,
+            codeforcesLink: q.codeforcesLink || '',
+            // backend returns output field, form needs expectedOutput
+            testCases: (q.testCases || []).map((tc) => ({
+              input: tc.input,
+              expectedOutput: tc.output ?? '',
+              isSample: tc.isSample,
+              isHidden: tc.isHidden,
+              points: tc.points ?? 1,
+              order: tc.order,
+              explanation: tc.explanation || '',
+            })),
+          }
+        : {
+            description: '',
+            constraints: '',
+            hints: [],
+            tags: [],
+            timeLimit: 2000,
+            memoryLimit: 256000,
+            codeforcesLink: '',
+            testCases: [],
+          },
     });
 
     lastResetId.current = id;
     slugTouched.current = true;
+    setResetKey((k) => k + 1);
   }, [isEdit, existing, id, reset]);
 
   // Phase 2 — fill in relation IDs once lookups are ready
@@ -289,26 +314,41 @@ export const QuestionForm = () => {
 
   // validate + narrow raw form values → CreateQuestionPayload
   const onSubmit = (rawData: FormValues) => {
-    // Normalize tags/hints: CodingSection uses comma-string inputs
+    const isCoding = rawData.type === 'CODING';
+
+    // Xử lý codingData chỉ khi là coding, đảm bảo các trường bắt buộc luôn tồn tại
+    let codingDataForPayload: FormValues['codingData'] = undefined;
+    if (isCoding) {
+      const existingCoding = rawData.codingData ?? {
+        description: '',
+        constraints: '',
+        tags: [],
+        hints: [],
+        timeLimit: 2000,
+        memoryLimit: 256000,
+        codeforcesLink: '',
+        testCases: [],
+      };
+      codingDataForPayload = {
+        ...existingCoding,
+        tags: Array.isArray(existingCoding.tags)
+          ? existingCoding.tags
+          : String(existingCoding.tags ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+        hints: Array.isArray(existingCoding.hints)
+          ? existingCoding.hints
+          : String(existingCoding.hints ?? '')
+              .split(',')
+              .map((s) => s.trim())
+              .filter(Boolean),
+      };
+    }
+
     const normalizedData: FormValues = {
       ...rawData,
-      codingData: rawData.codingData
-        ? {
-            ...rawData.codingData,
-            tags: Array.isArray(rawData.codingData.tags)
-              ? rawData.codingData.tags
-              : String(rawData.codingData.tags ?? '')
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-            hints: Array.isArray(rawData.codingData.hints)
-              ? rawData.codingData.hints
-              : String(rawData.codingData.hints ?? '')
-                  .split(',')
-                  .map((s) => s.trim())
-                  .filter(Boolean),
-          }
-        : undefined,
+      codingData: codingDataForPayload, // undefined nếu không phải coding
     };
 
     const result = questionSchema.safeParse(normalizedData);
@@ -436,7 +476,11 @@ export const QuestionForm = () => {
                 control={control}
                 name="difficulty"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    key={`difficulty-${resetKey}`}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -464,7 +508,11 @@ export const QuestionForm = () => {
                 control={control}
                 name="type"
                 render={({ field }) => (
-                  <Select value={field.value} onValueChange={field.onChange}>
+                  <Select
+                    key={`type-${resetKey}`}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                  >
                     <SelectTrigger>
                       <SelectValue />
                     </SelectTrigger>
@@ -586,11 +634,11 @@ export const QuestionForm = () => {
           <div className="flex items-center gap-2">
             <h2 className="font-semibold text-base">Nội dung câu hỏi</h2>
             <Badge variant="outline" className="text-xs">
-              {typeValue}
+              {displayType}
             </Badge>
           </div>
 
-          {typeValue !== 'CODING' ? (
+          {displayType !== 'CODING' ? (
             <TheorySection register={register as any} control={control} />
           ) : (
             <CodingSection register={register as any} control={control} />

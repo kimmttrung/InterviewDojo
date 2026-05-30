@@ -9,7 +9,7 @@ export const formatDateForInput = (value?: string | Date | null): string => {
 
   const date = new Date(value);
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: DEFAULT_TIMEZONE,
   }).format(date);
 };
@@ -36,7 +36,7 @@ export const formatDateTimeForInput = (value?: string | Date | null): string => 
 export const formatICTTime = (value?: string | Date | null): string => {
   if (!value) return '';
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('vi-VN', {
     hour: '2-digit',
     minute: '2-digit',
     timeZone: DEFAULT_TIMEZONE,
@@ -50,7 +50,7 @@ export const formatICTTime = (value?: string | Date | null): string => {
 export const formatICTDateTime = (value?: string | Date | null): string => {
   if (!value) return '';
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('vi-VN', {
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',
@@ -65,7 +65,7 @@ export const formatICTDateTime = (value?: string | Date | null): string => {
  * Dùng cho min date
  */
 export const getTodayICT = (): string => {
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('en-CA', {
     timeZone: DEFAULT_TIMEZONE,
   }).format(new Date());
 };
@@ -73,7 +73,7 @@ export const getTodayICT = (): string => {
 export const formatICTFullDate = (value?: string | Date | null): string => {
   if (!value) return '';
 
-  return new Intl.DateTimeFormat('en-US', {
+  return new Intl.DateTimeFormat('vi-VN', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
