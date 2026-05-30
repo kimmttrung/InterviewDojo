@@ -160,6 +160,29 @@ describe('MentorPayoutService', () => {
     expect(prisma.user.update).not.toHaveBeenCalled();
   });
 
+  it('treats concurrent duplicate payout creation as idempotent', async () => {
+    prisma.$transaction.mockRejectedValueOnce({
+      code: 'P2002',
+      meta: { target: ['session_id'] },
+    });
+    prisma.mentorPayout.findUnique.mockResolvedValue({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
+
+    await expect(service.payoutCompletedSession(11)).resolves.toEqual({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    });
+
+    expect(prisma.mentorPayout.findUnique).toHaveBeenCalledWith({
+      where: { sessionId: 11 },
+      include: expect.any(Object),
+    });
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
+  });
+
   it('approves a payout atomically and records payout plus platform fee transactions', async () => {
     prisma.mentorPayout.updateMany.mockResolvedValue({ count: 1 });
     prisma.mentorPayout.findUniqueOrThrow

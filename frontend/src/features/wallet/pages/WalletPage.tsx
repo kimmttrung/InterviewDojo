@@ -1,29 +1,33 @@
-// src/features/wallet/pages/WalletPage.tsx
 import { useState } from 'react';
-import { Wallet, Plus, ArrowDownLeft, ArrowUpRight, RefreshCcw, Receipt } from 'lucide-react';
-
-import { Layout } from '@/shared/components/layout/Layout';
-import { Card, CardContent } from '@/shared/components/ui/card';
-import { Button } from '@/shared/components/ui/button';
-import { Badge } from '@/shared/components/ui/badge';
-import { Skeleton } from '@/shared/components/ui/skeleton';
-
-import { useWallet } from '../hooks/useWallet';
-import { useWalletTransactions } from '../hooks/useWalletTransactions';
-import { DepositModal } from '../components/DepositModal';
+import {
+  ArrowDownLeft,
+  ArrowUpRight,
+  BanknoteArrowDown,
+  Plus,
+  Receipt,
+  RefreshCcw,
+  Wallet,
+} from 'lucide-react';
 import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
+import { MentorLayout } from '@/features/mentor/dashboard/components/MentorLayout';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Card, CardContent } from '@/shared/components/ui/card';
+import { Skeleton } from '@/shared/components/ui/skeleton';
 import { WalletTransactionType } from '@/shared/types/enum';
 
-// ==================== HELPERS ====================
+import { DepositModal } from '../components/DepositModal';
+import { useWallet } from '../hooks/useWallet';
+import { useWalletTransactions } from '../hooks/useWalletTransactions';
 
 function formatAmount(amount: number) {
-  // Đổi sang 'en-US' để hiển thị định dạng số chuẩn tiếng Anh (ví dụ: 100,000 thay vì 100.000)
   return new Intl.NumberFormat('en-US').format(amount);
 }
 
 function formatDate(date: string) {
-  // Đổi sang 'en-US' cho đồng bộ ngôn ngữ hiển thị thời gian
   return new Intl.DateTimeFormat('en-US', {
     dateStyle: 'medium',
     timeStyle: 'short',
@@ -42,6 +46,8 @@ function getTransactionLabel(type: WalletTransactionType) {
       return 'Withdrawal';
     case WalletTransactionType.PLATFORM_FEE:
       return 'Platform fee';
+    case WalletTransactionType.ADMIN_ADJUSTMENT:
+      return 'Admin adjustment';
     default:
       return type;
   }
@@ -51,26 +57,48 @@ function getTransactionIcon(type: WalletTransactionType) {
   const isIncoming =
     type === WalletTransactionType.DEPOSIT || type === WalletTransactionType.REFUND;
 
-  return isIncoming ? (
-    <div className="rounded-full bg-green-100 p-2">
-      <ArrowDownLeft className="h-4 w-4 text-green-600" />
-    </div>
-  ) : type === WalletTransactionType.PAYMENT ||
+  if (isIncoming) {
+    return (
+      <div className="rounded-full bg-green-100 p-2">
+        <ArrowDownLeft className="h-4 w-4 text-green-600" />
+      </div>
+    );
+  }
+
+  if (
+    type === WalletTransactionType.PAYMENT ||
     type === WalletTransactionType.PAYOUT ||
-    type === WalletTransactionType.PLATFORM_FEE ? (
-    <div className="rounded-full bg-red-100 p-2">
-      <ArrowUpRight className="h-4 w-4 text-red-500" />
-    </div>
-  ) : (
+    type === WalletTransactionType.PLATFORM_FEE
+  ) {
+    return (
+      <div className="rounded-full bg-red-100 p-2">
+        <ArrowUpRight className="h-4 w-4 text-red-500" />
+      </div>
+    );
+  }
+
+  return (
     <div className="rounded-full bg-muted p-2">
       <RefreshCcw className="h-4 w-4" />
     </div>
   );
 }
 
-// ==================== PAGE ====================
+interface WalletContentProps {
+  title?: string;
+  description?: string;
+  balanceLabel?: string;
+  showTopUp?: boolean;
+  showWithdraw?: boolean;
+}
 
-export default function WalletPage() {
+function WalletContent({
+  title = 'Credits Wallet',
+  description = 'Manage your balance and transaction history',
+  balanceLabel = 'Current Balance',
+  showTopUp = true,
+  showWithdraw = false,
+}: WalletContentProps) {
   const queryClient = useQueryClient();
   const [depositOpen, setDepositOpen] = useState(false);
 
@@ -82,27 +110,28 @@ export default function WalletPage() {
 
   const transactions = transactionsData?.items ?? [];
 
-  // Sau khi nạp thành công: refetch ví + lịch sử giao dịch
   const handleDepositSuccess = () => {
     queryClient.invalidateQueries({ queryKey: ['wallet'] });
     queryClient.invalidateQueries({ queryKey: ['wallet-transactions'] });
   };
 
+  const handleWithdrawMock = () => {
+    toast.success('Withdrawal request created (mock)');
+  };
+
   return (
-    <Layout>
-      <div className="mx-auto max-w-5xl p-6 space-y-6">
-        {/* HEADER */}
+    <>
+      <div className="mx-auto max-w-5xl space-y-6">
         <div>
-          <h1 className="text-3xl font-bold">Credits Wallet</h1>
-          <p className="mt-1 text-muted-foreground">Manage your balance and transaction history</p>
+          <h1 className="text-3xl font-bold">{title}</h1>
+          <p className="mt-1 text-muted-foreground">{description}</p>
         </div>
 
-        {/* WALLET CARD */}
         <Card className="border-0 bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-lg">
           <CardContent className="p-8">
             <div className="flex items-start justify-between">
               <div>
-                <p className="text-sm text-white/80">Current Balance</p>
+                <p className="text-sm text-white/80">{balanceLabel}</p>
                 {walletLoading ? (
                   <Skeleton className="mt-3 h-14 w-40 bg-white/20" />
                 ) : (
@@ -118,14 +147,25 @@ export default function WalletPage() {
             </div>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {/* Nút mở DepositModal */}
-              <Button
-                className="bg-white text-black hover:bg-white/90"
-                onClick={() => setDepositOpen(true)}
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Top Up Credits
-              </Button>
+              {showTopUp && (
+                <Button
+                  className="bg-white text-black hover:bg-white/90"
+                  onClick={() => setDepositOpen(true)}
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Top Up Credits
+                </Button>
+              )}
+
+              {showWithdraw && (
+                <Button
+                  className="bg-white text-black hover:bg-white/90"
+                  onClick={handleWithdrawMock}
+                >
+                  <BanknoteArrowDown className="mr-2 h-4 w-4" />
+                  Withdraw
+                </Button>
+              )}
 
               <Button
                 variant="outline"
@@ -138,7 +178,6 @@ export default function WalletPage() {
           </CardContent>
         </Card>
 
-        {/* TRANSACTION HISTORY */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
             <div>
@@ -184,9 +223,8 @@ export default function WalletPage() {
           ) : (
             <div className="space-y-3">
               {transactions.map((tx) => {
-                const isIncoming =
-                  tx.type === WalletTransactionType.DEPOSIT ||
-                  tx.type === WalletTransactionType.REFUND;
+                const isIncoming = tx.balanceAfter >= tx.balanceBefore;
+                const displayAmount = Math.abs(tx.amount);
 
                 return (
                   <Card key={tx.id} className="transition-all hover:shadow-md">
@@ -205,13 +243,13 @@ export default function WalletPage() {
                               <span>{formatDate(tx.createdAt)}</span>
                               {tx.referenceId && (
                                 <>
-                                  <span>•</span>
+                                  <span>*</span>
                                   <span className="font-mono text-xs">{tx.referenceId}</span>
                                 </>
                               )}
                             </div>
                             <div className="mt-2 text-xs text-muted-foreground">
-                              Balance: {formatAmount(tx.balanceBefore)} →{' '}
+                              Balance: {formatAmount(tx.balanceBefore)} -&gt;{' '}
                               {formatAmount(tx.balanceAfter)}
                             </div>
                           </div>
@@ -223,7 +261,7 @@ export default function WalletPage() {
                           }`}
                         >
                           {isIncoming ? '+' : '-'}
-                          {formatAmount(tx.amount)}
+                          {formatAmount(displayAmount)}
                         </div>
                       </div>
                     </CardContent>
@@ -235,12 +273,35 @@ export default function WalletPage() {
         </div>
       </div>
 
-      {/* DEPOSIT MODAL — mount ở cuối, ngoài scroll container */}
       <DepositModal
         open={depositOpen}
         onClose={() => setDepositOpen(false)}
         onSuccess={handleDepositSuccess}
       />
+    </>
+  );
+}
+
+export default function WalletPage() {
+  return (
+    <Layout>
+      <div className="p-6">
+        <WalletContent />
+      </div>
     </Layout>
+  );
+}
+
+export function MentorWalletPage() {
+  return (
+    <MentorLayout>
+      <WalletContent
+        title="Mentor Wallet"
+        description="Manage your earnings and withdrawal history"
+        balanceLabel="Available Balance"
+        showTopUp={false}
+        showWithdraw
+      />
+    </MentorLayout>
   );
 }

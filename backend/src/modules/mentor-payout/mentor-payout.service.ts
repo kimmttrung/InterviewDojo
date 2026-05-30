@@ -34,61 +34,159 @@ export class MentorPayoutService {
   async payoutCompletedSession(sessionId: number) {
     const platformFeePercent = this.getPlatformFeePercent();
 
-    return this.prisma.$transaction(async (tx) => {
-      const session = await tx.mockSession.findUnique({
-        where: { id: sessionId },
-        include: {
-          booking: true,
-          mentorPayout: true,
-        },
-      });
+    try {
+      return await this.prisma.$transaction(async (tx) => {
+        const session = await tx.mockSession.findUnique({
+          where: { id: sessionId },
+          include: {
+            booking: true,
+            mentorPayout: true,
+          },
+        });
 
-      if (!session) {
-        throw new NotFoundException('Session not found');
-      }
+        if (!session) {
+          throw new NotFoundException('Session not found');
+        }
 
-      if (
-        session.status !== SessionStatus.COMPLETED ||
-        session.source !== SessionSource.MENTOR_BOOKING ||
-        !session.booking
-      ) {
-        return null;
-      }
+        if (
+          session.status !== SessionStatus.COMPLETED ||
+          session.source !== SessionSource.MENTOR_BOOKING ||
+          !session.booking
+        ) {
+          return null;
+        }
 
-      if (!payableBookingStatuses.includes(session.booking.status)) {
-        return null;
-      }
+        if (!payableBookingStatuses.includes(session.booking.status)) {
+          return null;
+        }
 
-      const grossAmount = session.booking.snapshotPlanPrice;
-      if (!grossAmount || grossAmount <= 0) {
-        throw new BadRequestException('Booking price is not available');
-      }
+        const grossAmount = session.booking.snapshotPlanPrice;
+        if (!grossAmount || grossAmount <= 0) {
+          throw new BadRequestException('Booking price is not available');
+        }
 
-      const platformFeeAmount = this.roundMoney(
-        (grossAmount * platformFeePercent) / 100,
-      );
-      const mentorEarning = this.roundMoney(grossAmount - platformFeeAmount);
-      const referenceId = this.sessionReferenceId(session.id);
+        const platformFeeAmount = this.roundMoney(
+          (grossAmount * platformFeePercent) / 100,
+        );
+        const mentorEarning = this.roundMoney(grossAmount - platformFeeAmount);
+        const referenceId = this.sessionReferenceId(session.id);
 
-      const existingPayoutTransaction = await tx.walletTransaction.findFirst({
-        where: {
-          type: WalletTransactionType.PAYOUT,
-          referenceId,
-        },
-      });
+        const existingPayoutTransaction = await tx.walletTransaction.findFirst({
+          where: {
+            type: WalletTransactionType.PAYOUT,
+            referenceId,
+          },
+        });
 
-      if (existingPayoutTransaction) {
-        if (session.mentorPayout) {
-          return tx.mentorPayout.update({
-            where: { id: session.mentorPayout.id },
+        if (existingPayoutTransaction) {
+          if (session.mentorPayout) {
+            return tx.mentorPayout.update({
+              where: { id: session.mentorPayout.id },
+              data: {
+                status: MentorPayoutStatus.COMPLETED,
+                failureReason: null,
+              },
+            });
+          }
+
+          return tx.mentorPayout.create({
             data: {
+              sessionId: session.id,
+              bookingId: session.booking.id,
+              mentorId: session.booking.mentorId,
+              candidateId: session.booking.candidateId,
+              grossAmount,
+              platformFeePercent,
+              platformFeeAmount,
+              mentorEarning,
+              refundableAmount: grossAmount,
               status: MentorPayoutStatus.COMPLETED,
-              failureReason: null,
             },
           });
         }
 
-        return tx.mentorPayout.create({
+        if (session.booking.status === BookingStatus.ACCEPTED) {
+          await tx.booking.update({
+            where: { id: session.booking.id },
+            data: { status: BookingStatus.COMPLETED },
+          });
+        }
+
+        const payout = session.mentorPayout
+          ? await tx.mentorPayout.update({
+              where: { id: session.mentorPayout.id },
+              data: {
+                grossAmount,
+                platformFeePercent,
+                platformFeeAmount,
+                mentorEarning,
+                refundableAmount: grossAmount,
+                status: MentorPayoutStatus.PENDING,
+                failureReason: null,
+              },
+            })
+          : await tx.mentorPayout.create({
+              data: {
+                sessionId: session.id,
+                bookingId: session.booking.id,
+                mentorId: session.booking.mentorId,
+                candidateId: session.booking.candidateId,
+                grossAmount,
+                platformFeePercent,
+                platformFeeAmount,
+                mentorEarning,
+                refundableAmount: grossAmount,
+                status: MentorPayoutStatus.PENDING,
+              },
+            });
+
+        const mentorBefore = await tx.user.findUnique({
+          where: { id: session.booking.mentorId },
+          select: { creditBalance: true },
+        });
+
+        if (!mentorBefore) {
+          return tx.mentorPayout.update({
+            where: { id: payout.id },
+            data: {
+              status: MentorPayoutStatus.FAILED,
+              failureReason: 'Mentor not found',
+            },
+          });
+        }
+
+        const mentorAfter = await tx.user.update({
+          where: { id: session.booking.mentorId },
+          data: { creditBalance: { increment: mentorEarning } },
+          select: { creditBalance: true },
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            userId: session.booking.mentorId,
+            type: WalletTransactionType.PAYOUT,
+            amount: mentorEarning,
+            balanceBefore: mentorBefore.creditBalance,
+            balanceAfter: mentorAfter.creditBalance,
+            referenceId,
+            note: `Thanh toan cho session coaching #${session.id}`,
+          },
+        });
+
+        await tx.walletTransaction.create({
+          data: {
+            userId: null,
+            type: WalletTransactionType.PLATFORM_FEE,
+            amount: platformFeeAmount,
+            balanceBefore: 0,
+            balanceAfter: 0,
+            referenceId,
+            note: `Phi nen tang (${platformFeePercent}%)`,
+          },
+        });
+
+        return tx.mentorPayout.update({
+          where: { id: payout.id },
           data: {
             sessionId: session.id,
             bookingId: session.booking.id,
@@ -100,107 +198,20 @@ export class MentorPayoutService {
             mentorEarning,
             refundableAmount: grossAmount,
             status: MentorPayoutStatus.COMPLETED,
+            failureReason: null,
           },
         });
-      }
-
-      if (session.booking.status === BookingStatus.ACCEPTED) {
-        await tx.booking.update({
-          where: { id: session.booking.id },
-          data: { status: BookingStatus.COMPLETED },
+      });
+    } catch (error) {
+      if (this.isUniqueConstraintError(error)) {
+        return this.prisma.mentorPayout.findUnique({
+          where: { sessionId },
+          include: this.payoutInclude(),
         });
       }
 
-      const payout = session.mentorPayout
-        ? await tx.mentorPayout.update({
-            where: { id: session.mentorPayout.id },
-            data: {
-              grossAmount,
-              platformFeePercent,
-              platformFeeAmount,
-              mentorEarning,
-              refundableAmount: grossAmount,
-              status: MentorPayoutStatus.PENDING,
-              failureReason: null,
-            },
-          })
-        : await tx.mentorPayout.create({
-            data: {
-              sessionId: session.id,
-              bookingId: session.booking.id,
-              mentorId: session.booking.mentorId,
-              candidateId: session.booking.candidateId,
-              grossAmount,
-              platformFeePercent,
-              platformFeeAmount,
-              mentorEarning,
-              refundableAmount: grossAmount,
-              status: MentorPayoutStatus.PENDING,
-            },
-          });
-
-      const mentorBefore = await tx.user.findUnique({
-        where: { id: session.booking.mentorId },
-        select: { creditBalance: true },
-      });
-
-      if (!mentorBefore) {
-        return tx.mentorPayout.update({
-          where: { id: payout.id },
-          data: {
-            status: MentorPayoutStatus.FAILED,
-            failureReason: 'Mentor not found',
-          },
-        });
-      }
-
-      const mentorAfter = await tx.user.update({
-        where: { id: session.booking.mentorId },
-        data: { creditBalance: { increment: mentorEarning } },
-        select: { creditBalance: true },
-      });
-
-      await tx.walletTransaction.create({
-        data: {
-          userId: session.booking.mentorId,
-          type: WalletTransactionType.PAYOUT,
-          amount: mentorEarning,
-          balanceBefore: mentorBefore.creditBalance,
-          balanceAfter: mentorAfter.creditBalance,
-          referenceId,
-          note: `Thanh toan cho session coaching #${session.id}`,
-        },
-      });
-
-      await tx.walletTransaction.create({
-        data: {
-          userId: null,
-          type: WalletTransactionType.PLATFORM_FEE,
-          amount: platformFeeAmount,
-          balanceBefore: 0,
-          balanceAfter: 0,
-          referenceId,
-          note: `Phi nen tang (${platformFeePercent}%)`,
-        },
-      });
-
-      return tx.mentorPayout.update({
-        where: { id: payout.id },
-        data: {
-          sessionId: session.id,
-          bookingId: session.booking.id,
-          mentorId: session.booking.mentorId,
-          candidateId: session.booking.candidateId,
-          grossAmount,
-          platformFeePercent,
-          platformFeeAmount,
-          mentorEarning,
-          refundableAmount: grossAmount,
-          status: MentorPayoutStatus.COMPLETED,
-          failureReason: null,
-        },
-      });
-    });
+      throw error;
+    }
   }
 
   async payoutCompletedSessionSafely(sessionId: number) {
@@ -549,21 +560,32 @@ export class MentorPayoutService {
         return;
       }
 
-      await this.prisma.mentorPayout.create({
-        data: {
-          sessionId: session.id,
-          bookingId: session.booking.id,
-          mentorId: session.booking.mentorId,
-          candidateId: session.booking.candidateId,
-          grossAmount,
-          platformFeePercent,
-          platformFeeAmount,
-          mentorEarning,
-          refundableAmount: grossAmount,
-          status: MentorPayoutStatus.FAILED,
-          failureReason,
-        },
-      });
+      try {
+        await this.prisma.mentorPayout.create({
+          data: {
+            sessionId: session.id,
+            bookingId: session.booking.id,
+            mentorId: session.booking.mentorId,
+            candidateId: session.booking.candidateId,
+            grossAmount,
+            platformFeePercent,
+            platformFeeAmount,
+            mentorEarning,
+            refundableAmount: grossAmount,
+            status: MentorPayoutStatus.FAILED,
+            failureReason,
+          },
+        });
+      } catch (createError) {
+        if (!this.isUniqueConstraintError(createError)) {
+          throw createError;
+        }
+
+        await this.prisma.mentorPayout.update({
+          where: { sessionId: session.id },
+          data: { failureReason },
+        });
+      }
     } catch (markError) {
       this.logger.error(
         `Failed to mark mentor payout as failed for session ${sessionId}`,
@@ -598,6 +620,15 @@ export class MentorPayoutService {
 
   private roundMoney(value: number) {
     return Math.round(value * 100) / 100;
+  }
+
+  private isUniqueConstraintError(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'code' in error &&
+      (error as { code?: string }).code === 'P2002'
+    );
   }
 
   private payoutInclude() {

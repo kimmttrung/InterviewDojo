@@ -29,7 +29,7 @@ import { ProtectedRoute, useCurrentUser } from '@/features/auth';
 import QuestionDetailContainer from '../features/shared-domain/question-bank/pages/QuestionDetailContainer';
 import MentorListPage from '@/features/candidate/list-mentor/pages/MentorListPage';
 import RootRedirect from '@/shared/components/routing/RootRedirect';
-import WalletPage from '@/features/wallet/pages/WalletPage';
+import WalletPage, { MentorWalletPage } from '@/features/wallet/pages/WalletPage';
 import MeetingRoom from '@/features/candidate/practice/interviews/mentor-interview/pages/MeetingRoom';
 import AdminLayout from '@/features/admin/components/AdminLayout';
 import { MentorApprovalList } from '@/features/admin/mentors/pages/MentorApprovalList';
@@ -276,6 +276,14 @@ export function App() {
               element={
                 <ProtectedRoute roles={['MENTOR']}>
                   <MentorSchedule />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/mentor/wallet"
+              element={
+                <ProtectedRoute roles={['MENTOR']}>
+                  <MentorWalletPage />
                 </ProtectedRoute>
               }
             />
