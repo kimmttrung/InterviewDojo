@@ -1,5 +1,5 @@
 // features/questions/components/QuestionDetail/TheoryView.tsx
-import { KeyRound, Lightbulb, CheckCircle2 } from 'lucide-react';
+import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide-react';
 import { QuestionDetail } from '../../types/question.types';
 import { CommentSection } from '@/features/comment/components/CommentSection';
 import { useEffect } from 'react';
@@ -61,6 +61,25 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
                 <li key={idx} className="flex items-start gap-2.5">
                   <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
                   <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionBox>
+        )}
+
+        {parsedData?.followUps?.length > 0 && (
+          <SectionBox
+            icon={<MessageCircleQuestion className="w-5 h-5 text-indigo-500" />}
+            title="Follow-up Questions"
+            colorClass="bg-indigo-50/40 border-indigo-100 text-indigo-800"
+          >
+            <ul className="space-y-2.5 text-sm">
+              {parsedData.followUps.map((q: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span>{q}</span>
                 </li>
               ))}
             </ul>

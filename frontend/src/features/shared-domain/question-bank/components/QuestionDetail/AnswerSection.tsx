@@ -1,26 +1,10 @@
 // features/questions/components/QuestionDetail/AnswerSection.tsx
 import { useState } from 'react';
-import { MessageCircle, ChevronDown, MoreHorizontal, PlusCircle, Share } from 'lucide-react';
+import { MessageCircle, ChevronDown, PlusCircle, Share } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
-import { Avatar, AvatarFallback, AvatarImage } from '@/shared/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
 import { Input } from '@/shared/components/ui/input';
-import { Badge } from '@/shared/components/ui/badge';
-
-// Vẫn giữ MOCK_ANSWERS, sau này thay bằng API
-const MOCK_ANSWERS = [
-  {
-    id: 1,
-    user: {
-      name: 'Kartikeya N.',
-      role: 'Member',
-      avatar: 'https://i.pravatar.cc/150?u=kartikeya',
-    },
-    date: 'November 30, 2025',
-    content:
-      "Clarifying questions\n\n- What does improve mean? What aspect are we targeting? : User engagement with recommended videos\n- Are we looking at a specific platform (Mobile, Web, TV)? : Let's assume across all platforms.",
-  },
-];
 
 export function AnswerSection({ answersCount }: { answersCount: number }) {
   const [myAnswer, setMyAnswer] = useState('');
@@ -77,41 +61,12 @@ export function AnswerSection({ answersCount }: { answersCount: number }) {
         <div className="flex items-center justify-between border-b border-slate-100 pb-4">
           <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
             <MessageCircle className="w-5 h-5 text-slate-400" />
-            {answersCount || MOCK_ANSWERS.length} Answers
+            {answersCount || 0} Answers
           </span>
           <Button variant="ghost" size="sm" className="text-slate-500 font-medium">
             🔥 Hot <ChevronDown className="w-4 h-4 ml-2" />
           </Button>
         </div>
-
-        {MOCK_ANSWERS.map((answer) => (
-          <div
-            key={answer.id}
-            className="flex gap-4 p-4 rounded-2xl hover:bg-slate-50/50 transition-colors border border-transparent hover:border-slate-100"
-          >
-            <Avatar className="h-10 w-10 shrink-0">
-              <AvatarImage src={answer.user.avatar} />
-              <AvatarFallback>{answer.user.name[0]}</AvatarFallback>
-            </Avatar>
-            <div className="flex-1 space-y-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-slate-900">{answer.user.name}</span>
-                  <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 text-[10px]">
-                    {answer.user.role}
-                  </Badge>
-                </div>
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </div>
-              <p className="text-xs text-slate-400">{answer.date}</p>
-              <div className="text-sm text-slate-700 whitespace-pre-line leading-relaxed italic border-l-2 border-slate-200 pl-4">
-                {answer.content}
-              </div>
-            </div>
-          </div>
-        ))}
       </div>
     </div>
   );
