@@ -75,7 +75,7 @@ export function CodingDescription({ question }: { question: any }) {
                 </div>
                 <div className="p-2 font-mono">
                   <div className="text-blue-600">In: {tc.input}</div>
-                  <div className="text-emerald-600">Out: {tc.expectedOutput}</div>
+                  <div className="text-emerald-600">Out: {tc.output}</div>
                 </div>
               </div>
             ))}
