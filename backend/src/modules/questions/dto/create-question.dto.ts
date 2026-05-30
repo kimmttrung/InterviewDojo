@@ -6,11 +6,48 @@ import {
   IsObject,
   IsArray,
   IsNumber,
+  IsInt,
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import { Difficulty, QuestionType } from '@prisma/client';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class TestCaseDto {
+  @ApiProperty({ example: '[1,2,3]\n9' })
+  @IsString()
+  input: string;
+
+  @ApiProperty({ example: '[0,1]' })
+  @IsString()
+  expectedOutput: string;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isSample?: boolean;
+
+  @ApiPropertyOptional({ default: false })
+  @IsOptional()
+  @IsBoolean()
+  isHidden?: boolean;
+
+  @ApiPropertyOptional({ default: 1 })
+  @IsOptional()
+  @IsNumber()
+  points?: number;
+
+  @ApiPropertyOptional({ default: 0 })
+  @IsOptional()
+  @IsInt()
+  order?: number;
+
+  @ApiPropertyOptional({ example: 'nums[0] + nums[1] = 9' })
+  @IsOptional()
+  @IsString()
+  explanation?: string;
+}
+
 export class CodingDataDto {
   @ApiProperty({ example: 'Viết hàm tính tổng 2 số...' })
   @IsString()
@@ -35,6 +72,25 @@ export class CodingDataDto {
   @IsOptional()
   @IsString()
   codeforcesLink?: string;
+
+  @ApiPropertyOptional({ type: [String], example: ['array', 'hash-table'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  tags?: string[];
+
+  @ApiPropertyOptional({ type: [String], example: ['Try using a hash map'] })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  hints?: string[];
+
+  @ApiPropertyOptional({ type: [TestCaseDto] })
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => TestCaseDto)
+  testCases?: TestCaseDto[];
 }
 
 export class CreateQuestionDto {
@@ -78,7 +134,12 @@ export class CreateQuestionDto {
   jobRoleIds?: number[];
 
   @ApiPropertyOptional({
-    example: { question: 'NodeJS là gì?', sampleAnswer: 'Là runtime...' },
+    example: {
+      question: 'NodeJS là gì?',
+      tips: [],
+      followUps: [],
+      keyPoints: [],
+    },
   })
   @IsOptional()
   @IsObject()

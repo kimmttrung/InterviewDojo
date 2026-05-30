@@ -17,14 +17,18 @@ export class QuestionsService {
   private toQuestionItem(q: any): QuestionItem {
     const isCoding = q.type === QuestionType.CODING;
     const specificData = isCoding ? q.codingQuestion : q.theoryQuestion;
+    const theoryQuestionText = !isCoding
+      ? specificData?.data?.question || q.title
+      : q.title;
     return {
       id: q.id,
-      title: q.title,
+      title: theoryQuestionText,
       slug: q.slug,
       difficulty: q.difficulty,
       questionType: q.type,
       isPublished: q.isPublished,
       createdAt: q.createdAt,
+      ...(!isCoding && { data: specificData?.data }),
       description: isCoding
         ? specificData?.description || ''
         : specificData?.data?.question || '',
@@ -66,7 +70,9 @@ export class QuestionsService {
 
     return {
       id: rawQ.id,
-      title: rawQ.title,
+      title: !isCoding
+        ? rawQ.theoryQuestion?.data?.question || rawQ.title
+        : rawQ.title,
       slug: rawQ.slug,
       difficulty: rawQ.difficulty,
       type: rawQ.type,
@@ -192,7 +198,7 @@ export class QuestionsService {
     userId?: number,
   ): Promise<QuestionDetail> {
     const rawQ = await this.prisma.question.findFirst({
-      where: { id, isPublished: true },
+      where: { id },
       include: {
         categories: { include: { category: true } },
         companies: { include: { company: true } },
@@ -300,7 +306,33 @@ export class QuestionsService {
           }),
         ...(question.type === QuestionType.CODING &&
           codingData && {
-            codingQuestion: { update: codingData },
+            codingQuestion: {
+              update: {
+                description: codingData.description,
+                constraints: codingData.constraints,
+                timeLimit: codingData.timeLimit,
+                memoryLimit: codingData.memoryLimit,
+                codeforcesLink: codingData.codeforcesLink,
+                hints: (codingData as any).hints ?? [],
+                tags: (codingData as any).tags ?? [],
+                ...((codingData as any).testCases && {
+                  testCases: {
+                    deleteMany: {},
+                    create: (codingData as any).testCases.map(
+                      (tc: any, i: number) => ({
+                        input: tc.input,
+                        expectedOutput: tc.expectedOutput,
+                        isSample: tc.isSample ?? false,
+                        isHidden: tc.isHidden ?? false,
+                        points: tc.points ?? 1,
+                        order: tc.order ?? i,
+                        explanation: tc.explanation,
+                      }),
+                    ),
+                  },
+                }),
+              },
+            },
           }),
       },
     });
