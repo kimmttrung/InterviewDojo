@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/en';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
 import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
@@ -9,6 +10,7 @@ import { getMeetingLink } from '../services/session.services';
 import { useNavigate } from 'react-router-dom';
 
 dayjs.extend(relativeTime);
+dayjs.locale('en');
 
 interface Props {
   session: SessionItem;
@@ -40,10 +42,10 @@ export const SessionCard = ({ session }: Props) => {
       if (meetingLink) {
         navigate(`/${meetingLink}`);
       } else {
-        alert('Không thể tạo phòng họp');
+        alert('Could not create the meeting room');
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+      alert(error.response?.data?.message || 'An error occurred');
     } finally {
       setIsJoining(false);
     }
@@ -62,9 +64,9 @@ export const SessionCard = ({ session }: Props) => {
       if (diffMinutes > 0) {
         setTimeLeft(start.fromNow());
       } else if (diffMinutes <= 0 && diffMinutes >= -duration) {
-        setTimeLeft('Đang diễn ra');
+        setTimeLeft('Ongoing');
       } else {
-        setTimeLeft('Đã kết thúc');
+        setTimeLeft('Finished');
       }
     };
 
@@ -126,7 +128,7 @@ export const SessionCard = ({ session }: Props) => {
           <p className="text-sm text-gray-500 mt-1">
             {session.scheduledAt
               ? dayjs(session.scheduledAt).format('HH:mm DD/MM/YYYY')
-              : 'Chưa có lịch'}
+              : 'Not scheduled'}
           </p>
         </div>
       </div>
@@ -147,8 +149,9 @@ export const SessionCard = ({ session }: Props) => {
       <div className="flex justify-between items-center mt-2">
         <div className="text-sm font-medium text-orange-600">
           {session.status === 'UPCOMING' && `Bắt đầu: ${timeLeft}`}
-          {session.status === 'ONGOING' && 'Cuộc phỏng vấn đang diễn ra'}
-          {session.status === 'PENDING' && 'Đang chờ mentor xác nhận'}
+          {session.status === 'ONGOING' && 'Session is ongoing'}
+          {session.status === 'PENDING' && 'Session is pending'}
+          {session.status === 'FINISHED' && 'Session is finished'}
         </div>
         <div className="flex gap-2">
           {/* 1. NÚT CANCEL: CHỈ HIỂN THỊ KHI UPCOMING */}
@@ -172,9 +175,9 @@ export const SessionCard = ({ session }: Props) => {
               }`}
             >
               {isJoining
-                ? 'Đang tạo phòng...'
-                : session.status === 'ONGOING' || timeLeft === 'Đang diễn ra'
-                  ? 'Vào ngay'
+                ? 'Creating room...'
+                : session.status === 'ONGOING' || timeLeft === 'Ongoing'
+                  ? 'Join now'
                   : 'Join'}
             </button>
           )}

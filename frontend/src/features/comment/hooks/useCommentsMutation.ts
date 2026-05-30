@@ -17,28 +17,27 @@ export const useCommentMutations = (questionId: number) => {
     mutationFn: createComment,
     onSuccess: () => {
       invalidateList();
-      showToast.success('Đã gửi bình luận');
+      showToast.success('Comment posted successfully');
     },
-    onError: () => showToast.error('Không thể gửi bình luận'),
+    onError: () => showToast.error('Failed to post comment'),
   });
 
   const updateMutation = useMutation({
     mutationFn: updateComment,
     onSuccess: () => {
       invalidateList();
-      showToast.success('Đã cập nhật bình luận');
+      showToast.success('Comment updated successfully');
     },
-    onError: () => showToast.error('Lỗi khi cập nhật'),
+    onError: () => showToast.error('Failed to update comment'),
   });
 
   const deleteMutation = useMutation({
     mutationFn: deleteComment,
     onSuccess: () => {
       invalidateList();
-      // showToast có warning/success/error. Dùng success cho thông báo xóa hoàn tất.
-      showToast.success('Bình luận đã bị xóa');
+      showToast.success('Comment deleted successfully');
     },
-    onError: () => showToast.error('Lỗi khi xóa'),
+    onError: () => showToast.error('Failed to delete comment'),
   });
 
   return { createMutation, updateMutation, deleteMutation };

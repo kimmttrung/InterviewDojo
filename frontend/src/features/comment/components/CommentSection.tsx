@@ -29,21 +29,23 @@ export const CommentSection: React.FC<Props> = ({ questionId }) => {
   };
 
   if (isLoading) {
-    return <div className="text-center py-4">Đang tải bình luận...</div>;
+    return <div className="text-center py-4">Loading comments...</div>;
   }
 
   if (isError) {
-    return <div className="text-red-500 text-center py-4">Đã có lỗi xảy ra khi tải bình luận!</div>;
+    return (
+      <div className="text-red-500 text-center py-4">An error occurred while loading comments!</div>
+    );
   }
 
   return (
     <div className="max-w-3xl mx-auto mt-8 p-4 bg-white rounded-lg shadow-sm">
-      <h3 className="text-xl font-bold mb-4 border-b pb-2">Bình luận ({data?.meta.total || 0})</h3>
+      <h3 className="text-xl font-bold mb-4 border-b pb-2">Discussion ({data?.meta.total || 0})</h3>
 
       <CommentForm
         onSubmit={handleCreateParentComment}
         isLoading={createMutation.isPending}
-        placeholder="Viết bình luận của bạn về câu hỏi này (hỗ trợ Markdown)..."
+        placeholder="Write your comment about this question (Markdown supported)..."
       />
 
       <CommentList
@@ -59,17 +61,17 @@ export const CommentSection: React.FC<Props> = ({ questionId }) => {
             onClick={() => setPage((p) => p - 1)}
             className="px-4 py-2 border rounded-md disabled:opacity-50 hover:bg-gray-50 transition-colors"
           >
-            Trang trước
+            Previous
           </button>
           <span className="font-medium text-gray-700">
-            Trang {page} / {data.meta.totalPages}
+            Page {page} / {data.meta.totalPages}
           </span>
           <button
             disabled={page === data.meta.totalPages}
             onClick={() => setPage((p) => p + 1)}
             className="px-4 py-2 border rounded-md disabled:opacity-50 hover:bg-gray-50 transition-colors"
           >
-            Trang sau
+            Next
           </button>
         </div>
       )}

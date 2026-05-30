@@ -7,6 +7,9 @@ import { DetailSidebar } from '../components/QuestionDetail/DetailSidebar';
 import { useQuestionDetail } from '../hooks/useQuestions';
 import { QuestionType } from '../types/question.types';
 import { BookmarkButton } from '@/features/bookmark/components/BookmarkButton';
+// Import CommentSection vào container cha
+import { CommentSection } from '@/features/comment/components/CommentSection';
+import { AnswerSection } from '../components/QuestionDetail/AnswerSection';
 
 export default function QuestionDetailContainer() {
   const { id } = useParams<{ id: string }>();
@@ -26,7 +29,7 @@ export default function QuestionDetailContainer() {
     );
   }
 
-  if (question.type === QuestionType.CODING) {
+  if (question.questionType === QuestionType.CODING) {
     return <CodingView question={question} />;
   }
 
@@ -43,14 +46,19 @@ export default function QuestionDetailContainer() {
             <ChevronLeft className="w-4 h-4 mr-1" />
             Back to Question Bank
           </Link>
-          {/* Thêm fallback false cho isBookmarked */}
           <BookmarkButton questionId={question.id} isBookmarked={question.isBookmarked || false} />
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10">
-          <div className="lg:col-span-8">
+          <div className="lg:col-span-8 space-y-10">
+            {' '}
             <TheoryView question={question} parsedData={parsedData} />
+            <AnswerSection />
+            <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
+              <CommentSection questionId={question.id} />
+            </div>
           </div>
+
           <div className="lg:col-span-4">
             <DetailSidebar question={question} />
           </div>
