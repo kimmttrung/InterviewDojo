@@ -6,6 +6,7 @@ export interface QuestionDetail {
   slug: string;
   difficulty: string;
   type: QuestionType;
+  questionType: QuestionType;
   isPublished: boolean;
   createdAt: Date;
   updatedAt: Date;

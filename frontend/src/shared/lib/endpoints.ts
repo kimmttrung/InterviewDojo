@@ -39,9 +39,6 @@ export const API_ENDPOINT = {
     GET_ALL: '/questions',
     GET_RANDOM: '/questions/random',
     GET_ONE: (id: string) => `/questions/${id}`,
-    CREATE: '/questions',
-    UPDATE: (id: number) => `/questions/${id}`,
-    DELETE: (id: number) => `/questions/${id}`,
   },
   CATEGORIES: {
     GET_ALL: '/categories',
@@ -161,6 +158,13 @@ export const API_ENDPOINT = {
     REPORTS: '/reports',
     REPORT_DETAIL: (id: number) => `/reports/${id}`,
     UPDATE_REPORT_STATUS: (id: number) => `/reports/${id}/status`,
+
+    QUESTIONS: '/admin/questions',
+    QUESTION_DETAIL: (id: number) => `/admin/questions/${id}`,
+    CREATE_QUESTION: '/admin/questions',
+    UPDATE_QUESTION: (id: number) => `/admin/questions/${id}`,
+    DELETE_QUESTION: (id: number) => `/admin/questions/${id}`,
+    RANDOM_QUESTION: '/admin/questions/random',
 
     WALLET_TRANSACTIONS: '/admin/wallet/transactions',
     WALLET_STATISTICS: '/admin/wallet/statistics',
