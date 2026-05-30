@@ -11,6 +11,7 @@ import { WalletService } from '../modules/wallet/wallet.service';
 import { StreamService } from '../modules/stream/stream.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+import { CloudinaryService } from '@/modules/cloudinary/cloudinary.service';
 
 describe('Booking Rejection Refund Integration', () => {
   let bookingService: BookingService;
@@ -90,6 +91,15 @@ describe('Booking Rejection Refund Integration', () => {
           useValue: { scheduleSessionEnd: jest.fn() },
         },
         { provide: StreamService, useValue: streamServiceMock },
+        {
+          provide: CloudinaryService,
+          useValue: {
+            uploadRawFile: jest.fn().mockResolvedValue({
+              secure_url: 'https://mock-url.com/file.pdf',
+              public_id: 'mock_id',
+            }),
+          },
+        },
       ],
     }).compile();
     bookingService = moduleRef.get(BookingService);
