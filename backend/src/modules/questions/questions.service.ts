@@ -198,7 +198,7 @@ export class QuestionsService {
     userId?: number,
   ): Promise<QuestionDetail> {
     const rawQ = await this.prisma.question.findFirst({
-      where: { id, isPublished: true },
+      where: { id },
       include: {
         categories: { include: { category: true } },
         companies: { include: { company: true } },
@@ -306,7 +306,33 @@ export class QuestionsService {
           }),
         ...(question.type === QuestionType.CODING &&
           codingData && {
-            codingQuestion: { update: codingData },
+            codingQuestion: {
+              update: {
+                description: codingData.description,
+                constraints: codingData.constraints,
+                timeLimit: codingData.timeLimit,
+                memoryLimit: codingData.memoryLimit,
+                codeforcesLink: codingData.codeforcesLink,
+                hints: (codingData as any).hints ?? [],
+                tags: (codingData as any).tags ?? [],
+                ...((codingData as any).testCases && {
+                  testCases: {
+                    deleteMany: {},
+                    create: (codingData as any).testCases.map(
+                      (tc: any, i: number) => ({
+                        input: tc.input,
+                        expectedOutput: tc.expectedOutput,
+                        isSample: tc.isSample ?? false,
+                        isHidden: tc.isHidden ?? false,
+                        points: tc.points ?? 1,
+                        order: tc.order ?? i,
+                        explanation: tc.explanation,
+                      }),
+                    ),
+                  },
+                }),
+              },
+            },
           }),
       },
     });
