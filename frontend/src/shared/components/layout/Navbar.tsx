@@ -109,7 +109,7 @@ export function Navbar() {
             onClick={() => navigate('/wallet')}
           >
             <Sparkles className="h-4 w-4 mr-1" />
-            Nạp tiền
+            Top-up
           </Button>
 
           {/* Language */}
@@ -210,7 +210,7 @@ export function Navbar() {
                           onClick={() => navigate('/wallet')}
                         >
                           <CreditCard className="mr-2 h-4 w-4" />
-                          Nạp ví
+                          Wallet Top-up
                         </Button>
                       </div>
                     </div>

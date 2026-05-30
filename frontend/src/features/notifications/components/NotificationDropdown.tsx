@@ -33,7 +33,7 @@ export default function NotificationDropdown() {
       filtered = filtered.filter((item) => item.isRead);
     }
 
-    // Sắp xếp: Pinned luôn nằm trên cùng
+    // Sort: Pinned items always on top
     return filtered.sort((a, b) => {
       if (a.isPinned && !b.isPinned) return -1;
       if (!a.isPinned && b.isPinned) return 1;
@@ -70,7 +70,7 @@ export default function NotificationDropdown() {
         <Bell className="h-5 w-5 text-gray-700" />
         {!!data?.unreadCount && (
           <span className="absolute right-0 top-0 flex h-4 w-4 items-center justify-center rounded-full border-2 border-white bg-red-500 text-[10px] font-bold text-white">
-            {data.unreadCount > 10 ? '10+' : data.unreadCount}
+            {data.unreadCount}
           </span>
         )}
       </button>
@@ -79,24 +79,24 @@ export default function NotificationDropdown() {
         <div className="absolute right-0 z-50 mt-2 w-80 origin-top-right overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5 focus:outline-none">
           <div className="border-b border-gray-100 bg-gray-50/50 p-3">
             <div className="mb-3 flex items-center justify-between px-1">
-              <h3 className="text-sm font-semibold text-gray-800">Thông báo</h3>
+              <h3 className="text-sm font-semibold text-gray-800">Notifications</h3>
               {data?.unreadCount ? (
                 <button
                   onClick={handleMarkAllRead}
                   className="flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:text-blue-800 hover:underline"
                 >
                   <CheckCheck className="h-3 w-3" />
-                  Đánh dấu tất cả đã đọc
+                  Mark all as read
                 </button>
               ) : null}
             </div>
 
-            {/* BỘ LỌC TABS */}
+            {/* FILTER TABS */}
             <div className="flex gap-2 rounded-lg bg-gray-200/50 p-1">
               {[
-                { label: 'Tất cả', value: 'ALL' },
-                { label: 'Chưa đọc', value: 'UNREAD' },
-                { label: 'Đã đọc', value: 'READ' },
+                { label: 'All', value: 'ALL' },
+                { label: 'Unread', value: 'UNREAD' },
+                { label: 'Read', value: 'READ' },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -114,13 +114,13 @@ export default function NotificationDropdown() {
           </div>
 
           <div className="max-h-[350px] overflow-y-auto">
-            {isLoading && <div className="p-4 text-center text-sm text-gray-500">Đang tải...</div>}
+            {isLoading && <div className="p-4 text-center text-sm text-gray-500">Loading...</div>}
 
             {!isLoading && displayItems.length === 0 && (
               <div className="p-8 text-center text-sm text-gray-500">
                 {filter === 'UNREAD'
-                  ? 'Bạn không có thông báo chưa đọc nào.'
-                  : 'Bạn chưa có thông báo nào.'}
+                  ? 'You have no unread notifications.'
+                  : 'You have no notifications.'}
               </div>
             )}
 

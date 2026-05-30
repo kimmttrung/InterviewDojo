@@ -10,7 +10,7 @@ interface SessionJobData {
   meetingLink?: string;
 }
 
-@Processor('session') // tên queue
+@Processor('session')
 export class SessionProcessor extends WorkerHost {
   constructor(
     private socketService: SocketService,
@@ -26,8 +26,8 @@ export class SessionProcessor extends WorkerHost {
         data: userIds.map((userId) => ({
           userId,
           type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Phỏng vấn đã bắt đầu',
-          message: 'Nhấn vào đây để tham gia cuộc họp.',
+          title: 'Interview has started',
+          message: 'Click here to join the meeting.',
           targetUrl: '/sessions/',
         })),
       });

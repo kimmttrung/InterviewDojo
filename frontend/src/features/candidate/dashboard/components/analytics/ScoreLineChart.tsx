@@ -49,10 +49,13 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 
     const score = typeof data?.score === 'number' ? data.score : 0;
     let sessionType = data?.sessionType ? String(data.sessionType) : 'UNKNOWN';
-    console.log('KIỂM TRA DỮ LIỆU TOOLTIP:', data);
+    console.log('TOOLTIP DATA CHECK:', data);
 
+    // Map DB values back to friendly UI names for display
     if (sessionType === 'MENTOR_BOOKING') {
       sessionType = 'MENTORING';
+    } else if (sessionType === 'P2P_MATCH') {
+      sessionType = 'P2P';
     }
 
     return (
@@ -83,7 +86,14 @@ export const ScoreLineChart = ({ data, activeFilter, setActiveFilter }: ScoreLin
     if (!data || !Array.isArray(data)) return [];
     if (activeFilter === 'ALL') return data;
 
-    const targetType = activeFilter === 'MENTORING' ? 'MENTOR_BOOKING' : activeFilter;
+    // Mapping logic from UI activeFilter to DB sessionType
+    let targetType = activeFilter;
+    if (activeFilter === 'MENTORING') {
+      targetType = 'MENTOR_BOOKING';
+    } else if (activeFilter === 'P2P') {
+      targetType = 'P2P_MATCH';
+    }
+
     return data.filter((d) => d && d.sessionType === targetType);
   }, [data, activeFilter]);
 
@@ -93,7 +103,7 @@ export const ScoreLineChart = ({ data, activeFilter, setActiveFilter }: ScoreLin
 
   const filters = ['ALL', 'MENTORING', 'SOLO', 'P2P'];
 
-  console.log('KIỂM TRA DỮ LIỆU ĐỒ THỊ:', data);
+  console.log('CHART DATA CHECK:', data);
   return (
     <Card className="overflow-hidden border bg-background shadow-sm">
       <CardContent className="p-0">

@@ -26,7 +26,7 @@ export default function HomePage() {
       link: '/question-bank',
     },
     {
-      title: 'List mentor booking',
+      title: 'Mentor booking list',
       icon: Users,
       color: 'from-green-500 to-emerald-500',
       link: '/mentors',

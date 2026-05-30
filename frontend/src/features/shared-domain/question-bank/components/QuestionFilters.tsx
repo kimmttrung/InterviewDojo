@@ -81,7 +81,7 @@ export function QuestionFilters() {
         className={`rounded-lg ${bookmarked ? 'bg-indigo-600 text-white' : 'border-indigo-600 text-indigo-600'}`}
         onClick={() => setBookmarked(!bookmarked)}
       >
-        Đã lưu
+        Saved
       </Button>
     </div>
   );
