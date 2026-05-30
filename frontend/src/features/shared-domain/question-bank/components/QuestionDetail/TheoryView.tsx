@@ -3,17 +3,20 @@ import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide
 import { QuestionDetail } from '../../types/question.types';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { AnswerSection } from './AnswerSection';
+import { CommentSection } from '@/features/comment/components/CommentSection';
 
 interface TheoryViewProps {
   question: QuestionDetail;
   parsedData: any;
+  isP2P?: boolean;
 }
 
-export function TheoryView({ question, parsedData }: TheoryViewProps) {
+export function TheoryView({ question, parsedData, isP2P = false }: TheoryViewProps) {
   const location = useLocation();
 
   useEffect(() => {
-    if (location.hash === '#comments') {
+    if (!isP2P && location.hash === '#comments') {
       const element = document.getElementById('comments');
       if (element) {
         setTimeout(() => {
@@ -21,8 +24,7 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
         }, 100);
       }
     }
-  }, [location]);
-
+  }, [location, isP2P]);
   return (
     <div className="space-y-8">
       <div className="space-y-4">
@@ -86,6 +88,14 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
           </SectionBox>
         )}
       </div>
+      {!isP2P && (
+        <>
+          <AnswerSection question={question} />
+          <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
+            <CommentSection questionId={question.id} />
+          </div>
+        </>
+      )}
     </div>
   );
 }

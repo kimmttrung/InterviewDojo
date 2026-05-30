@@ -23,6 +23,14 @@ export const bookingService = {
       })
       .then((r) => r.data.data),
 
+  // 🔥 THÊM API: Đẩy file đính kèm lên cổng /bookings/upload-attachment của Backend
+  uploadAttachment: (formData: FormData) =>
+    api
+      .post('/bookings/upload-attachment', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      })
+      .then((r) => r.data.data), // Trả về { secure_url: string, public_id: string }
+
   createBooking: (data: {
     coachingPlanId: number;
     startTime: string;

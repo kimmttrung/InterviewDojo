@@ -11,7 +11,7 @@ interface WorkspaceTabsProps {
   setWorkMode: (mode: WorkMode) => void;
   currentQuestion: Question | null;
   roomId: string;
-  userId: string;
+  userId: string | null;
 }
 
 export function WorkspaceTabs({

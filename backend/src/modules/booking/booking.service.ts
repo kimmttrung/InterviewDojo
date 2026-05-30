@@ -30,6 +30,8 @@ import { StreamService } from '../stream/stream.service';
 import { SessionService } from '../session/session.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { randomUUID } from 'crypto';
+import { CloudinaryService } from '../cloudinary/cloudinary.service';
+import { UploadedFileType } from '@/common/types/uploaded-file.type';
 
 @Injectable()
 export class BookingService {
@@ -39,6 +41,7 @@ export class BookingService {
     private readonly streamService: StreamService,
     private readonly sessionService: SessionService,
     private readonly eventEmitter: EventEmitter2,
+    private readonly cloudinaryService: CloudinaryService,
   ) {}
 
   private mapToBookingResponse(
@@ -116,40 +119,34 @@ export class BookingService {
       throw new BadRequestException('Không thể đặt lịch trong quá khứ');
     }
 
+    // 🚀 TỐI ƯU 1: Đẩy việc đọc Coaching Plan ra ngoài Transaction để giảm thời gian giữ connection
+    const plan = await this.prisma.coachingPlan.findUnique({
+      where: { id: coachingPlanId },
+      include: { mentor: true },
+    });
+
+    if (!plan || !plan.isActive) {
+      throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
+    }
+
+    const mentorId = plan.mentor.userId;
+
+    // Validate duration nhanh ở ngoài
+    const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
+    if (durationMinutes !== plan.duration) {
+      throw new BadRequestException('Duration không khớp coaching plan');
+    }
+
+    // 🚀 TỐI ƯU 2: Bắt đầu Transaction ngắn gọn (Chỉ chứa logic cần tính nguyên tố)
     return this.prisma.$transaction(
       async (tx) => {
-        // 1. Lấy coaching plan
-        const plan = await tx.coachingPlan.findUnique({
-          where: { id: coachingPlanId },
-          include: {
-            mentor: true,
-          },
-        });
-
-        if (!plan || !plan.isActive) {
-          throw new BadRequestException(Messages.BOOKING.PLAN_NOT_FOUND);
-        }
-
-        const mentorId = plan.mentor.userId;
-
-        // 2. Validate duration
-        const durationMinutes = (end.getTime() - start.getTime()) / (1000 * 60);
-
-        if (durationMinutes !== plan.duration) {
-          throw new BadRequestException('Duration không khớp coaching plan');
-        }
-
-        // 3. Resolve slot
+        // 1. Resolve slot (Tìm slot khả dụng của mentor)
         const slot = await tx.slot.findFirst({
           where: {
             mentorId,
             isActive: true,
-            startTime: {
-              lte: start,
-            },
-            endTime: {
-              gte: end,
-            },
+            startTime: { lte: start },
+            endTime: { gte: end },
           },
         });
 
@@ -157,11 +154,10 @@ export class BookingService {
           throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
         }
 
-        // 4. Check overlap booking
+        // 2. Kiểm tra trùng lịch hẹn (Overlap booking)
         const conflicting = await tx.booking.findFirst({
           where: {
             mentorId,
-
             OR: [
               {
                 status: {
@@ -173,19 +169,11 @@ export class BookingService {
               },
               {
                 status: BookingStatus.PENDING_PAYMENT,
-                holdExpiresAt: {
-                  gt: new Date(),
-                },
+                holdExpiresAt: { gt: new Date() },
               },
             ],
-
-            startTime: {
-              lt: end,
-            },
-
-            endTime: {
-              gt: start,
-            },
+            startTime: { lt: end },
+            endTime: { gt: start },
           },
         });
 
@@ -193,28 +181,21 @@ export class BookingService {
           throw new BadRequestException(Messages.BOOKING.SLOT_UNAVAILABLE);
         }
 
-        // 5. Create booking
+        // 3. Tiến hành tạo đơn Booking mới
         const booking = await tx.booking.create({
           data: {
             candidateId,
             mentorId,
-
             slotId: slot.id,
-
             coachingPlanId,
-
             startTime: start,
             endTime: end,
-
             status: BookingStatus.PENDING_PAYMENT,
-
-            holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000),
-
+            holdExpiresAt: new Date(Date.now() + 5 * 60 * 1000), // 5 phút giữ chỗ thanh toán
             snapshotPlanTitle: plan.title,
             snapshotPlanDescription: plan.description,
             snapshotPlanPrice: plan.price,
             snapshotPlanDuration: plan.duration,
-
             answers: answers?.length
               ? {
                   create: answers.map((a) => ({
@@ -225,10 +206,8 @@ export class BookingService {
                 }
               : undefined,
           },
-
           include: {
             coachingPlan: true,
-
             candidate: {
               select: {
                 id: true,
@@ -242,9 +221,10 @@ export class BookingService {
 
         return this.mapToBookingResponse(booking);
       },
-
       {
-        isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
+        // 🚀 T2ỐI ƯU 3: Đổi Isolation sang RepeatableRead. Postgres/Neon xử lý nó nhanh hơn hẳn Serializable
+        isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead,
+        timeout: 20000, // Giữ nguyên 20 giây để bù đắp Latency mạng
       },
     );
   }
@@ -341,6 +321,21 @@ export class BookingService {
 
       return this.mapToBookingResponse(updatedBooking);
     });
+  }
+
+  async uploadAttachment(file: UploadedFileType) {
+    try {
+      const uploadResult = await this.cloudinaryService.uploadRawFile(
+        file,
+        'interview_dojo/booking_attachments',
+      );
+      return {
+        secure_url: uploadResult.secure_url,
+        public_id: uploadResult.public_id,
+      };
+    } catch (error: any) {
+      throw new BadRequestException(error.message || 'Lỗi upload Cloudinary');
+    }
   }
 
   async accept(bookingId: number, mentorId: number): Promise<BookingResponse> {

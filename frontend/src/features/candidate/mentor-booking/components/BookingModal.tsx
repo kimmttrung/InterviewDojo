@@ -8,7 +8,7 @@ import { CoachingPlan, AvailableSession } from '../types';
 import { CalendarSlotPicker } from './CalendarSlotPicker';
 import { useWallet } from '@/features/wallet/hooks/useWallet';
 import { formatICTTime } from '@/shared/utils/date';
-
+import { Eye, FileText, Paperclip, Trash2 } from 'lucide-react';
 type BookingStep = 'FORM' | 'CONFIRM';
 
 interface BookingModalProps {
@@ -22,6 +22,7 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
   const [session, setSession] = useState<AvailableSession | null>(null);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [fileAnswers, setFileAnswers] = useState<Record<string, File>>({});
+  const [isUploadingFiles, setIsUploadingFiles] = useState(false);
 
   const queryClient = useQueryClient();
   const { data: wallet } = useWallet();
@@ -65,15 +66,38 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
   const handleConfirmPayment = async () => {
     if (!session) return;
     try {
-      // TODO: upload files trước khi tạo booking (nếu cần)
+      setIsUploadingFiles(true);
+      const uploadedFileUrls: Record<string, string> = {};
+
+      // 1. Duyệt loop upload file qua service mới tạo
+      const uploadPromises = Object.entries(fileAnswers).map(async ([questionId, file]) => {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        // Gọi qua service sạch sẽ của dự án
+        const response = await bookingService.uploadAttachment(formData);
+        uploadedFileUrls[questionId] = response.secure_url;
+      });
+
+      if (uploadPromises.length > 0) {
+        toast.loading('Đang tải tài liệu lên hệ thống...', { id: 'upload-attachments' });
+        await Promise.all(uploadPromises);
+        toast.dismiss('upload-attachments');
+      }
+
+      // 2. Chuẩn bị payload JSON câu trả lời
+      const formattedAnswers = plan.questions.map((q) => ({
+        questionId: q.id,
+        answerText: answers[String(q.id)] || '',
+        fileUrl: uploadedFileUrls[String(q.id)] || '', // Đính kèm link Cloudinary sạch từ service trả về
+      }));
+
+      // 3. Gọi mutation tạo đơn đặt lịch
       const booking = await createBookingMutation.mutateAsync({
         coachingPlanId: plan.id,
         startTime: session.startTime,
         endTime: session.endTime,
-        answers: plan.questions.map((q) => ({
-          questionId: q.id,
-          answerText: answers[String(q.id)] || '',
-        })),
+        answers: formattedAnswers,
       });
       await payBookingMutation.mutateAsync(booking.id);
       await Promise.all([
@@ -149,11 +173,76 @@ export function BookingModal({ mentorId, plan, onClose }: BookingModalProps) {
                         }
                       />
                     ) : (
-                      <input
-                        type="file"
-                        className="w-full text-sm"
-                        onChange={(e) => handleFileChange(q.id, e.target.files?.[0] || null)}
-                      />
+                      <div className="space-y-2">
+                        {/* Nút upload custom nhìn chuyên nghiệp hơn input gốc */}
+                        {!fileAnswers[String(q.id)] ? (
+                          <label className="flex flex-col items-center justify-center w-full h-24 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100 transition">
+                            <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                              <Paperclip className="w-6 h-6 text-gray-400 mb-1" />
+                              <p className="text-sm text-gray-500 font-medium">
+                                Tải lên tài liệu (PDF, Word, Ảnh...)
+                              </p>
+                            </div>
+                            <input
+                              type="file"
+                              className="hidden"
+                              accept="image/*,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                              onChange={(e) => handleFileChange(q.id, e.target.files?.[0] || null)}
+                            />
+                          </label>
+                        ) : (
+                          /* Khối hiển thị file đã chọn kèm Preview */
+                          <div className="flex items-center justify-between p-3 border rounded-lg bg-slate-50 border-indigo-100">
+                            <div className="flex items-center gap-3 overflow-hidden">
+                              {fileAnswers[String(q.id)].type.startsWith('image/') ? (
+                                <img
+                                  src={URL.createObjectURL(fileAnswers[String(q.id)])}
+                                  alt="Preview"
+                                  className="w-10 h-10 rounded object-cover border"
+                                />
+                              ) : (
+                                <div className="p-2 bg-indigo-50 rounded text-indigo-600">
+                                  <FileText className="w-5 h-5" />
+                                </div>
+                              )}
+                              <div className="overflow-hidden">
+                                <p className="text-sm font-medium truncate text-gray-700">
+                                  {fileAnswers[String(q.id)].name}
+                                </p>
+                                <p className="text-xs text-gray-400">
+                                  {(fileAnswers[String(q.id)].size / (1024 * 1024)).toFixed(2)} MB
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1">
+                              {/* Nút xem thử file nếu định dạng hỗ trợ */}
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  window.open(
+                                    URL.createObjectURL(fileAnswers[String(q.id)]),
+                                    '_blank',
+                                  )
+                                }
+                                className="p-1.5 text-gray-500 hover:text-indigo-600 rounded-md hover:bg-white transition"
+                                title="Xem trước"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {/* Nút gỡ file */}
+                              <button
+                                type="button"
+                                onClick={() => handleFileChange(q.id, null)}
+                                className="p-1.5 text-gray-400 hover:text-red-500 rounded-md hover:bg-white transition"
+                                title="Xóa file"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 ))}

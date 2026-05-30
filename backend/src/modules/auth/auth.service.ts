@@ -137,9 +137,9 @@ export class AuthService {
 
     let redirect: string | null = null;
     if (user.role === Role.MENTOR && !user.mentorProfile) {
-      redirect = '/mentor/setup';
+      redirect = '/mentor/dashboard';
     } else if (user.role === Role.CANDIDATE && !user.targetRoleId) {
-      redirect = '/candidate/setup';
+      redirect = '/home';
     }
 
     return { ...tokens, redirect };
