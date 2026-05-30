@@ -21,7 +21,7 @@ export const BookmarkedQuestionsPage = () => {
   }, [debouncedSearch, filters.search, setFilters]);
 
   if (isError) {
-    return <div className="text-center text-red-500 py-10">Lỗi khi tải danh sách</div>;
+    return <div className="text-center text-red-500 py-10">Error loading list</div>;
   }
 
   const questions = data?.items || [];
@@ -29,14 +29,14 @@ export const BookmarkedQuestionsPage = () => {
 
   return (
     <div className="container mx-auto py-6 px-4">
-      <h1 className="text-2xl font-bold mb-6">Câu hỏi đã lưu</h1>
+      <h1 className="text-2xl font-bold mb-6">Bookmarked Questions</h1>
 
-      {/* Bộ lọc (bỏ category) */}
+      {/* Filters (excluding category) */}
       <div className="bg-white p-4 rounded-lg border shadow-sm mb-6 space-y-4">
         <div className="flex flex-wrap gap-4">
           <input
             type="text"
-            placeholder="Tìm kiếm theo tiêu đề..."
+            placeholder="Search by title..."
             className="flex-1 min-w-[200px] px-4 py-2 border rounded-md"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -46,7 +46,7 @@ export const BookmarkedQuestionsPage = () => {
             value={filters.difficulty || ''}
             onChange={(e) => setFilters({ difficulty: e.target.value || undefined })}
           >
-            <option value="">Tất cả độ khó</option>
+            <option value="">All difficulties</option>
             <option value={Difficulty.EASY}>Easy</option>
             <option value={Difficulty.MEDIUM}>Medium</option>
             <option value={Difficulty.HARD}>Hard</option>
@@ -56,25 +56,25 @@ export const BookmarkedQuestionsPage = () => {
             className="px-4 py-2 border rounded-md"
             value={filters.startDate || ''}
             onChange={(e) => setFilters({ startDate: e.target.value || undefined })}
-            placeholder="Từ ngày"
+            placeholder="From date"
           />
           <input
             type="date"
             className="px-4 py-2 border rounded-md"
             value={filters.endDate || ''}
             onChange={(e) => setFilters({ endDate: e.target.value || undefined })}
-            placeholder="Đến ngày"
+            placeholder="To date"
           />
           <button
             onClick={resetFilters}
             className="px-4 py-2 text-red-600 border border-red-600 rounded-md hover:bg-red-50"
           >
-            Xoá bộ lọc
+            Clear filters
           </button>
         </div>
       </div>
 
-      {/* Danh sách câu hỏi đã lưu (giữ nguyên) */}
+      {/* Bookmarked questions list */}
       {isLoading ? (
         <div className="grid grid-cols-1 gap-4">
           {[1, 2, 3].map((i) => (
@@ -83,7 +83,7 @@ export const BookmarkedQuestionsPage = () => {
         </div>
       ) : questions.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border border-dashed">
-          <p className="text-gray-500">Chưa có câu hỏi nào được lưu.</p>
+          <p className="text-gray-500">No questions bookmarked yet.</p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
@@ -112,7 +112,7 @@ export const BookmarkedQuestionsPage = () => {
                   </div>
                 </div>
                 <div className="text-right text-sm text-gray-500">
-                  Lưu lúc: {dayjs(q.bookmarkedAt).format('HH:mm DD/MM/YYYY')}
+                  Saved at: {dayjs(q.bookmarkedAt).format('HH:mm DD/MM/YYYY')}
                 </div>
               </div>
               <div className="mt-3 flex justify-end gap-2">
@@ -120,13 +120,13 @@ export const BookmarkedQuestionsPage = () => {
                   onClick={() => unbookmark(q.id)}
                   className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
                 >
-                  Bỏ lưu
+                  Unbookmark
                 </button>
                 <a
                   href={`/questions/${q.slug}`}
                   className="px-4 py-2 bg-primary text-white rounded-md hover:bg-primary-dark"
                 >
-                  Xem chi tiết
+                  View details
                 </a>
               </div>
             </div>
@@ -134,7 +134,7 @@ export const BookmarkedQuestionsPage = () => {
         </div>
       )}
 
-      {/* Phân trang */}
+      {/* Pagination */}
       {meta && meta.totalPages > 1 && (
         <div className="flex justify-center gap-4 mt-6">
           <button
@@ -142,17 +142,17 @@ export const BookmarkedQuestionsPage = () => {
             onClick={() => setFilters({ page: meta.page - 1 })}
             className="px-4 py-2 border rounded-md disabled:opacity-50"
           >
-            Trước
+            Previous
           </button>
           <span className="px-4 py-2">
-            Trang {meta.page} / {meta.totalPages}
+            Page {meta.page} / {meta.totalPages}
           </span>
           <button
             disabled={meta.page >= meta.totalPages}
             onClick={() => setFilters({ page: meta.page + 1 })}
             className="px-4 py-2 border rounded-md disabled:opacity-50"
           >
-            Sau
+            Next
           </button>
         </div>
       )}

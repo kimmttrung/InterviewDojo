@@ -6,6 +6,7 @@ import Skeleton from 'react-loading-skeleton';
 import 'react-loading-skeleton/dist/skeleton.css';
 import { UserProfileModal } from '../../shared-domain/users/components/UserProfileModal';
 import { CancelSessionModal } from '../components/modals/CancelSessionModal';
+import OpenRoadIcon from '/src/assets/icon/OpenRoad.svg';
 
 export const SessionListByType = ({ type }: { type: string }) => {
   // Lấy filters.status từ global store thay vì dùng useState
@@ -51,9 +52,9 @@ export const SessionListByType = ({ type }: { type: string }) => {
       {sessions.length === 0 ? (
         <div className="text-center py-16 bg-white rounded-lg border border-dashed">
           <img
-            src="/assets/empty-box.svg"
+            src={OpenRoadIcon}
             alt="Empty"
-            className="w-24 h-24 mx-auto mb-4 opacity-50"
+            className="w-80 h-auto md:w-96 mx-auto mb-10 object-contain opacity-80"
           />
           <p className="text-gray-500 text-lg">No sessions available.</p>
         </div>

@@ -16,7 +16,7 @@ export interface RejectMentorPayoutPayload {
 
 export const adminMentorPayoutApi = {
   getPayouts: (params: MentorPayoutQuery) =>
-    api.get(API_ENDPOINT.ADMIN.RETRYABLE_PAYOUTS, { params }).then((res) => res.data.data),
+    api.get(API_ENDPOINT.ADMIN.MENTOR_PAYOUTS, { params }).then((res) => res.data.data),
 
   approvePayout: (id: number) =>
     api.post(API_ENDPOINT.ADMIN.APPROVE_MENTOR_PAYOUT(id)).then((res) => res.data.data),

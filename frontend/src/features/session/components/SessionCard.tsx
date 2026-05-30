@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
+import 'dayjs/locale/en';
 import { SessionItem, SessionTab } from '../types/session.types';
 import { useSessionStore } from '../stores/useSessionStore';
 import { SessionFeedbackModal } from './modals/SessionFeedbackModal';
 import { UserAvatar } from '@/features/shared-domain/users/components/UserAvatar';
-import { api } from '@/shared/lib/api';
 import { getMeetingLink } from '../services/session.services';
 import { useNavigate } from 'react-router-dom';
 
 dayjs.extend(relativeTime);
+dayjs.locale('en');
 
 interface Props {
   session: SessionItem;
@@ -19,17 +20,17 @@ export const SessionCard = ({ session }: Props) => {
   const { openCancelModal, openRejectModal } = useSessionStore();
   const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false);
   const [timeLeft, setTimeLeft] = useState('');
-  const [isJoinable, setIsJoinable] = useState(false);
+  // const [isJoinable, setIsJoinable] = useState(false);
 
   const [isJoining, setIsJoining] = useState(false);
   const navigate = useNavigate();
 
-  // Chỉ dựa vào thời gian, không cần kiểm tra session.meetingLink nữa
   const canJoin = (() => {
     const now = dayjs();
     const start = dayjs(session.scheduledAt);
     const diffMinutes = start.diff(now, 'minute');
-    return diffMinutes <= 15 && diffMinutes >= -120;
+    const duration = session.durationMinutes;
+    return diffMinutes <= 15 && diffMinutes >= -duration;
   })();
 
   const handleJoin = async () => {
@@ -41,43 +42,45 @@ export const SessionCard = ({ session }: Props) => {
       if (meetingLink) {
         navigate(`/${meetingLink}`);
       } else {
-        alert('Không thể tạo phòng họp');
+        alert('Could not create the meeting room');
       }
     } catch (error: any) {
-      alert(error.response?.data?.message || 'Có lỗi xảy ra');
+      alert(error.response?.data?.message || 'An error occurred');
     } finally {
       setIsJoining(false);
     }
   };
 
   useEffect(() => {
-    if (session.status !== SessionTab.UPCOMING) return;
+    if (session.status !== SessionTab.UPCOMING && session.status !== 'ONGOING') return;
 
     const checkTime = () => {
       const now = dayjs();
       const start = dayjs(session.scheduledAt);
       const diffMinutes = start.diff(now, 'minute');
 
-      const canJoin = diffMinutes <= 15 && diffMinutes >= -120;
-      // diffMinutes <= 30 && diffMinutes >= -120;
-      setIsJoinable(canJoin && !!session.meetingLink);
+      const duration = session.durationMinutes;
 
       if (diffMinutes > 0) {
         setTimeLeft(start.fromNow());
+      } else if (diffMinutes <= 0 && diffMinutes >= -duration) {
+        setTimeLeft('Ongoing');
       } else {
-        setTimeLeft('Đang diễn ra');
+        setTimeLeft('Finished');
       }
     };
 
     checkTime();
     const interval = setInterval(checkTime, 60000);
     return () => clearInterval(interval);
-  }, [session.scheduledAt, session.status, session.meetingLink]);
+  }, [session.scheduledAt, session.status, session.meetingLink, session.durationMinutes]);
 
   const getStatusColor = () => {
     switch (session.status) {
       case 'UPCOMING':
         return 'text-green-600 bg-green-100';
+      case 'ONGOING':
+        return 'text-blue-700 bg-blue-100 animate-pulse border border-blue-200';
       case 'PENDING':
         return 'text-yellow-600 bg-yellow-100';
       case 'REJECTED':
@@ -125,7 +128,7 @@ export const SessionCard = ({ session }: Props) => {
           <p className="text-sm text-gray-500 mt-1">
             {session.scheduledAt
               ? dayjs(session.scheduledAt).format('HH:mm DD/MM/YYYY')
-              : 'Chưa có lịch'}
+              : 'Not scheduled'}
           </p>
         </div>
       </div>
@@ -146,33 +149,37 @@ export const SessionCard = ({ session }: Props) => {
       <div className="flex justify-between items-center mt-2">
         <div className="text-sm font-medium text-orange-600">
           {session.status === 'UPCOMING' && `Bắt đầu: ${timeLeft}`}
-          {session.status === 'PENDING' && 'Đang chờ mentor xác nhận'}
+          {session.status === 'ONGOING' && 'Session is ongoing'}
+          {session.status === 'PENDING' && 'Session is pending'}
+          {session.status === 'FINISHED' && 'Session is finished'}
         </div>
         <div className="flex gap-2">
+          {/* 1. NÚT CANCEL: CHỈ HIỂN THỊ KHI UPCOMING */}
           {session.status === 'UPCOMING' && (
-            <>
-              <button
-                onClick={() => openCancelModal(session.id.toString())}
-                className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
-              >
-                Cancel session
-              </button>
-              <button
-                onClick={handleJoin}
-                disabled={!canJoin || isJoining}
-                className={`px-4 py-2 rounded-md font-semibold ${
-                  canJoin && !isJoining
-                    ? 'bg-primary text-white hover:bg-primary-dark'
-                    : 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                }`}
-              >
-                {isJoining
-                  ? 'Đang tạo phòng...'
-                  : timeLeft === 'Đang diễn ra'
-                    ? 'Vào ngay'
-                    : 'Join'}
-              </button>
-            </>
+            <button
+              onClick={() => openCancelModal(session.id.toString())}
+              className="px-4 py-2 border border-red-600 text-red-600 rounded-md hover:bg-red-50"
+            >
+              Cancel session
+            </button>
+          )}
+          {/* 2. NÚT JOIN: HIỂN THỊ CẢ KHI UPCOMING LẪN ONGOING */}
+          {(session.status === 'UPCOMING' || session.status === 'ONGOING') && (
+            <button
+              onClick={handleJoin}
+              disabled={!canJoin || isJoining}
+              className={`px-4 py-2 rounded-md font-semibold ${
+                canJoin && !isJoining
+                  ? 'bg-primary text-white hover:bg-primary-dark'
+                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              }`}
+            >
+              {isJoining
+                ? 'Creating room...'
+                : session.status === 'ONGOING' || timeLeft === 'Ongoing'
+                  ? 'Join now'
+                  : 'Join'}
+            </button>
           )}
 
           {(session.status === 'REJECTED' || session.status === 'CANCELLED') && (

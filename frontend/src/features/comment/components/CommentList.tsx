@@ -16,7 +16,7 @@ export const CommentList: React.FC<CommentListProps> = ({
   if (!comments || comments.length === 0) {
     return (
       <div className="text-center py-8 text-gray-500 italic">
-        Chưa có bình luận nào. Hãy là người đầu tiên bình luận!
+        No comments yet. Be the first to comment!
       </div>
     );
   }

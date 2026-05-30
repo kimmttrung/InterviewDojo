@@ -65,19 +65,19 @@ export const MentorProfileForm = () => {
     setProfileField('headline', value);
 
     if (!value.trim()) {
-      setHeadlineError('Headline là bắt buộc để ứng viên dễ nhận diện.');
+      setHeadlineError('Headline is required to help candidates recognize you.');
       return;
     }
 
     const countAtSymbol = (value.match(/@/g) || []).length;
     if (countAtSymbol > 1) {
-      setHeadlineError('Headline chỉ được chứa duy nhất một ký tự @ phân tách.');
+      setHeadlineError('Headline must contain only a single "@" character as a separator.');
       return;
     }
 
     if (!headlineRegex.test(value)) {
       setHeadlineError(
-        'Định dạng chuẩn phải là: Vị trí @ Tên công ty. Ví dụ: Senior Backend Engineer @ Google',
+        'Standard format must be: Role @ Company Name. e.g. Senior Backend Engineer @ Google',
       );
     } else {
       setHeadlineError(null);
@@ -155,7 +155,6 @@ export const MentorProfileForm = () => {
               placeholder="e.g. Senior Backend Engineer @ Google"
               value={profile.headline}
               onChange={(event) => handleHeadlineChange(event.target.value)}
-              // Đổi màu viền sang đỏ nếu dữ liệu gõ vào không đúng định dạng mong muốn
               className={`border-slate-200 bg-slate-50 transition-colors ${
                 headlineError ? 'border-red-400 focus-visible:ring-red-400' : ''
               }`}

@@ -38,50 +38,71 @@ export class SessionService {
   async handleOverdueSessions() {
     try {
       let hasMore = true;
-      const batchSize = 100; // Xử lý 100 bản ghi mỗi lần lặp
+      const batchSize = 100;
       let totalUpdated = 0;
+      let lastId: number | undefined = undefined;
+
+      type ActiveSessionType = {
+        id: number;
+        scheduledAt: Date;
+        durationMinutes: number | null;
+      };
 
       while (hasMore) {
-        // 1. Tìm các bản ghi quá hạn (chỉ query lấy ID để tiết kiệm RAM)
-        const overdueSessions = await this.prisma.mockSession.findMany({
+        const queryParams: Prisma.MockSessionFindManyArgs = {
           where: {
             status: SessionStatus.SCHEDULED,
             scheduledAt: { lt: new Date() },
           },
-          select: { id: true },
+          select: { id: true, scheduledAt: true, durationMinutes: true },
           take: batchSize,
-        });
+          orderBy: { id: 'asc' },
+        };
+        if (lastId) {
+          queryParams.skip = 1;
+          queryParams.cursor = { id: lastId };
+        }
 
-        // Nếu không còn bản ghi nào, thoát vòng lặp
-        if (overdueSessions.length === 0) {
+        const activeSessions = (await this.prisma.mockSession.findMany(
+          queryParams,
+        )) as ActiveSessionType[];
+
+        if (activeSessions.length === 0) {
           hasMore = false;
           break;
         }
 
-        const sessionIds = overdueSessions.map((s) => s.id);
+        lastId = activeSessions[activeSessions.length - 1].id;
+        const now = Date.now();
 
-        // 2. Cập nhật trạng thái cho lô ID vừa lấy
-        const updateResult = await this.prisma.mockSession.updateMany({
-          where: { id: { in: sessionIds } },
-          data: { status: SessionStatus.COMPLETED },
-        });
+        const overdueIds = activeSessions
+          .filter((session: ActiveSessionType) => {
+            const duration = session.durationMinutes || 60;
+            const endTime =
+              session.scheduledAt.getTime() + duration * 60 * 1000;
+            return endTime < now;
+          })
+          .map((s: ActiveSessionType) => s.id);
+        if (overdueIds.length > 0) {
+          const updateResult = await this.prisma.mockSession.updateMany({
+            where: { id: { in: overdueIds } },
+            data: { status: SessionStatus.COMPLETED },
+          });
 
-        await Promise.all(
-          sessionIds.map((sessionId) =>
-            this.mentorPayoutService.payoutCompletedSessionSafely(sessionId),
-          ),
-        );
+          await Promise.all(
+            overdueIds.map((sessionId) =>
+              this.mentorPayoutService.payoutCompletedSessionSafely(sessionId),
+            ),
+          );
 
-        totalUpdated += updateResult.count;
+          totalUpdated += updateResult.count;
+        }
       }
 
       if (totalUpdated > 0) {
         this.logger.log(
           `Đã quét và cập nhật thành công ${totalUpdated} sessions quá hạn thành COMPLETED.`,
         );
-
-        // Gọi lại hàm schedule của bạn nếu logic yêu cầu (giống trong onModuleInit cũ)
-        await this.scheduleAllUpcomingSessions();
       }
     } catch (error) {
       this.logger.error('Lỗi khi chạy Cron Job quét session quá hạn:', error);
@@ -596,16 +617,34 @@ export class SessionService {
       session.match?.candidateBId === userId;
 
     if (!isParticipant) throw new ForbiddenException('Not participant');
+    let displayStatus = session.status as string;
+    if (displayStatus === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes || 60;
+      const end = new Date(start.getTime() + duration * 60000);
+      const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+
+      if (now >= allowJoinTime && now <= end) {
+        displayStatus = 'ONGOING';
+      } else if (now > end) {
+        displayStatus = 'FINISHED';
+      } else {
+        displayStatus = 'UPCOMING';
+      }
+    } else if (displayStatus === 'COMPLETED') {
+      displayStatus = 'FINISHED';
+    }
 
     return {
       id: session.id,
       source: session.source,
       scheduledAt: session.scheduledAt,
       durationMinutes: session.durationMinutes,
-      status: session.status,
       mentorId: session.booking?.mentorId || null,
       candidateId: session.booking?.candidateId || null,
       intervieweeId: session.intervieweeId,
+      status: displayStatus,
       // thêm các field cần thiết
     };
   }
@@ -641,13 +680,28 @@ export class SessionService {
     }
 
     let status = session.status;
-    if (status === 'SCHEDULED') status = 'UPCOMING';
-    else if (status === 'COMPLETED') status = 'FINISHED';
+    if (status === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes;
+      const end = new Date(start.getTime() + duration * 60000);
+
+      if (now >= start && now <= end) {
+        status = 'ONGOING';
+      } else if (now > end) {
+        status = 'FINISHED';
+      } else {
+        status = 'UPCOMING';
+      }
+    } else if (status === 'COMPLETED') {
+      status = 'FINISHED';
+    }
 
     return {
       id: session.id,
       type,
       status: status,
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -730,6 +784,7 @@ export class SessionService {
       id: booking.id,
       type: 'MENTOR',
       status: 'PENDING',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -756,6 +811,7 @@ export class SessionService {
       id: booking.id,
       type: 'MENTOR',
       status: 'REJECTED',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -802,6 +858,7 @@ export class SessionService {
       id: session.id,
       type,
       status: 'FINISHED',
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -925,12 +982,16 @@ export class SessionService {
     // 2. Kiểm tra thời gian cho phép (15 phút trước đến 2 giờ sau)
     const now = new Date();
     const start = session.scheduledAt;
-    const diffMinutes = (start.getTime() - now.getTime()) / 60000;
-    const canJoin = diffMinutes <= 15 && diffMinutes >= -120; // giống frontend
-    if (!canJoin) {
+    const duration = session.durationMinutes;
+    const end = new Date(start.getTime() + duration * 60000);
+    const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+    if (now < allowJoinTime) {
       throw new Error(
-        `Chỉ có thể tham gia từ 15 phút trước đến 2 giờ sau giờ bắt đầu`,
+        'Chưa đến giờ phỏng vấn. Bạn có thể vào phòng trước 15 phút!',
       );
+    }
+    if (now > end) {
+      throw new Error('Cuộc phỏng vấn đã kết thúc, không thể tham gia nữa!');
     }
 
     // 3. Nếu đã có meetingLink thì trả về luôn

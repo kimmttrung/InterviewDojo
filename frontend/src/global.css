@@ -158,3 +158,324 @@
   height: 100% !important;
   background-color: transparent !important;
 }
+
+.str-video__speech-indicator {
+  order: 1 !important;
+  flex: 0 0 auto !important;
+  margin: 0 !important;
+}
+
+.str-video__speech-indicator__bar {
+  background-color: #3b82f6 !important;
+}
+
+/* ========================================================
+   HIỂN THỊ ICON TẮT MIC & CAM (Ép icon vào thẻ rỗng)
+   ======================================================== */
+
+/* 1. Định hình cái hộp rỗng: Cấp kích thước, màu đỏ, và ép vị trí ra phía sau vạch âm thanh */
+.str-video__participant-details__name--audio-muted,
+.str-video__participant-details__name--video-muted {
+  display: inline-block !important; /* Phải là inline-block thì hộp rỗng mới có kích thước */
+  width: 14px !important;
+  height: 14px !important;
+  background-color: #ef4444 !important; /* Đổ màu đỏ rực cho icon */
+
+  order: 2 !important; /* Khóa vị trí ra sau vạch sóng âm (sửa lỗi nhảy vạch) */
+  margin-left: 6px !important; /* Cách chữ/vạch âm thanh một chút */
+
+  /* Cấu hình mask chung */
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+}
+
+/* 2. Nhúng Icon Mic Off (Tắt Mic) */
+.str-video__participant-details__name--audio-muted {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3Cpath d='M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6'/%3E%3Cpath d='M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3Cpath d='M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6'/%3E%3Cpath d='M17 16.95A7 7 0 0 1 5 12v-2m14 0v2a7 7 0 0 1-.11 1.23'/%3E%3Cline x1='12' y1='19' x2='12' y2='23'/%3E%3Cline x1='8' y1='23' x2='16' y2='23'/%3E%3C/svg%3E") !important;
+}
+
+/* 3. Nhúng Icon Video Off (Tắt Cam) */
+.str-video__participant-details__name--video-muted {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10'/%3E%3Cline x1='1' y1='1' x2='23' y2='23'/%3E%3C/svg%3E") !important;
+}
+
+.str-video__participant-details {
+  position: absolute !important;
+  bottom: 4px !important;
+  left: 4px !important;
+  margin: 0 !important;
+  min-height: 0 !important;
+  width: fit-content !important;
+  padding: 4px 10px !important;
+
+  background-color: rgba(0, 0, 0, 0.6) !important;
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-radius: 6px !important;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+.str-video__participant-details__name {
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8) !important;
+  margin: 0 !important;
+  line-height: 1 !important;
+
+  white-space: nowrap !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+}
+
+/* ========================================================
+   SCREEN SHARE OVERLAY (Thông báo đang chia sẻ màn hình)
+   ======================================================== */
+
+/* Đưa khung thông báo lên trên cùng, căn giữa, bỏ hiệu ứng mờ tràn màn hình */
+.str-video__screen-share-overlay {
+  position: absolute !important;
+  top: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important; /* Căn giữa theo chiều ngang */
+  width: fit-content !important;
+  height: fit-content !important;
+  min-height: unset !important;
+  padding: 8px 16px !important;
+
+  background-color: rgba(0, 0, 0, 0.75) !important; /* Nền tối, rõ ràng */
+  backdrop-filter: blur(8px) !important;
+  -webkit-backdrop-filter: blur(8px) !important;
+  border-radius: 8px !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3) !important;
+
+  /* Sắp xếp nội dung nằm ngang */
+  display: flex !important;
+  align-items: center !important;
+  gap: 12px !important;
+  z-index: 100 !important; /* Đảm bảo luôn nằm trên cùng */
+}
+
+/* Style cho dòng chữ "You are presenting your screen" */
+.str-video__screen-share-overlay__title {
+  color: #ffffff !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  white-space: nowrap !important;
+}
+
+/* Style cho icon bên cạnh chữ (nếu có) */
+.str-video__screen-share-overlay .str-video__icon {
+  color: #ffffff !important;
+  width: 20px !important;
+  height: 20px !important;
+}
+
+/* Style cho nút bấm (thường là nút Stop Sharing / Dismiss) */
+.str-video__screen-share-overlay__button {
+  background-color: #ef4444 !important; /* Màu đỏ cảnh báo */
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 6px 12px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  transition: background-color 0.2s ease !important;
+}
+
+/* Hiệu ứng khi hover vào nút */
+.str-video__screen-share-overlay__button:hover {
+  background-color: #dc2626 !important;
+}
+
+/* ========================================================
+   NOTIFICATION WRAPPER (Thông báo chất lượng mạng, v.v.)
+   ======================================================== */
+
+/* Đặt các icon/thông báo góc phải (dựa theo ảnh DOM còn thiếu) */
+.str-video__notification-wrapper {
+  position: absolute !important;
+  top: 16px !important;
+  right: 16px !important;
+  z-index: 99 !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px !important;
+}
+
+/* ========================================================
+   DYNAMIC WIFI INDICATOR (Icon Wifi tự động đổi vạch và màu)
+   ======================================================== */
+
+/* Xóa bỏ style chấm tròn cũ, tạo khung hình vuông cho icon */
+.str-video__participant-details__connection-quality {
+  display: inline-block !important;
+  width: 18px !important;
+  height: 18px !important;
+  margin-left: 8px !important;
+  vertical-align: middle !important;
+  border: none !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+
+  /* Cấu hình mask để nhúng SVG Wifi */
+  -webkit-mask-repeat: no-repeat !important;
+  mask-repeat: no-repeat !important;
+  -webkit-mask-position: center !important;
+  mask-position: center !important;
+  -webkit-mask-size: contain !important;
+  mask-size: contain !important;
+
+  /* Hiệu ứng chuyển mượt mà khi đổi màu/đổi vạch */
+  transition:
+    background-color 0.3s ease,
+    -webkit-mask-image 0.3s ease !important;
+}
+
+/* 1. Mạng Rất Tốt (Excellent): 3 vạch + Dấu chấm -> Màu Xanh Lá */
+.str-video__participant-details__connection-quality--excellent {
+  background-color: #22c55e !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8.5a15 15 0 0 1 20 0'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0'/%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M2 8.5a15 15 0 0 1 20 0'/%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0'/%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+}
+
+/* 2. Mạng Tốt (Good): 2 vạch + Dấu chấm -> Màu Xanh/Vàng chanh */
+.str-video__participant-details__connection-quality--good {
+  background-color: #a3e635 !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0'/%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5a10 10 0 0 1 14 0'/%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+}
+
+/* 3. Mạng Yếu (Poor/Fair): 1 vạch + Dấu chấm -> Màu Vàng */
+.str-video__participant-details__connection-quality--poor,
+.str-video__participant-details__connection-quality--fair {
+  background-color: #facc15 !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8.5 16.5a5 5 0 0 1 7 0'/%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+}
+
+/* 4. Mạng Cực Kém (Bad): Chỉ còn dấu chấm -> Màu Đỏ + Nhấp nháy mạnh */
+.str-video__participant-details__connection-quality--bad {
+  background-color: #ef4444 !important;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cline x1='12' y1='20' x2='12.01' y2='20'/%3E%3C/svg%3E") !important;
+  animation: wifi-danger-flash 0.8s infinite !important;
+}
+
+/* Hiệu ứng nhấp nháy khi rớt mạng (Cực kém) */
+@keyframes wifi-danger-flash {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.3;
+    transform: scale(0.85);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Tùy chọn: Hiệu ứng nhịp thở nhẹ (động) cho các trạng thái mạng bình thường */
+.str-video__participant-details__connection-quality:not(
+  .str-video__participant-details__connection-quality--bad
+) {
+  animation: wifi-breathe 2.5s ease-in-out infinite alternate !important;
+}
+
+@keyframes wifi-breathe {
+  0% {
+    opacity: 0.8;
+  }
+  100% {
+    opacity: 1;
+    filter: drop-shadow(0 0 2px currentColor);
+  }
+}
+
+.str-video__screen-share-overlay {
+  position: absolute !important;
+  top: 16px !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+
+  /* Ép hiển thị trên 1 dòng */
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 12px !important; /* Khoảng cách giữa chữ và nút */
+
+  /* Thu gọn kích thước */
+  width: fit-content !important;
+  height: fit-content !important;
+  min-height: unset !important;
+  padding: 6px 12px !important; /* Viền nhỏ lại */
+
+  /* Nền trong suốt (flux/blur) */
+  background-color: rgba(0, 0, 0, 0.4) !important;
+  backdrop-filter: blur(10px) !important;
+  -webkit-backdrop-filter: blur(10px) !important;
+
+  border-radius: 20px !important; /* Bo tròn dạng viên thuốc (pill) */
+  border: 1px solid rgba(255, 255, 255, 0.15) !important;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1) !important;
+  z-index: 100 !important;
+}
+
+/* Style cho dòng chữ "You are presenting..." */
+.str-video__screen-share-overlay__title {
+  color: #ffffff !important;
+  font-size: 13px !important;
+  font-weight: 500 !important;
+  margin: 0 !important;
+  white-space: nowrap !important; /* Tuyệt đối không cho xuống dòng */
+}
+
+.str-video__screen-share-overlay__button {
+  background-color: #ef4444 !important;
+  color: #ffffff !important;
+  border: none !important;
+  border-radius: 12px !important;
+  padding: 6px 12px !important;
+  cursor: pointer !important;
+
+  width: fit-content !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+
+  font-size: 0 !important;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  transition: background-color 0.2s ease !important;
+}
+
+.str-video__screen-share-overlay__button > * {
+  display: none !important;
+}
+
+/* Chèn chữ "Stop" mới vào */
+.str-video__screen-share-overlay__button::after {
+  content: 'Stop' !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  display: block !important;
+  line-height: 1 !important;
+}
+
+.str-video__screen-share-overlay__button:hover {
+  background-color: #dc2626 !important;
+}
