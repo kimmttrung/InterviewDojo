@@ -1,17 +1,17 @@
 // features/candidate/practice/interviews/peer-interview/pages/InterviewRoom.tsx
 import '@stream-io/video-react-sdk/dist/css/styles.css';
 import { useEffect, useRef, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { StreamVideo, StreamCall } from '@stream-io/video-react-sdk';
 import { InterviewHeader } from '../components/InterviewHeader';
 import { QuestionPanel } from '../components/QuestionPanel';
 import { WorkspaceTabs } from '../components/WorkspaceTabs';
 import { VideoCallSection } from '../components/VideoCallSection';
 import { ChatAndNotes } from '../components/ChatAndNotes';
-import { useVideoCall } from '../../../../../../hooks/useVideoCall';
-import { useLocalStorage } from '../../../../../../hooks/useLocalStorage';
-import { useSocketStore } from '../../../../../../stores/useSocketStore';
-import { WorkMode } from '../../../../../../shared/types/interview';
+import { useVideoCall } from '@/hooks/useVideoCall';
+import { useLocalStorage } from '@/hooks/useLocalStorage';
+import { useSocketStore } from '@/stores/useSocketStore';
+import { WorkMode } from '@/shared/types/interview';
 import { QuestionType } from '../../../../../shared-domain/question-bank/types/question.types';
 import { useAuthStore } from '@/stores/useAuthStore';
 import { useCurrentUser } from '@/features/auth';
@@ -23,9 +23,10 @@ import { FeedbackModal } from '@/features/shared-domain/feedback/components/Feed
 import { FeedbackForm } from '@/features/shared-domain/feedback/components/FeedbackForm';
 import { useCursorSync } from '../hooks/useCursorSync';
 import { CursorOverlay } from '../components/CursorOverlay';
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
 
 export default function InterviewRoom() {
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
   const { roomId } = useParams();
   const [searchParams] = useSearchParams();
   const sessionId = Number(searchParams.get('sessionId'));
@@ -36,12 +37,7 @@ export default function InterviewRoom() {
   const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const userId = currentUser?.id ? String(currentUser.id) : null;
 
-  const { client, call, error, isInitializing } = useVideoCall(
-    roomId,
-    streamToken,
-    userId,
-    currentUser,
-  );
+  const { client, call } = useVideoCall(roomId, streamToken, userId, currentUser);
   const [workMode, setWorkMode] = useLocalStorage<WorkMode>('workMode', 'code');
   const { emit, socket } = useSocketStore();
 
@@ -65,7 +61,7 @@ export default function InterviewRoom() {
 
     container.addEventListener('mousemove', onMouseMove);
     return () => container.removeEventListener('mousemove', onMouseMove);
-  }, [sendMouseMove]); // ✅ bỏ mainContainerRef.current
+  }, [sendMouseMove]);
 
   // Hook lắng nghe call ended (phòng tự kết thúc do đối phương rời)
   const isSessionEnded = useSessionEnded();
@@ -188,7 +184,6 @@ export default function InterviewRoom() {
     return <InterviewLoading roomId={roomId} />;
   }
 
-  // ✅ Hiển thị loading khi đang fetch user (tránh gọi useVideoCall với userId chưa sẵn sàng)
   if (!client || !call) {
     return <InterviewLoading roomId={roomId} />;
   }
@@ -200,28 +195,56 @@ export default function InterviewRoom() {
           <div className="h-screen flex flex-col bg-white overflow-hidden">
             <InterviewHeader roomId={roomId!} />
             <main ref={mainContainerRef} className="flex-1 flex h-full min-h-0 overflow-hidden">
-              <QuestionPanel
-                question={displayedQuestion}
-                onRandom={handleRandom}
-                isLoading={isFetching}
-                selectedType={selectedType}
-                selectedDifficulty={selectedDifficulty}
-                onTypeChange={handleTypeChange}
-                onDifficultyChange={handleDifficultyChange}
-              />
-              <WorkspaceTabs
-                workMode={workMode}
-                setWorkMode={setWorkMode}
-                currentQuestion={displayedQuestion}
-                roomId={roomId!}
-                userId={userId}
-              />
+              <ResizablePanelGroup direction="horizontal" className="h-full w-full">
+                {/* CỘT 1: CÂU HỎI */}
+                <ResizablePanel defaultSize={25} minSize={15}>
+                  <div className="h-full w-full overflow-y-auto">
+                    <QuestionPanel
+                      question={displayedQuestion}
+                      onRandom={handleRandom}
+                      isLoading={isFetching}
+                      selectedType={selectedType}
+                      selectedDifficulty={selectedDifficulty}
+                      onTypeChange={handleTypeChange}
+                      onDifficultyChange={handleDifficultyChange}
+                    />
+                  </div>
+                </ResizablePanel>
 
-              <aside className="w-1/4 flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
-                <VideoCallSection onLeave={handleLeaveRoom} roomId={roomId!} />
-                <ChatAndNotes />
-              </aside>
-              <CursorOverlay cursors={cursors} containerRef={mainContainerRef} />
+                <ResizableHandle className="w-1 bg-slate-200 hover:bg-blue-500 cursor-col-resize transition-colors duration-200" />
+
+                {/* CỘT 2: CODE & BOARD */}
+                <ResizablePanel defaultSize={50} minSize={30}>
+                  <div className="h-full w-full">
+                    <WorkspaceTabs
+                      workMode={workMode}
+                      setWorkMode={setWorkMode}
+                      currentQuestion={displayedQuestion}
+                      roomId={roomId!}
+                      userId={userId}
+                    />
+                  </div>
+                </ResizablePanel>
+
+                <ResizableHandle className="w-1 bg-slate-200 hover:bg-blue-500 cursor-col-resize transition-colors duration-200" />
+
+                {/* CỘT 3: VIDEO & CHAT */}
+                <ResizablePanel defaultSize={25} minSize={20}>
+                  {/* Đã xóa w-1/4, thêm w-full h-full */}
+                  <aside className="w-full h-full flex flex-col bg-slate-50 border-l border-slate-200 overflow-hidden">
+                    <VideoCallSection onLeave={handleLeaveRoom} roomId={roomId!} />
+
+                    {/* Thêm flex-1 overflow-hidden để Chat chiếm nốt phần chiều cao còn lại */}
+                    <div className="flex-1 overflow-hidden">
+                      <ChatAndNotes />
+                    </div>
+                  </aside>
+                </ResizablePanel>
+              </ResizablePanelGroup>
+              <CursorOverlay
+                cursors={cursors}
+                containerRef={mainContainerRef as React.RefObject<HTMLDivElement>}
+              />
             </main>
           </div>
         </StreamCall>

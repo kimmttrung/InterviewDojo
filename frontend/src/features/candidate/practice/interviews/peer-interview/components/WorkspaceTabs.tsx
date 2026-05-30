@@ -49,7 +49,7 @@ export function WorkspaceTabs({
   };
 
   return (
-    <div className="flex-1 flex flex-col bg-slate-50 overflow-hidden">
+    <div className="w-full h-full flex flex-col bg-slate-50 overflow-hidden">
       <div className="flex gap-1 px-4 pt-2 border-b bg-white">
         {(['code', 'whiteboard'] as WorkMode[]).map((m) => (
           <button
@@ -66,17 +66,17 @@ export function WorkspaceTabs({
         ))}
       </div>
 
-      <div className="flex-1 relative overflow-hidden">
+      <div className="w-full h-full relative overflow-hidden">
         {workMode === 'code' && (
           <CodeEditor
             mode="peer"
             roomId={roomId}
-            userId={userId}
+            userId={userId || ''}
             currentQuestion={currentQuestion}
           />
         )}
 
-        {workMode === 'whiteboard' && <Whiteboard roomId={roomId} userId={userId} />}
+        {workMode === 'whiteboard' && <Whiteboard roomId={roomId} userId={userId || ''} />}
       </div>
     </div>
   );
