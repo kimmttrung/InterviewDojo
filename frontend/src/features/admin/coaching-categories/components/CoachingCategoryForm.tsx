@@ -105,7 +105,7 @@ export const CoachingCategoryForm = ({
           </div>
           <DialogFooter>
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
+              Hủy
             </Button>
             <Button type="submit" disabled={isLoading}>
               {isLoading ? 'Đang xử lý...' : editingCategory ? 'Cập nhật' : 'Thêm mới'}

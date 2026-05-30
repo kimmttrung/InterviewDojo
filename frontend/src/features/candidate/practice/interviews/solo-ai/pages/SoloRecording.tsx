@@ -17,7 +17,7 @@ import {
   Play,
 } from 'lucide-react';
 import { soloRecordingService } from '../services/solo-recording.service';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { toast } from 'sonner';
 import { Layout } from '../../../../../../shared/components/layout/Layout';
 import { Card } from '../../../../../../shared/components/ui/card';
@@ -48,6 +48,10 @@ const getQuestionText = (question: QuestionItem) =>
 
 export default function SoloRecording() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const preselectedQuestion = (location.state as any)?.preselectedQuestion as
+    | QuestionItem
+    | undefined;
   const { data: currentUser } = useCurrentUser();
   const [step, setStep] = useState<'setup' | 'recording' | 'preview' | 'analysis'>('setup');
 
@@ -62,13 +66,18 @@ export default function SoloRecording() {
 
   // State
   const [questions, setQuestions] = useState<QuestionItem[]>([]);
-  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(null);
+  const [selectedQuestionId, setSelectedQuestionId] = useState<number | null>(
+    preselectedQuestion?.id ?? null,
+  );
+  // Khi có câu hỏi từ "Thử ngay", bỏ qua màn setup
+  const [isPreselected] = useState(!!preselectedQuestion);
 
   const [typeFilter, setTypeFilter] = useState('');
   const [difficultyFilter, setDifficultyFilter] = useState('');
   const [companyFilter, setCompanyFilter] = useState('');
 
-  const selectedQuestion = questions.find((q) => q.id === selectedQuestionId);
+  const selectedQuestion =
+    preselectedQuestion ?? questions.find((q) => q.id === selectedQuestionId);
   const selectedQuestionTitle = selectedQuestion ? getQuestionText(selectedQuestion) : '';
 
   const resetQuestionSelection = useCallback(() => {
@@ -536,91 +545,131 @@ export default function SoloRecording() {
                 </p>
               </div>
 
-              <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
-                <div className="text-left space-y-4">
-                  <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
-                    Filter Questions
-                  </label>
+              {isPreselected ? (
+                /* === PRESELECTED: Hiển thị câu hỏi confirm, bỏ filter === */
+                <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
+                  <div className="text-left space-y-3">
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Câu hỏi đã chọn
+                    </label>
+                    <div className="p-4 bg-indigo-50 border border-indigo-100 rounded-xl text-indigo-900 font-medium text-[15px] leading-relaxed">
+                      {selectedQuestionTitle}
+                    </div>
+                    <button
+                      onClick={() => navigate('/practice/solo-recording', { replace: true })}
+                      className="text-xs text-slate-400 hover:text-indigo-600 underline underline-offset-2 transition-colors"
+                    >
+                      Chọn câu hỏi khác
+                    </button>
+                  </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 gap-4 pt-2">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Camera className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">Auto Camera On</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Mic className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">HD Audio Recording</span>
+                    </div>
+                  </div>
+
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
+                    onClick={handleStartInterview}
+                  >
+                    Start Practice Session
+                  </Button>
+                </Card>
+              ) : (
+                /* === NORMAL: Full filter UI === */
+                <Card className="p-8 max-w-2xl mx-auto space-y-6 shadow-xl border-t-4 border-t-indigo-600">
+                  <div className="text-left space-y-4">
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Filter Questions
+                    </label>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      <select
+                        className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        value={typeFilter}
+                        onChange={(e) => {
+                          setTypeFilter(e.target.value);
+                          resetQuestionSelection();
+                        }}
+                      >
+                        <option value="">All categories</option>
+                        {SOLO_QUESTION_TYPES.map((type) => (
+                          <option key={type.value} value={type.value}>
+                            {type.label}
+                          </option>
+                        ))}
+                      </select>
+
+                      <select
+                        className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                        value={difficultyFilter}
+                        onChange={(e) => {
+                          setDifficultyFilter(e.target.value);
+                          resetQuestionSelection();
+                        }}
+                      >
+                        <option value="">All difficulty</option>
+                        <option value="EASY">Easy</option>
+                        <option value="MEDIUM">Medium</option>
+                        <option value="HARD">Hard</option>
+                      </select>
+
+                      <select
+                        className="w-full p-4 rounded-lg border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+                        value={companyFilter}
+                        onChange={(e) => setCompanyFilter(e.target.value)}
+                        disabled
+                      >
+                        <option value="">All companies</option>
+                      </select>
+                    </div>
+
+                    <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
+                      Choose a Question
+                    </label>
+
                     <select
                       className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={typeFilter}
-                      onChange={(e) => {
-                        setTypeFilter(e.target.value);
-                        resetQuestionSelection();
-                      }}
+                      value={selectedQuestionId ?? ''}
+                      onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
                     >
-                      <option value="">All categories</option>
-                      {SOLO_QUESTION_TYPES.map((type) => (
-                        <option key={type.value} value={type.value}>
-                          {type.label}
+                      {questions.length === 0 && <option value="">No matching questions</option>}
+                      {questions.map((q) => (
+                        <option key={q.id} value={q.id}>
+                          {getQuestionText(q)}
                         </option>
                       ))}
                     </select>
-
-                    <select
-                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={difficultyFilter}
-                      onChange={(e) => {
-                        setDifficultyFilter(e.target.value);
-                        resetQuestionSelection();
-                      }}
-                    >
-                      <option value="">All difficulties</option>
-                      <option value="EASY">Easy</option>
-                      <option value="MEDIUM">Medium</option>
-                      <option value="HARD">Hard</option>
-                    </select>
-
-                    <select
-                      className="w-full p-4 rounded-lg border bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
-                      value={companyFilter}
-                      onChange={(e) => setCompanyFilter(e.target.value)}
-                      disabled
-                    >
-                      <option value="">All companies</option>
-                    </select>
                   </div>
 
-                  <label className="font-bold text-sm uppercase tracking-wider text-slate-500">
-                    Choose a Question
-                  </label>
+                  <div className="grid grid-cols-2 gap-4 pt-4">
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Camera className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">Auto Camera On</span>
+                    </div>
+                    <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                      <Mic className="text-indigo-600" size={20} />
+                      <span className="text-sm font-medium">HD Audio Recording</span>
+                    </div>
+                  </div>
 
-                  <select
-                    className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                    value={selectedQuestionId ?? ''}
-                    onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
+                  <Button
+                    size="lg"
+                    className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
+                    onClick={handleStartInterview}
+                    disabled={!selectedQuestionId}
                   >
-                    {questions.length === 0 && <option value="">No questions available</option>}
-                    {questions.map((q) => (
-                      <option key={q.id} value={q.id}>
-                        {getQuestionText(q)}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4 pt-4">
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
-                    <Camera className="text-indigo-600" size={20} />
-                    <span className="text-sm font-medium">Auto Camera On</span>
-                  </div>
-                  <div className="flex items-center gap-3 p-3 bg-slate-50 rounded-lg border border-dashed">
-                    <Mic className="text-indigo-600" size={20} />
-                    <span className="text-sm font-medium">HD Audio Recording</span>
-                  </div>
-                </div>
-
-                <Button
-                  size="lg"
-                  className="w-full h-14 text-lg bg-indigo-600 hover:bg-indigo-700 shadow-lg"
-                  onClick={handleStartInterview}
-                  disabled={!selectedQuestionId}
-                >
-                  Start Practice Session
-                </Button>
-              </Card>
+                    Start Practice Session
+                  </Button>
+                </Card>
+              )}
             </div>
           )}
 
