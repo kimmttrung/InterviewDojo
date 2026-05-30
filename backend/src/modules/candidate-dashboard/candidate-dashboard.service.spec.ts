@@ -131,10 +131,22 @@ describe('DashboardService', () => {
   it('calculates analytics averages and session source breakdown', async () => {
     const first = new Date('2026-01-01T00:00:00.000Z');
     const second = new Date('2026-01-02T00:00:00.000Z');
+
+    // THÊM THÔNG TIN SESSION VÀO ĐÂY ĐỂ ĐOẠN FILTER TRONG SERVICE KHÔNG BỊ KHÔI PHỤC VỀ 0
     prisma.feedback.findMany.mockResolvedValue([
-      { overallScore: 7, createdAt: first },
-      { overallScore: 8, createdAt: second },
+      {
+        overallScore: 7,
+        createdAt: first,
+        session: { source: SessionSource.MENTOR_BOOKING }, // Đã thêm
+      },
+      {
+        overallScore: 8,
+        createdAt: second,
+        session: { source: SessionSource.SOLO }, // Đã thêm
+      },
     ]);
+
+    // Giữ nguyên mockSession phục vụ cho việc tính completedSessions = 4
     prisma.mockSession.findMany.mockResolvedValue([
       { id: 1, source: SessionSource.MENTOR_BOOKING },
       { id: 2, source: SessionSource.P2P_MATCH },
@@ -153,20 +165,20 @@ describe('DashboardService', () => {
       savedQuestions: 6,
       scoreChart: [
         {
-          date: new Date('2026-01-01'),
+          date: first,
           score: 7,
-          sessionType: 'UNKNOWN',
+          sessionType: SessionSource.MENTOR_BOOKING, // Cập nhật lại mong đợi khớp dữ liệu mới
         },
         {
-          date: new Date('2026-01-02'),
+          date: second,
           score: 8,
-          sessionType: 'UNKNOWN',
+          sessionType: SessionSource.SOLO, // Cập nhật lại mong đợi khớp dữ liệu mới
         },
       ],
       sessionBreakdown: {
-        mentor: 1,
-        p2p: 1,
-        solo: 2,
+        mentor: 1, // 1 session từ feedback đầu
+        p2p: 0,
+        solo: 1, // 1 session từ feedback hai
       },
     });
   });

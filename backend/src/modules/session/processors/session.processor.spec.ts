@@ -1,3 +1,4 @@
+// src/modules/session/processors/session.processor.spec.ts
 import { Test, TestingModule } from '@nestjs/testing';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { SocketService } from '../../socket/socket.service';
@@ -66,6 +67,7 @@ describe('SessionProcessor', () => {
     );
   });
 
+  // ==================== ĐÃ FIX TEXT TIẾNG ANH TẠI ĐÂY ====================
   it('creates meeting-room notifications when a session starts', async () => {
     const job = {
       name: 'start-session-notification',
@@ -83,15 +85,15 @@ describe('SessionProcessor', () => {
         expect.objectContaining({
           userId: 1,
           type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Phỏng vấn đã bắt đầu',
-          message: 'Nhấn vào đây để tham gia cuộc họp.',
+          title: 'Interview has started',
+          message: 'Click here to join the meeting.',
           targetUrl: '/sessions/',
         }),
         expect.objectContaining({
           userId: 2,
           type: NotificationType.INTERVIEW_UPCOMING,
-          title: 'Phỏng vấn đã bắt đầu',
-          message: 'Nhấn vào đây để tham gia cuộc họp.',
+          title: 'Interview has started',
+          message: 'Click here to join the meeting.',
           targetUrl: '/sessions/',
         }),
       ],
