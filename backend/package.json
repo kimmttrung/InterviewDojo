@@ -20,7 +20,7 @@
     "test:e2e": "jest --config ./test/jest-e2e.json",
     "db:seed-mentor": "ts-node prisma/seed-mentor.ts",
     "db:seed-solo-questions": "tsx prisma/seed-solo-questions.ts",
-    "db:seed": "ts-node prisma/seed.ts"
+    "db:seed": "ts-node prisma/seed-staging.ts"
   },
   "dependencies": {
     "@nestjs/axios": "^4.0.1",
