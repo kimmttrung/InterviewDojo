@@ -20,6 +20,7 @@ export class QuestionsService {
     const theoryQuestionText = !isCoding
       ? specificData?.data?.question || q.title
       : q.title;
+
     return {
       id: q.id,
       title: theoryQuestionText,
@@ -35,7 +36,8 @@ export class QuestionsService {
       categories: q.categories?.map((c: any) => c.category?.name || '') || [],
       companies: q.companies?.map((c: any) => c.company?.name || '') || [],
       jobRoles: q.jobRoles?.map((j: any) => j.jobRole?.name || '') || [],
-      isBookmarked: false, // mặc định false, sẽ ghi đè nếu có userId trong findAll
+      isBookmarked: false, // Mặc định false, sẽ ghi đè nếu có userId trong findAll
+      answersCount: q._count?.comments || 0,
     };
   }
 
@@ -160,6 +162,9 @@ export class QuestionsService {
           jobRoles: { include: { jobRole: true } },
           theoryQuestion: true,
           codingQuestion: true,
+          _count: {
+            select: { comments: true },
+          },
         },
       }),
       this.prisma.question.count({ where }),
@@ -176,6 +181,9 @@ export class QuestionsService {
 
     const items = questions.map((q) => {
       const item = this.toQuestionItem(q);
+
+      item.answersCount = q._count?.comments || 0;
+
       if (userId) {
         item.isBookmarked = bookmarkedIds.includes(item.id);
       }
