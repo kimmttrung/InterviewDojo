@@ -92,6 +92,7 @@ describe('QuestionsService', () => {
         companies: ['Google'],
         jobRoles: ['Backend Developer'],
         isBookmarked: false,
+        answersCount: 0,
       });
       expect(result.meta.total).toBe(1);
       expect(result.meta.page).toBe(1);
