@@ -116,6 +116,13 @@ enum WalletTransactionType {
   ADMIN_ADJUSTMENT
 }
 
+enum MentorPayoutStatus {
+  PENDING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
 enum MatchStatus {
   WAITING
   MATCHED
@@ -254,6 +261,9 @@ model User {
   slots               Slot[]              @relation("MentorSlots")
   blockedEvents       BlockedEvent[]
   walletTransactions  WalletTransaction[]
+  mentorPayouts       MentorPayout[]      @relation("MentorPayoutMentor")
+  candidatePayouts    MentorPayout[]      @relation("MentorPayoutCandidate")
+  reviewedPayouts     MentorPayout[]      @relation("MentorPayoutReviewer")
   bookingsAsMentor    Booking[]           @relation("MentorBookings")
   bookingsAsCandidate Booking[]           @relation("CandidateBookings")
   codeSubmissions     CodeSubmission[]
@@ -515,6 +525,7 @@ model Booking {
 
   payments     Payment[]
   mockSessions MockSession[]
+  mentorPayout MentorPayout?
   answers      CoachingPlanAnswer[]
   logs         BookingActionLog[]
 
@@ -847,6 +858,7 @@ model MockSession {
 
   feedbacks Feedback[]
   questions MockSessionQuestion[]
+  mentorPayout MentorPayout?
 
   @@map("mock_sessions")
   @@index([status, scheduledAt])
@@ -952,7 +964,7 @@ model PaymentWebhookLog {
 
 model WalletTransaction {
   id            Int                   @id @default(autoincrement())
-  userId        Int                   @map("user_id")
+  userId        Int?                  @map("user_id")
   type          WalletTransactionType
   amount        Float
   balanceBefore Float                 @map("balance_before")
@@ -961,10 +973,42 @@ model WalletTransaction {
   note          String?
   createdAt     DateTime              @default(now()) @map("created_at")
 
-  user User @relation(fields: [userId], references: [id])
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([userId])
+  @@index([referenceId])
   @@map("wallet_transactions")
+}
+
+model MentorPayout {
+  id                 Int                @id @default(autoincrement())
+  sessionId          Int                @unique @map("session_id")
+  bookingId          Int                @unique @map("booking_id")
+  mentorId           Int                @map("mentor_id")
+  candidateId        Int                @map("candidate_id")
+  grossAmount        Float              @map("gross_amount")
+  platformFeePercent Float              @map("platform_fee_percent")
+  platformFeeAmount  Float              @map("platform_fee_amount")
+  mentorEarning      Float              @map("mentor_earning")
+  refundableAmount   Float              @map("refundable_amount")
+  status             MentorPayoutStatus @default(PENDING)
+  reviewedByAdminId  Int?               @map("reviewed_by_admin_id")
+  reviewedAt         DateTime?          @map("reviewed_at")
+  rejectReason       String?            @map("reject_reason")
+  failureReason      String?            @map("failure_reason")
+  createdAt          DateTime           @default(now()) @map("created_at")
+  updatedAt          DateTime           @updatedAt @map("updated_at")
+
+  session         MockSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  booking         Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  mentor          User        @relation("MentorPayoutMentor", fields: [mentorId], references: [id])
+  candidate       User        @relation("MentorPayoutCandidate", fields: [candidateId], references: [id])
+  reviewedByAdmin User?       @relation("MentorPayoutReviewer", fields: [reviewedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt])
+  @@index([mentorId])
+  @@index([candidateId])
+  @@map("mentor_payouts")
 }
 
 // ==================== COMMENT ====================
