@@ -22,6 +22,7 @@ import {
 import { StreamService } from '../stream/stream.service';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { SocketService } from '../socket/socket.service';
+import { MentorPayoutService } from '../mentor-payout/mentor-payout.service';
 @Injectable()
 export class SessionService {
   private readonly logger = new Logger(SessionService.name);
@@ -30,6 +31,7 @@ export class SessionService {
     @InjectQueue('session') private sessionQueue: Queue,
     private streamService: StreamService,
     private socketService: SocketService,
+    private mentorPayoutService: MentorPayoutService,
   ) {}
 
   @Cron(CronExpression.EVERY_5_MINUTES)
@@ -86,6 +88,12 @@ export class SessionService {
             where: { id: { in: overdueIds } },
             data: { status: SessionStatus.COMPLETED },
           });
+
+          await Promise.all(
+            overdueIds.map((sessionId) =>
+              this.mentorPayoutService.payoutCompletedSessionSafely(sessionId),
+            ),
+          );
 
           totalUpdated += updateResult.count;
         }

@@ -10,6 +10,7 @@ import {
 import { BookingService } from '../modules/booking/booking.service';
 import { SessionTab } from '../modules/session/dto/get-sessions.dto';
 import { SessionService } from '../modules/session/session.service';
+import { MentorPayoutService } from '../modules/mentor-payout/mentor-payout.service';
 import { SocketService } from '../modules/socket/socket.service';
 import { WalletService } from '../modules/wallet/wallet.service';
 import { StreamService } from '../modules/stream/stream.service';
@@ -202,6 +203,10 @@ describe('Booking Wallet Session Integration', () => {
               public_id: 'mock_id',
             }),
           },
+        },
+        {
+          provide: MentorPayoutService,
+          useValue: { payoutCompletedSessionSafely: jest.fn() },
         },
       ],
     }).compile();

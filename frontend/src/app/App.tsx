@@ -49,6 +49,7 @@ import { AdminDashboard } from '@/features/admin/dashboard/pages/AdminDashboard'
 import CompaniesPage from '@/features/admin/companies/pages/CompaniesPage';
 import { WalletStatistics } from '@/features/admin/wallet/pages/WalletStatistics';
 import { TransactionList } from '@/features/admin/wallet/pages/TransactionList';
+import { MentorPayoutList } from '@/features/admin/mentor-payouts/pages/MentorPayoutList';
 // ──────────────────────────────────────────
 // Guard cho trang chọn target role
 // ──────────────────────────────────────────
@@ -311,6 +312,7 @@ export function App() {
               <Route path="questions/:id/edit" element={<QuestionForm />} />
               <Route path="wallet-statistics" element={<WalletStatistics />} />
               <Route path="transactions" element={<TransactionList />} />
+              <Route path="mentor-payouts" element={<MentorPayoutList />} />
               {/* Thêm các route admin khác sau */}
             </Route>
 
