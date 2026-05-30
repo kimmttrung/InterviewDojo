@@ -1,10 +1,11 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { ApprovalStatus } from '@prisma/client';
+import { ApprovalStatus, Role } from '@prisma/client';
 import { MentorAdminService } from './mentor-admin.service';
 
 describe('MentorAdminService', () => {
   let service: MentorAdminService;
   let prisma: any;
+  let eventEmitter: any; // Add eventEmitter mock holder
 
   beforeEach(() => {
     prisma = {
@@ -12,6 +13,7 @@ describe('MentorAdminService', () => {
         findMany: jest.fn(),
         count: jest.fn(),
         findUnique: jest.fn(),
+        update: jest.fn(), // Added to support user promotion
       },
       mentorProfile: {
         findUnique: jest.fn(),
@@ -20,9 +22,16 @@ describe('MentorAdminService', () => {
       mentorApprovalLog: {
         create: jest.fn(),
       },
-      $transaction: jest.fn(),
+      $transaction: jest.fn((cb) => cb), // Mock transaction to immediately execute array elements
     };
-    service = new MentorAdminService(prisma);
+
+    // Mock EventEmitter2
+    eventEmitter = {
+      emit: jest.fn(),
+    };
+
+    // Pass BOTH arguments into the constructor to fix TS2554 error
+    service = new MentorAdminService(prisma, eventEmitter);
   });
 
   it('lists mentor profiles filtered by approval status', async () => {
@@ -84,19 +93,25 @@ describe('MentorAdminService', () => {
     await expect(service.findOne(1)).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it('approves a pending mentor and writes an approval log', async () => {
+  it('approves a pending mentor, upgrades user role, writes log, and emits event', async () => {
     prisma.mentorProfile.findUnique.mockResolvedValue({
       id: 9,
       userId: 1,
       approvalStatus: ApprovalStatus.PENDING,
+      user: { id: 1, role: Role.CANDIDATE }, // Added to mock the included user relation
     });
 
     await service.approve(1, 99);
 
+    // Verify transaction executes all updates including the role promotion and normalized notes
     expect(prisma.$transaction).toHaveBeenCalledWith([
       prisma.mentorProfile.update({
         where: { userId: 1 },
         data: { approvalStatus: ApprovalStatus.ACTIVE },
+      }),
+      prisma.user.update({
+        where: { id: 1 },
+        data: { role: Role.MENTOR },
       }),
       prisma.mentorApprovalLog.create({
         data: {
@@ -104,10 +119,16 @@ describe('MentorAdminService', () => {
           adminId: 99,
           statusBefore: ApprovalStatus.PENDING,
           statusAfter: ApprovalStatus.ACTIVE,
-          note: null,
+          note: 'Profile approved by administrator',
         },
       }),
     ]);
+
+    // Verify the profile updated event was triggered
+    expect(eventEmitter.emit).toHaveBeenCalledWith('user.profile.updated', {
+      userId: 1,
+      role: Role.MENTOR,
+    });
   });
 
   it('rejects approving an already active mentor', async () => {
