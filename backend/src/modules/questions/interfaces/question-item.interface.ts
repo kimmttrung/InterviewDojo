@@ -12,4 +12,5 @@ export interface QuestionItem {
   companies: string[];
   jobRoles: string[];
   isBookmarked?: boolean;
+  answersCount: number;
 }

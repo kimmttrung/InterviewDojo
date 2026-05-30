@@ -12,4 +12,5 @@ export enum WalletTransactionType {
   REFUND = 'REFUND',
   PAYOUT = 'PAYOUT',
   PLATFORM_FEE = 'PLATFORM_FEE',
+  ADMIN_ADJUSTMENT = 'ADMIN_ADJUSTMENT',
 }

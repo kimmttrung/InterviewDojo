@@ -100,15 +100,7 @@ export function QuestionCard({ question }: QuestionCardProps) {
             <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
               <MessageCircle className="w-4 h-4" /> {answersCount || 0} answers
             </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                navigate(`/questions/${id}/${slug}#comments`);
-              }}
-              className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors"
-            >
-              <MessageSquare className="w-4 h-4" /> Comment
-            </button>
+
             <button className="flex items-center gap-1.5 text-sm font-bold hover:text-indigo-600 transition-colors">
               <PlusCircle className="w-4 h-4" /> I was asked this
             </button>
