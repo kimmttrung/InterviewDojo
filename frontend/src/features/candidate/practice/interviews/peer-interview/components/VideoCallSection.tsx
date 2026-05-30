@@ -7,21 +7,8 @@ import {
   StreamVideoParticipant,
   SpeakerLayout,
 } from '@stream-io/video-react-sdk';
-import {
-  Mic,
-  MicOff,
-  Video,
-  VideoOff,
-  PhoneOff,
-  MonitorUp,
-  // ArrowUpRight,
-  // ArrowUpLeft,
-  // ArrowDownRight,
-  // ArrowDownLeft,
-  // ArrowRightLeft,
-} from 'lucide-react';
+import { Mic, MicOff, Video, VideoOff, PhoneOff, MonitorUp } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-// import { useState } from 'react';
 // 1. Tạo Component hiển thị khi tắt Cam (Avatar placeholder)
 const CustomVideoPlaceholder = ({ participant }: { participant: StreamVideoParticipant }) => (
   <div className="absolute inset-0 bg-slate-900 flex flex-col items-center justify-center z-10">

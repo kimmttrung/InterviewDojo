@@ -609,16 +609,34 @@ export class SessionService {
       session.match?.candidateBId === userId;
 
     if (!isParticipant) throw new ForbiddenException('Not participant');
+    let displayStatus = session.status as string;
+    if (displayStatus === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes || 60;
+      const end = new Date(start.getTime() + duration * 60000);
+      const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+
+      if (now >= allowJoinTime && now <= end) {
+        displayStatus = 'ONGOING';
+      } else if (now > end) {
+        displayStatus = 'FINISHED';
+      } else {
+        displayStatus = 'UPCOMING';
+      }
+    } else if (displayStatus === 'COMPLETED') {
+      displayStatus = 'FINISHED';
+    }
 
     return {
       id: session.id,
       source: session.source,
       scheduledAt: session.scheduledAt,
       durationMinutes: session.durationMinutes,
-      status: session.status,
       mentorId: session.booking?.mentorId || null,
       candidateId: session.booking?.candidateId || null,
       intervieweeId: session.intervieweeId,
+      status: displayStatus,
       // thêm các field cần thiết
     };
   }
@@ -654,13 +672,28 @@ export class SessionService {
     }
 
     let status = session.status;
-    if (status === 'SCHEDULED') status = 'UPCOMING';
-    else if (status === 'COMPLETED') status = 'FINISHED';
+    if (status === 'SCHEDULED') {
+      const now = new Date();
+      const start = new Date(session.scheduledAt);
+      const duration = session.durationMinutes;
+      const end = new Date(start.getTime() + duration * 60000);
+
+      if (now >= start && now <= end) {
+        status = 'ONGOING';
+      } else if (now > end) {
+        status = 'FINISHED';
+      } else {
+        status = 'UPCOMING';
+      }
+    } else if (status === 'COMPLETED') {
+      status = 'FINISHED';
+    }
 
     return {
       id: session.id,
       type,
       status: status,
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -743,6 +776,7 @@ export class SessionService {
       id: booking.id,
       type: 'MENTOR',
       status: 'PENDING',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -769,6 +803,7 @@ export class SessionService {
       id: booking.id,
       type: 'MENTOR',
       status: 'REJECTED',
+      durationMinutes: booking.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -815,6 +850,7 @@ export class SessionService {
       id: session.id,
       type,
       status: 'FINISHED',
+      durationMinutes: session.durationMinutes,
       opponentId: opponent?.id || null,
       opponentName: opponent?.name || 'Unknown',
       opponentAvatar: opponent?.avatarUrl || null,
@@ -938,12 +974,16 @@ export class SessionService {
     // 2. Kiểm tra thời gian cho phép (15 phút trước đến 2 giờ sau)
     const now = new Date();
     const start = session.scheduledAt;
-    const diffMinutes = (start.getTime() - now.getTime()) / 60000;
-    const canJoin = diffMinutes <= 15 && diffMinutes >= -120; // giống frontend
-    if (!canJoin) {
+    const duration = session.durationMinutes;
+    const end = new Date(start.getTime() + duration * 60000);
+    const allowJoinTime = new Date(start.getTime() - 15 * 60000);
+    if (now < allowJoinTime) {
       throw new Error(
-        `Chỉ có thể tham gia từ 15 phút trước đến 2 giờ sau giờ bắt đầu`,
+        'Chưa đến giờ phỏng vấn. Bạn có thể vào phòng trước 15 phút!',
       );
+    }
+    if (now > end) {
+      throw new Error('Cuộc phỏng vấn đã kết thúc, không thể tham gia nữa!');
     }
 
     // 3. Nếu đã có meetingLink thì trả về luôn
