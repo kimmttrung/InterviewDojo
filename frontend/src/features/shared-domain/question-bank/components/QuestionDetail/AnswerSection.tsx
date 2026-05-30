@@ -1,24 +1,40 @@
 // features/questions/components/QuestionDetail/AnswerSection.tsx
-import { useState } from 'react';
-import { MessageCircle, ChevronDown, PlusCircle, Share } from 'lucide-react';
+import { PlusCircle, Share, Sparkles } from 'lucide-react';
 import { Button } from '@/shared/components/ui/button';
 import { Card } from '@/shared/components/ui/card';
-import { Avatar, AvatarFallback } from '@/shared/components/ui/avatar';
-import { Input } from '@/shared/components/ui/input';
+import { useNavigate } from 'react-router-dom';
 
-export function AnswerSection({ answersCount }: { answersCount: number }) {
-  const [myAnswer, setMyAnswer] = useState('');
+interface AnswerSectionProps {
+  question?: {
+    id: number;
+    title: string;
+    type?: string;
+    data?: any;
+    description?: string;
+  };
+}
+
+export function AnswerSection({ question }: AnswerSectionProps) {
+  const navigate = useNavigate();
+
+  const handleTryWithAI = () => {
+    navigate('/practice/solo-recording', {
+      state: {
+        preselectedQuestion: {
+          id: question?.id,
+          title: question?.title,
+          data: question?.data,
+          description: question?.description,
+          type: question?.type,
+        },
+      },
+    });
+  };
 
   return (
-    <div className="space-y-8 mt-10">
+    <div className="space-y-6 mt-10 border-t border-slate-100 pt-6">
       {/* Action Buttons */}
-      <div className="flex flex-wrap items-center gap-3 border-t border-slate-100 pt-6">
-        {/* <Button
-          variant="outline"
-          className="rounded-xl border-slate-200 font-semibold hover:bg-indigo-50 hover:text-indigo-700 transition-all"
-        >
-          <Star className="w-4 h-4 mr-2" /> Save
-        </Button> */}
+      <div className="flex flex-wrap items-center gap-3">
         <Button
           variant="outline"
           className="rounded-xl border-slate-200 font-semibold hover:bg-indigo-50 hover:text-indigo-700 transition-all"
@@ -35,39 +51,14 @@ export function AnswerSection({ answersCount }: { answersCount: number }) {
         <p className="text-indigo-800 text-sm font-medium">
           💡 <b>Tip:</b> Bạn có thể sử dụng AI để chấm điểm câu trả lời của mình ngay lập tức.
         </p>
-        <Button className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs px-4 h-9">
+        <Button
+          onClick={handleTryWithAI}
+          className="bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs px-4 h-9 shrink-0"
+        >
+          <Sparkles className="w-3.5 h-3.5 mr-1.5" />
           Thử ngay
         </Button>
       </Card>
-
-      {/* User Input Area */}
-      <div className="flex gap-4 items-center bg-white p-2 rounded-2xl border border-slate-100 shadow-sm">
-        <Avatar className="h-10 w-10 border border-slate-100 shrink-0 ml-2">
-          <AvatarFallback className="bg-slate-100 text-slate-500 text-xs">You</AvatarFallback>
-        </Avatar>
-        <Input
-          value={myAnswer}
-          onChange={(e) => setMyAnswer(e.target.value)}
-          placeholder="Chia sẻ cách bạn trả lời câu hỏi này..."
-          className="border-none focus-visible:ring-0 bg-transparent h-12"
-        />
-        <Button disabled={!myAnswer} className="bg-indigo-600 rounded-xl mr-2">
-          Gửi
-        </Button>
-      </div>
-
-      {/* Answers List */}
-      <div className="space-y-6">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-4">
-          <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
-            <MessageCircle className="w-5 h-5 text-slate-400" />
-            {answersCount || 0} Answers
-          </span>
-          <Button variant="ghost" size="sm" className="text-slate-500 font-medium">
-            🔥 Hot <ChevronDown className="w-4 h-4 ml-2" />
-          </Button>
-        </div>
-      </div>
     </div>
   );
 }

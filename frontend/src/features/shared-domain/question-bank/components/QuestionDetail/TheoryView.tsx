@@ -2,6 +2,7 @@
 import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide-react';
 import { QuestionDetail } from '../../types/question.types';
 import { CommentSection } from '@/features/comment/components/CommentSection';
+import { AnswerSection } from './AnswerSection';
 import { useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 
@@ -86,6 +87,7 @@ export function TheoryView({ question, parsedData }: TheoryViewProps) {
           </SectionBox>
         )}
       </div>
+      <AnswerSection question={question} />
       <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
         <CommentSection questionId={question.id} />
       </div>
