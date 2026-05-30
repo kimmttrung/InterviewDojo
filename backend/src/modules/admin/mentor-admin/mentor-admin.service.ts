@@ -7,10 +7,15 @@ import { PrismaService } from '../../../prisma/prisma.service';
 import { GetMentorsAdminDto } from './dto/get-mentors-admin.dto';
 import { buildPaginationResponse } from '../../../common/interfaces/pagination.interface';
 import { ApprovalStatus } from '@prisma/client';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { Role } from '@/common/enums/role.enum';
 
 @Injectable()
 export class MentorAdminService {
-  constructor(private prisma: PrismaService) {}
+  constructor(
+    private prisma: PrismaService,
+    private eventEmitter: EventEmitter2,
+  ) {}
 
   async findAll(dto: GetMentorsAdminDto) {
     const { page, limit, status } = dto;
@@ -126,6 +131,11 @@ export class MentorAdminService {
         },
       }),
     ]);
+
+    this.eventEmitter.emit('user.profile.updated', {
+      userId: userId,
+      role: Role.MENTOR,
+    });
   }
 
   async reject(userId: number, reason: string, adminId: number) {
