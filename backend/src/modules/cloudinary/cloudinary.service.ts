@@ -6,6 +6,7 @@ import {
 } from 'cloudinary';
 import { Readable } from 'stream';
 import { UploadedFileType } from '../../common/types/uploaded-file.type';
+import * as path from 'path';
 
 const ALLOWED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 
@@ -30,6 +31,15 @@ const ALLOWED_AUDIO_TYPES = [
   'application/octet-stream',
 ];
 
+const ALLOWED_DOCUMENT_TYPES = [
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+];
+
 @Injectable()
 export class CloudinaryService {
   private uploadStream(
@@ -52,7 +62,7 @@ export class CloudinaryService {
         },
       );
 
-      Readable.from(buffer).pipe(upload);
+      upload.end(buffer);
     });
   }
 
@@ -84,67 +94,30 @@ export class CloudinaryService {
     });
   }
 
-  // async uploadVideo(file: UploadedFileType): Promise<UploadApiResponse> {
-  //   if (!file?.buffer) {
-  //     throw new BadRequestException('Video file is required');
-  //   }
+  async uploadImage(
+    file: UploadedFileType,
+    folder: string,
+  ): Promise<UploadApiResponse> {
+    if (!file?.buffer) throw new BadRequestException('Image file required');
+    if (!this.isValidMimetype(file.mimetype, ALLOWED_IMAGE_TYPES)) {
+      throw new BadRequestException(
+        `Invalid image type. Allowed: ${ALLOWED_IMAGE_TYPES.join(', ')}`,
+      );
+    }
+    return this.uploadStream(file.buffer, {
+      folder,
+      transformation: [{ quality: 'auto', fetch_format: 'auto' }],
+    });
+  }
 
-  //   // // Kiểm tra mimetype
-  //   // if (!ALLOWED_VIDEO_TYPES.includes(file.mimetype)) {
-  //   //   throw new BadRequestException(
-  //   //     `Invalid video type. Allowed: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
-  //   //   );
-  //   // }
-  //   const isValid = ALLOWED_VIDEO_TYPES.some((prefix) =>
-  //     file.mimetype?.toLowerCase().startsWith(prefix.toLowerCase()),
-  //   );
-
-  //   if (!isValid) {
-  //     throw new BadRequestException(
-  //       `Định dạng không hợp lệ: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
-  //     );
-  //   }
-
-  //   return this.uploadStream(file.buffer, {
-  //     resource_type: 'video', // Bắt buộc là video để hỗ trợ .mp4, .webm
-  //     folder: 'interview_dojo/solo_recordings', // Đổi folder cho đồng bộ
-  //     chunk_size: 6_000_000,
-  //   });
-  // }
-
-  // async uploadAudio(file: UploadedFileType): Promise<UploadApiResponse> {
-  //   if (!file?.buffer) {
-  //     throw new BadRequestException('Audio file is required');
-  //   }
-
-  //   // if (!ALLOWED_AUDIO_TYPES.includes(file.mimetype)) {
-  //   //   throw new BadRequestException(
-  //   //     `Invalid audio type. Allowed: ${ALLOWED_AUDIO_TYPES.join(', ')}`,
-  //   //   );
-  //   // }
-  //   const isValid = ALLOWED_AUDIO_TYPES.some((prefix) =>
-  //     file.mimetype?.toLowerCase().startsWith(prefix.toLowerCase()),
-  //   );
-
-  //   if (!isValid) {
-  //     throw new BadRequestException(
-  //       `Định dạng không hợp lệ: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_AUDIO_TYPES.join(', ')}`,
-  //     );
-  //   }
-
-  //   return this.uploadStream(file.buffer, {
-  //     resource_type: 'video',
-  //     folder: 'interview_dojo/solo_recordings_audio',
-  //     chunk_size: 6_000_000,
-  //   });
-  // }
-
-  async uploadVideo(file: UploadedFileType): Promise<UploadApiResponse> {
+  async uploadVideo(
+    file: UploadedFileType,
+    folder: string,
+  ): Promise<UploadApiResponse> {
     if (!file?.buffer) {
       throw new BadRequestException('Video file is required');
     }
 
-    // Sửa: Sử dụng helper và mảng ALLOWED_VIDEO_TYPES
     if (!this.isValidMimetype(file.mimetype, ALLOWED_VIDEO_TYPES)) {
       throw new BadRequestException(
         `Invalid video type: ${file.mimetype}. Chỉ chấp nhận: ${ALLOWED_VIDEO_TYPES.join(', ')}`,
@@ -153,7 +126,9 @@ export class CloudinaryService {
 
     return this.uploadStream(file.buffer, {
       resource_type: 'video',
-      folder: 'interview_dojo/solo_recordings_video',
+
+      folder,
+
       chunk_size: 6_000_000,
     });
   }
@@ -175,6 +150,43 @@ export class CloudinaryService {
       resource_type: 'auto',
       folder: 'interview_dojo/solo_recordings_audio',
       chunk_size: 6_000_000,
+    });
+  }
+
+  async uploadRawFile(
+    file: UploadedFileType,
+    folder: string,
+  ): Promise<UploadApiResponse> {
+    if (!file?.buffer) {
+      throw new BadRequestException('Document file is required');
+    }
+
+    if (!this.isValidMimetype(file.mimetype, ALLOWED_DOCUMENT_TYPES)) {
+      throw new BadRequestException(
+        `Invalid document type. Allowed formats: PDF, DOC, DOCX`,
+      );
+    }
+
+    // 1. Trích xuất đuôi file gốc (Ví dụ: .pdf)
+    const fileExt = path.extname(file.originalname).toLowerCase();
+
+    // 2. Tạo tên ngẫu nhiên độc nhất
+    const randomName = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+
+    // 3. ĐỊNH CẤU HÌNH CHIẾN THUẬT:
+    // - Nếu là PDF: Ép sang 'image' để mở khóa quyền xem công khai (Public Access) trên Cloudinary
+    // - Nếu là WORD (.doc, .docx): Bắt buộc giữ 'raw'
+    const isPdf = fileExt === '.pdf';
+    const targetResourceType = isPdf ? 'image' : 'raw';
+
+    // Với file hình ảnh/PDF (đã ép sang 'image'), Cloudinary tự điền đuôi file vào URL nên không cần cộng fileExt vào public_id.
+    // Với file raw (Word), bắt buộc phải cộng fileExt vào tên public_id để tránh mất định dạng.
+    const customPublicId = isPdf ? randomName : `${randomName}${fileExt}`;
+
+    return this.uploadStream(file.buffer, {
+      folder,
+      resource_type: targetResourceType as any, // Ép kiểu linh hoạt
+      public_id: customPublicId,
     });
   }
 

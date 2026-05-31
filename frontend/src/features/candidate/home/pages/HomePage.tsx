@@ -1,0 +1,214 @@
+import { Share2, Code2, Brain, Users, BookOpen, MessageCircle, Target } from 'lucide-react';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Card } from '@/shared/components/ui/card';
+import { Badge } from '@/shared/components/ui/badge';
+import { Button } from '@/shared/components/ui/button';
+import { Link } from 'react-router-dom';
+
+export default function HomePage() {
+  const features = [
+    {
+      title: 'Peer to peer matching',
+      icon: Share2,
+      color: 'from-pink-500 to-rose-500',
+      link: '/practice/matching',
+    },
+    {
+      title: 'Solo interview AI feedback',
+      icon: BookOpen,
+      color: 'from-indigo-500 to-purple-500',
+      link: '/practice/solo-recording',
+    },
+    {
+      title: 'Practice coding questions',
+      icon: Code2,
+      color: 'from-blue-500 to-cyan-500',
+      link: '/question-bank',
+    },
+    {
+      title: 'Mentor booking list',
+      icon: Users,
+      color: 'from-green-500 to-emerald-500',
+      link: '/mentors',
+    },
+    {
+      title: 'Prep for AI companies',
+      icon: Brain,
+      color: 'from-purple-500 to-violet-500',
+      link: '/share-interview',
+    },
+    {
+      title: 'View interview questions',
+      icon: MessageCircle,
+      color: 'from-orange-500 to-amber-500',
+      link: '/share-interview',
+    },
+    {
+      title: 'Add Credit for canidate',
+      icon: Target,
+      color: 'from-red-500 to-pink-500',
+      link: '/wallet',
+    },
+  ];
+
+  return (
+    <Layout>
+      <div className="p-8 space-y-8 bg-gradient-to-b from-background to-muted/20 min-h-screen">
+        {/* HEADER */}
+
+        <div>
+          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
+
+          <p className="text-muted-foreground">
+            Continue learning with our recommendations based on your career goals and recent
+            activity.
+          </p>
+        </div>
+
+        {/* FEATURE GRID */}
+
+        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
+          {features.map((item, index) => {
+            const Icon = item.icon;
+
+            return (
+              <Link key={index} to={item.link}>
+                <Card className="p-4 flex flex-col items-center text-center transition-all duration-300 cursor-pointer hover:shadow-xl hover:-translate-y-1 border hover:border-primary/40">
+                  <div
+                    className={`p-3 rounded-lg mb-2 text-white bg-gradient-to-r ${item.color} shadow`}
+                  >
+                    <Icon className="h-5 w-5 text-primary" />
+                  </div>
+
+                  <p className="text-sm font-medium">{item.title}</p>
+                </Card>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* MAIN GRID */}
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* LEFT SIDE */}
+
+          <div className="space-y-6">
+            {/* Getting started */}
+
+            <Card className="p-6">
+              <h2 className="font-semibold text-lg mb-2">Getting started</h2>
+
+              <p className="text-sm text-muted-foreground mb-4">
+                Start preparing for your next interview.
+              </p>
+
+              <ul className="space-y-2 text-sm">
+                <li>Sign up for InterviewDojo</li>
+                <li>Practic question</li>
+                <li>Explore interview questions</li>
+                <li>Join a practice interview</li>
+                <li>Book a coaching session</li>
+              </ul>
+            </Card>
+
+            {/* Question of the day */}
+
+            <Card className="p-6 space-y-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
+              <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
+                Question of the day
+              </Badge>
+              <h3 className="font-medium">Design a taxi recommendation system for airports.</h3>
+
+              <div className="flex gap-2">
+                <Button className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">
+                  Answer now
+                </Button>
+                <Button variant="outline">Shuffle</Button>
+              </div>
+
+              <p className="text-sm text-muted-foreground">
+                Answer a practice question to stay on top of your interview preparation.
+              </p>
+            </Card>
+          </div>
+
+          {/* RIGHT SIDE */}
+
+          <div className="lg:col-span-2 space-y-6">
+            {/* Interview Questions */}
+
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold">Interview questions</h2>
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium">Amazon Software Engineer Questions</h3>
+
+                  <p className="text-sm text-muted-foreground">
+                    Check out example Amazon Software Engineer Questions
+                  </p>
+                </div>
+
+                <Button variant="outline">View Now</Button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="font-medium">Google Software Engineer Questions</h3>
+
+                  <p className="text-sm text-muted-foreground">
+                    Check out example Google Software Engineer Questions
+                  </p>
+                </div>
+
+                <Button variant="outline">View Now</Button>
+              </div>
+
+              <Button variant="link">See more questions</Button>
+            </Card>
+
+            {/* Practice mentor */}
+
+            <Card className="p-6 space-y-4">
+              <h2 className="text-lg font-semibold">Practice mentor</h2>
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Thang T.</p>
+
+                  <p className="text-sm text-muted-foreground">
+                    Senior Data Engineer | Amazon (ex-Meta, Apple)
+                  </p>
+                </div>
+
+                <Button>Booking Now</Button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Venkata K.</p>
+
+                  <p className="text-sm text-muted-foreground">Software Engineer | Amazon</p>
+                </div>
+
+                <Button>Booking Now</Button>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div>
+                  <p className="font-medium">Peer mock interviews</p>
+
+                  <p className="text-sm text-muted-foreground">
+                    Practice with peers every day on our live mock interview platform.
+                  </p>
+                </div>
+
+                <Button>Booking Now</Button>
+              </div>
+            </Card>
+          </div>
+        </div>
+      </div>
+    </Layout>
+  );
+}

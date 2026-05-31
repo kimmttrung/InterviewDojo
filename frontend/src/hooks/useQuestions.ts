@@ -1,125 +1,61 @@
 // src/hooks/useQuestions.ts
-import { useState, useCallback, useEffect } from 'react';
-import { Question, QuestionAPI, TheoryQuestion } from '../types/interview';
-import { api } from '../../lib/api';
-import { codingService } from '../../services/coding.service';
-
-const THEORY_QUESTIONS: TheoryQuestion[] = [
-  {
-    title: 'Giải thích React Virtual DOM',
-    difficulty: 'Medium',
-    tags: ['React'],
-    content:
-      'Giải thích cơ chế hoạt động của React Virtual DOM. Tại sao nó lại giúp cải thiện hiệu năng so với DOM thực?',
-    examples: [],
-  },
-  {
-    title: 'Difference between let, const, and var',
-    difficulty: 'Easy',
-    tags: ['JavaScript'],
-    content:
-      'So sánh sự khác nhau giữa let, const và var trong JavaScript về scope, hoisting, và khả năng reassign.',
-    examples: [],
-  },
-  {
-    title: 'Explain Closure in JavaScript',
-    difficulty: 'Medium',
-    tags: ['JavaScript'],
-    content:
-      'Closure là gì? Hãy giải thích cơ chế hoạt động và ứng dụng thực tế của closure trong JavaScript.',
-    examples: [],
-  },
-];
+import { useState, useCallback } from 'react';
+import { questionService } from '../features/shared-domain/question-bank/services/question.service';
+import { QuestionType } from '../features/shared-domain/question-bank/types/question.types';
 
 export function useQuestions() {
-  const [codingQuestions, setCodingQuestions] = useState<QuestionAPI[]>([]);
-  const [currentQuestion, setCurrentQuestion] = useState<Question | null>(null);
+  const [currentQuestion, setCurrentQuestion] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const fetchQuestions = useCallback(async () => {
+  // Cập nhật: Thêm tham số difficulty vào logic lấy câu hỏi ngẫu nhiên
+  const getRandomQuestion = useCallback(async (type?: QuestionType, difficulty?: string) => {
+    setIsLoading(true);
     try {
-      const response = await codingService.getAllQuestions(); // ← sửa dòng này
-      console.log('check questions', response);
-      setCodingQuestions(response.data);
+      const params = {
+        page: 1,
+        limit: 50, // Lấy tập đủ lớn để việc random có ý nghĩa
+        questionType: type, // Đảm bảo dùng đúng key Backend mong đợi (questionType)
+        difficulty: difficulty,
+        sortBy: 'createdAt',
+        sortOrder: 'desc',
+      };
+
+      console.log('🎲 Requesting random question with filters:', { type, difficulty });
+
+      const res = await questionService.getAll(params);
+      const list = res?.data?.data || [];
+
+      if (list.length > 0) {
+        // Thực hiện random trong danh sách trả về
+        const selected = list[Math.floor(Math.random() * list.length)];
+
+        // Fetch chi tiết để lấy đầy đủ data (testcases, theory data, constraints...)
+        const detailRes = await questionService.getById(selected.id);
+        const fullData = detailRes?.data?.data || detailRes?.data;
+
+        setCurrentQuestion(fullData);
+        console.log('🎲 Question:', fullData);
+        return fullData;
+      }
+
+      // Nếu không tìm thấy câu nào phù hợp với filter
+      setCurrentQuestion(null);
+      console.log('🎲 Question:', null);
+
+      return null;
     } catch (error) {
-      console.error('Lỗi tải danh sách câu hỏi:', error);
+      console.error('Random question failed:', error);
+      setCurrentQuestion(null);
+      return null;
+    } finally {
+      setIsLoading(false);
     }
   }, []);
 
-  const transformCodeQuestion = useCallback((selected: QuestionAPI): Question => {
-    // Lấy các test case mẫu (isSample = true)
-    const sampleTestCases =
-      selected.testCases
-        ?.filter((tc) => tc.isSample)
-        .map((tc) => ({
-          input: tc.input.trim(),
-          output: tc.expectedOutput.trim(),
-          explanation: tc.explanation || undefined,
-        })) || [];
-
-    // Format difficulty
-    const difficultyMap = {
-      EASY: 'Easy',
-      MEDIUM: 'Medium',
-      HARD: 'Hard',
-    };
-
-    return {
-      id: selected.id,
-      title: selected.title,
-      difficulty: difficultyMap[selected.difficulty] || 'Medium',
-      tags: selected.tags,
-      content: selected.description,
-      examples: sampleTestCases,
-      constraints: selected.constraints,
-      hints: selected.hints,
-      timeLimit: selected.timeLimit,
-      memoryLimit: selected.memoryLimit,
-    };
-  }, []);
-
-  const getRandomQuestion = useCallback(
-    (type: 'code' | 'theory') => {
-      setIsLoading(true);
-
-      if (type === 'code') {
-        if (codingQuestions.length === 0) {
-          setIsLoading(false);
-          return null;
-        }
-        const selected = codingQuestions[Math.floor(Math.random() * codingQuestions.length)];
-        const question = transformCodeQuestion(selected);
-        setIsLoading(false);
-        return question;
-      } else {
-        const random = THEORY_QUESTIONS[Math.floor(Math.random() * THEORY_QUESTIONS.length)];
-        const theoryQuestion: Question = {
-          id: Date.now(), // temporary id
-          title: random.title,
-          difficulty: random.difficulty,
-          tags: random.tags,
-          content: random.content,
-          examples: random.examples,
-        };
-        setIsLoading(false);
-        return theoryQuestion;
-      }
-    },
-    [codingQuestions, transformCodeQuestion],
-  );
-
-  // Tự động fetch questions khi hook được gọi
-  useEffect(() => {
-    fetchQuestions();
-  }, [fetchQuestions]);
-
   return {
-    codingQuestions,
     currentQuestion,
-    isLoading,
     setCurrentQuestion,
-    fetchQuestions,
     getRandomQuestion,
-    setIsLoading,
+    isLoading,
   };
 }

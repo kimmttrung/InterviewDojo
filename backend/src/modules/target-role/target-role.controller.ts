@@ -9,7 +9,7 @@ import {
   UseGuards,
   ValidationPipe,
 } from '@nestjs/common';
-import { TargetRoleService } from './target-role.service';
+import { JobRoleService } from './target-role.service';
 import { CreateTargetRoleDto } from './dto/create-target-role.dto';
 import { UpdateTargetRoleDto } from './dto/update-target-role.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
@@ -20,9 +20,9 @@ import { CreateMultipleTargetRoleDto } from './dto/create-multiple-target-role.d
 
 @Controller('target-roles')
 export class TargetRoleController {
-  constructor(private service: TargetRoleService) {}
+  constructor(private service: JobRoleService) {}
 
-  @Roles(Role.ADMIN, Role.STAFF)
+  @Roles(Role.ADMIN)
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   create(
@@ -38,14 +38,14 @@ export class TargetRoleController {
     return this.service.findAll();
   }
 
-  @Roles(Role.ADMIN, Role.STAFF)
+  @Roles(Role.ADMIN)
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   update(@Param('id') id: string, @Body() dto: UpdateTargetRoleDto) {
     return this.service.update(Number(id), dto);
   }
 
-  @Roles(Role.ADMIN, Role.STAFF)
+  @Roles(Role.ADMIN)
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   delete(@Param('id') id: string) {
@@ -53,7 +53,7 @@ export class TargetRoleController {
   }
 
   @Post('bulk')
-  @Roles(Role.ADMIN, Role.STAFF)
+  @Roles(Role.ADMIN)
   @UseGuards(JwtAuthGuard, RolesGuard)
   createMany(
     @Body(new ValidationPipe({ whitelist: true, transform: true }))

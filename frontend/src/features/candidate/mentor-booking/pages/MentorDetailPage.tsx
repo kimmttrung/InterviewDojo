@@ -1,0 +1,69 @@
+import { useState } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useMentorDetail } from '../hooks/useMentorDetail';
+import { useMentorPlans } from '../hooks/useMentorPlans';
+import { MentorProfileSection } from '../components/MentorProfileSection';
+import { MentorSkillsSection } from '../components/MentorSkillsSection';
+import { MentorExperiencesSection } from '../components/MentorExperiencesSection';
+import { PlanSelector } from '../components/PlanSelector';
+import { BookingModal } from '../components/BookingModal';
+import { Layout } from '@/shared/components/layout/Layout';
+import { Loader2, ArrowLeft } from 'lucide-react';
+
+export default function MentorDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const navigate = useNavigate();
+  const mentorId = Number(id);
+  const { data: mentor, isLoading, isError } = useMentorDetail(mentorId);
+  const { data: plans = [] } = useMentorPlans(mentorId);
+
+  const [selectedPlanId, setSelectedPlanId] = useState<number | null>(null);
+  const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+
+  if (isLoading) {
+    return (
+      <Layout>
+        <div className="flex h-[70vh] items-center justify-center">
+          <Loader2 className="h-10 w-10 animate-spin text-slate-400" />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (isError || !mentor) {
+    return (
+      <Layout>
+        <div className="flex h-[70vh] items-center justify-center text-slate-500">
+          Mentor not found.
+        </div>
+      </Layout>
+    );
+  }
+
+  return (
+    <Layout>
+      <div className="mx-auto max-w-6xl space-y-8 px-6 py-8">
+        <button
+          onClick={() => navigate('/mentors')}
+          className="inline-flex items-center gap-2 text-sm text-indigo-600 hover:underline mb-2"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to mentors list
+        </button>
+        <MentorProfileSection mentor={mentor} />
+        <MentorSkillsSection skills={mentor.skills ?? []} />
+        <MentorExperiencesSection
+          experiences={mentor.mentorProfile?.experiences ?? mentor.experiences ?? []}
+        />
+        <PlanSelector plans={plans} selectedPlanId={selectedPlanId} onSelect={setSelectedPlanId} />
+        {selectedPlan && (
+          <BookingModal
+            mentorId={mentorId}
+            plan={selectedPlan}
+            onClose={() => setSelectedPlanId(null)}
+          />
+        )}
+      </div>
+    </Layout>
+  );
+}

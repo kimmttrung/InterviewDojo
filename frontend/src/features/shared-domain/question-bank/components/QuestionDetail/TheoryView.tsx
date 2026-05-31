@@ -1,0 +1,112 @@
+// features/questions/components/QuestionDetail/TheoryView.tsx
+import { KeyRound, Lightbulb, CheckCircle2, MessageCircleQuestion } from 'lucide-react';
+import { QuestionDetail } from '../../types/question.types';
+import { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import { AnswerSection } from './AnswerSection';
+import { CommentSection } from '@/features/comment/components/CommentSection';
+
+interface TheoryViewProps {
+  question: QuestionDetail;
+  parsedData: any;
+  isP2P?: boolean;
+}
+
+export function TheoryView({ question, parsedData, isP2P = false }: TheoryViewProps) {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!isP2P && location.hash === '#comments') {
+      const element = document.getElementById('comments');
+      if (element) {
+        setTimeout(() => {
+          element.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+      }
+    }
+  }, [location, isP2P]);
+  return (
+    <div className="space-y-8">
+      <div className="space-y-4">
+        <h1 className="text-3xl font-extrabold text-slate-900 leading-tight">{question.title}</h1>
+        <div className="p-5 bg-slate-50 border border-slate-100 rounded-xl text-slate-800 whitespace-pre-line leading-relaxed font-medium text-[15px]">
+          {parsedData?.question || question.description}
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-4">
+        {parsedData?.keyPoints?.length > 0 && (
+          <SectionBox
+            icon={<KeyRound className="w-5 h-5 text-emerald-600" />}
+            title="Key Points"
+            colorClass="bg-emerald-50/40 border-emerald-100 text-emerald-800"
+          >
+            <ul className="space-y-2.5">
+              {parsedData.keyPoints.map((point: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-2.5 text-sm">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <span>{point}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionBox>
+        )}
+
+        {parsedData?.tips?.length > 0 && (
+          <SectionBox
+            icon={<Lightbulb className="w-5 h-5 text-amber-500" />}
+            title="Pro Tips"
+            colorClass="bg-amber-50/40 border-amber-100 text-amber-800"
+          >
+            <ul className="space-y-2.5 text-sm">
+              {parsedData.tips.map((tip: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-2.5">
+                  <div className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
+                  <span>{tip}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionBox>
+        )}
+
+        {parsedData?.followUps?.length > 0 && (
+          <SectionBox
+            icon={<MessageCircleQuestion className="w-5 h-5 text-indigo-500" />}
+            title="Follow-up Questions"
+            colorClass="bg-indigo-50/40 border-indigo-100 text-indigo-800"
+          >
+            <ul className="space-y-2.5 text-sm">
+              {parsedData.followUps.map((q: string, idx: number) => (
+                <li key={idx} className="flex items-start gap-2.5">
+                  <span className="flex-shrink-0 w-5 h-5 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center text-[10px] font-bold mt-0.5">
+                    {idx + 1}
+                  </span>
+                  <span>{q}</span>
+                </li>
+              ))}
+            </ul>
+          </SectionBox>
+        )}
+      </div>
+      {!isP2P && (
+        <>
+          <AnswerSection question={question} />
+          <div id="comments" className="mt-16 pt-8 border-t border-slate-200">
+            <CommentSection questionId={question.id} />
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+function SectionBox({ icon, title, children, colorClass }: any) {
+  return (
+    <div className={`p-5 border rounded-xl ${colorClass}`}>
+      <h4 className="flex items-center gap-2 font-bold mb-3">
+        {icon} {title}
+      </h4>
+      {children}
+    </div>
+  );
+}
