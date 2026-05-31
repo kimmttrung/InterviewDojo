@@ -185,12 +185,10 @@ describe('MentorPayoutService', () => {
   });
 
   it('retries payout for a session by delegating to automatic payout', async () => {
-    jest
-      .spyOn(service, 'payoutCompletedSession')
-      .mockResolvedValue({
-        ...payout,
-        status: MentorPayoutStatus.COMPLETED,
-      } as any);
+    jest.spyOn(service, 'payoutCompletedSession').mockResolvedValue({
+      ...payout,
+      status: MentorPayoutStatus.COMPLETED,
+    } as any);
 
     await expect(service.retryPayoutForSession(11)).resolves.toEqual(
       expect.objectContaining({ status: MentorPayoutStatus.COMPLETED }),
@@ -607,6 +605,56 @@ describe('MentorPayoutService', () => {
     expect(prisma.mentorPayout.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
         where: {},
+        skip: 0,
+        take: 15,
+      }),
+    );
+    expect(result.meta).toEqual({
+      total: 0,
+      page: 1,
+      limit: 15,
+      totalPages: 0,
+    });
+  });
+
+  it('lists the current mentor payouts with safe pagination and status filter', async () => {
+    prisma.mentorPayout.count.mockResolvedValue(1);
+    prisma.mentorPayout.findMany.mockResolvedValue([payout]);
+
+    const result = await service.getMyPayouts(2, {
+      page: 3,
+      limit: 200,
+      status: MentorPayoutStatus.COMPLETED,
+    });
+
+    expect(prisma.mentorPayout.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { mentorId: 2, status: MentorPayoutStatus.COMPLETED },
+        skip: 200,
+        take: 100,
+        orderBy: { createdAt: 'desc' },
+      }),
+    );
+    expect(result).toEqual({
+      items: [payout],
+      meta: {
+        total: 1,
+        page: 3,
+        limit: 100,
+        totalPages: 1,
+      },
+    });
+  });
+
+  it('lists the current mentor payouts with default pagination and no status filter', async () => {
+    prisma.mentorPayout.count.mockResolvedValue(0);
+    prisma.mentorPayout.findMany.mockResolvedValue([]);
+
+    const result = await service.getMyPayouts(2, {});
+
+    expect(prisma.mentorPayout.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { mentorId: 2 },
         skip: 0,
         take: 15,
       }),
