@@ -1,9 +1,14 @@
-import { Share2, Code2, Brain, Users, BookOpen, MessageCircle, Target } from 'lucide-react';
+import React from 'react';
+import { Share2, Code2, Users, BookOpen, Target } from 'lucide-react';
 import { Layout } from '@/shared/components/layout/Layout';
-import { Card } from '@/shared/components/ui/card';
-import { Badge } from '@/shared/components/ui/badge';
-import { Button } from '@/shared/components/ui/button';
 import { Link } from 'react-router-dom';
+import { Footer } from '@/shared/components/layout/Footer';
+
+// Import đầy đủ 4 ảnh từ thư mục assets
+import thumbnail1 from '@/assets/img/thumbnail1.png';
+import thumbnail2 from '@/assets/img/thumbnail2.png';
+import thumbnail3 from '@/assets/img/thumbnail3.png';
+import thumbnail4 from '@/assets/img/thumbnail4.png';
 
 export default function HomePage() {
   const features = [
@@ -31,184 +36,174 @@ export default function HomePage() {
       color: 'from-green-500 to-emerald-500',
       link: '/mentors',
     },
+    // {
+    //   title: 'Prep for AI companies',
+    //   icon: Brain,
+    //   color: 'from-purple-500 to-violet-500',
+    //   link: '/share-interview',
+    // },
+    // {
+    //   title: 'View interview questions',
+    //   icon: MessageCircle,
+    //   color: 'from-orange-500 to-amber-500',
+    //   link: '/share-interview',
+    // },
     {
-      title: 'Prep for AI companies',
-      icon: Brain,
-      color: 'from-purple-500 to-violet-500',
-      link: '/share-interview',
-    },
-    {
-      title: 'View interview questions',
-      icon: MessageCircle,
-      color: 'from-orange-500 to-amber-500',
-      link: '/share-interview',
-    },
-    {
-      title: 'Add Credit for canidate',
+      title: 'Add Credit for candidate',
       icon: Target,
       color: 'from-red-500 to-pink-500',
       link: '/wallet',
     },
   ];
 
+  // Đưa 4 ảnh local vào mảng slider
+  const interviewImages = [thumbnail1, thumbnail2, thumbnail3, thumbnail4];
+
+  // Nhân bản chuỗi ảnh để cuộn liên tục (infinite loop)
+  const marqueeImages = [...interviewImages, ...interviewImages, ...interviewImages];
+
   return (
-    <Layout>
-      <div className="p-8 space-y-8 bg-gradient-to-b from-background to-muted/20 min-h-screen">
-        {/* HEADER */}
+    <>
+      <Layout>
+        <style>{`
+        @keyframes blob {
+          0%, 100% { transform: translate(0, 0) scale(1); }
+          33% { transform: translate(30px, -50px) scale(1.1); }
+          66% { transform: translate(-20px, 20px) scale(0.9); }
+        }
+        .animate-blob {
+          animation: blob 8s infinite ease-in-out;
+        }
+        .animation-delay-2000 {
+          animation-delay: 2s;
+        }
+        .animation-delay-4000 {
+          animation-delay: 4s;
+        }
+        @keyframes marquee {
+          0% { transform: translateX(0%); }
+          100% { transform: translateX(-50%); }
+        }
+        .animate-marquee {
+          animation: marquee 25s linear infinite;
+        }
+        .animate-marquee:hover {
+          animation-play-state: paused;
+        }
+          @keyframes fade-on-scroll {
+          0% { opacity: 1; filter: blur(0px); transform: translateY(0); }
+          100% { opacity: 0; filter: blur(12px); transform: translateY(-30px); }
+        }
+        .scroll-fade-text {
+          animation: fade-on-scroll linear both;
+          animation-timeline: view();
+          animation-range: exit 40% exit 100%;
+        }
+      `}</style>
 
-        <div>
-          <h1 className="text-3xl font-bold mb-2">Welcome back</h1>
-
-          <p className="text-muted-foreground">
-            Continue learning with our recommendations based on your career goals and recent
-            activity.
-          </p>
-        </div>
-
-        {/* FEATURE GRID */}
-
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4">
-          {features.map((item, index) => {
-            const Icon = item.icon;
-
-            return (
-              <Link key={index} to={item.link}>
-                <Card className="p-4 flex flex-col items-center text-center transition-all duration-300 cursor-pointer hover:shadow-xl hover:-translate-y-1 border hover:border-primary/40">
-                  <div
-                    className={`p-3 rounded-lg mb-2 text-white bg-gradient-to-r ${item.color} shadow`}
-                  >
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-
-                  <p className="text-sm font-medium">{item.title}</p>
-                </Card>
-              </Link>
-            );
-          })}
-        </div>
-
-        {/* MAIN GRID */}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* LEFT SIDE */}
-
-          <div className="space-y-6">
-            {/* Getting started */}
-
-            <Card className="p-6">
-              <h2 className="font-semibold text-lg mb-2">Getting started</h2>
-
-              <p className="text-sm text-muted-foreground mb-4">
-                Start preparing for your next interview.
-              </p>
-
-              <ul className="space-y-2 text-sm">
-                <li>Sign up for InterviewDojo</li>
-                <li>Practic question</li>
-                <li>Explore interview questions</li>
-                <li>Join a practice interview</li>
-                <li>Book a coaching session</li>
-              </ul>
-            </Card>
-
-            {/* Question of the day */}
-
-            <Card className="p-6 space-y-6 transition-all duration-300 hover:shadow-lg hover:-translate-y-1">
-              <Badge className="bg-gradient-to-r from-indigo-500 to-purple-500 text-white">
-                Question of the day
-              </Badge>
-              <h3 className="font-medium">Design a taxi recommendation system for airports.</h3>
-
-              <div className="flex gap-2">
-                <Button className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:scale-105 transition">
-                  Answer now
-                </Button>
-                <Button variant="outline">Shuffle</Button>
-              </div>
-
-              <p className="text-sm text-muted-foreground">
-                Answer a practice question to stay on top of your interview preparation.
-              </p>
-            </Card>
+        <div className="relative min-h-[calc(100vh-4rem)] flex flex-col pt-8 pb-32 items-center px-4 md:px-8 overflow-hidden bg-gradient-to-b from-transparent via-background/50 to-muted/20">
+          {/* Lớp màu chuyển động phía sau */}
+          <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
+            <div className="absolute top-0 left-1/4 w-[500px] h-[500px] bg-purple-500/20 rounded-full mix-blend-multiply filter blur-[100px] animate-blob"></div>
+            <div className="absolute top-1/4 right-1/4 w-[500px] h-[500px] bg-cyan-500/20 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-2000"></div>
+            <div className="absolute -bottom-10 left-1/3 w-[500px] h-[500px] bg-pink-500/20 rounded-full mix-blend-multiply filter blur-[100px] animate-blob animation-delay-4000"></div>
           </div>
 
-          {/* RIGHT SIDE */}
+          <div className="relative z-10 text-center mb-10 mt-4 scroll-fade-text">
+            <h1 className="text-4xl md:text-5xl font-extrabold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-primary to-primary/60">
+              Welcome back to InterviewDojo
+            </h1>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+              Khám phá các tính năng bằng cách tương tác với bảng điều khiển bên dưới
+            </p>
+          </div>
 
-          <div className="lg:col-span-2 space-y-6">
-            {/* Interview Questions */}
+          {/* TRUNG TÂM: 3D THUMBNAIL */}
+          <div
+            className="relative z-20 w-full max-w-7xl group cursor-pointer"
+            style={{ perspective: '1200px' }}
+          >
+            <div
+              className="relative transition-all duration-700 ease-out transform-gpu group-hover:-translate-y-6"
+              style={{
+                transformStyle: 'preserve-3d',
+                transform: 'rotateX(0deg)',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = 'rotateX(-12deg)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = 'rotateX(0deg)';
+              }}
+            >
+              <div className="w-full h-[500px] md:h-[600px] bg-card/60 backdrop-blur-sm rounded-[2rem] overflow-hidden border border-border shadow-2xl relative flex items-center">
+                <div className="absolute inset-0 z-10 bg-gradient-to-t from-background/90 via-transparent to-transparent pointer-events-none"></div>
 
-            <Card className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Interview questions</h2>
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium">Amazon Software Engineer Questions</h3>
-
-                  <p className="text-sm text-muted-foreground">
-                    Check out example Amazon Software Engineer Questions
-                  </p>
+                <div className="flex w-max animate-marquee space-x-8 px-8">
+                  {marqueeImages.map((src, index) => (
+                    <img
+                      key={index}
+                      src={src}
+                      alt={`Real interview practice ${index}`}
+                      className="w-[600px] md:w-[800px] h-[400px] md:h-[500px] object-cover rounded-3xl shadow-xl border border-white/10"
+                    />
+                  ))}
                 </div>
-
-                <Button variant="outline">View Now</Button>
               </div>
 
-              <div className="flex justify-between items-center">
-                <div>
-                  <h3 className="font-medium">Google Software Engineer Questions</h3>
-
-                  <p className="text-sm text-muted-foreground">
-                    Check out example Google Software Engineer Questions
-                  </p>
+              {/* Các nút Features nổi 3D khi hover */}
+              {/* Đổi flex-wrap thành flex-col để tạo cột dọc chứa 2 hàng */}
+              <div
+                className="absolute left-0 right-0 -bottom-20 md:-bottom-32 mb-40 md:mb-26 flex flex-col items-center gap-3 md:gap-4 opacity-0 pointer-events-none group-hover:pointer-events-auto group-hover:opacity-100 transition-all duration-700 ease-out z-50"
+                style={{ transform: 'translateZ(100px)' }}
+              >
+                {/* HÀNG 1: Dùng slice(0, 3) để lấy đúng 3 nút đầu tiên */}
+                <div className="flex justify-center gap-3 md:gap-4">
+                  {features.slice(0, 3).map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={`row1-${index}`} to={item.link}>
+                        <div className="bg-background/95 backdrop-blur-xl border border-border p-3 md:p-5 rounded-2xl flex items-center gap-3 shadow-2xl hover:bg-muted transition-colors duration-300 hover:-translate-y-2">
+                          <div
+                            className={`p-2.5 rounded-xl text-white bg-gradient-to-br ${item.color} shadow-md`}
+                          >
+                            <Icon className="h-5 w-5 md:h-6 md:w-6" />
+                          </div>
+                          <span className="text-sm md:text-base font-semibold whitespace-nowrap">
+                            {item.title}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
 
-                <Button variant="outline">View Now</Button>
-              </div>
-
-              <Button variant="link">See more questions</Button>
-            </Card>
-
-            {/* Practice mentor */}
-
-            <Card className="p-6 space-y-4">
-              <h2 className="text-lg font-semibold">Practice mentor</h2>
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Thang T.</p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Senior Data Engineer | Amazon (ex-Meta, Apple)
-                  </p>
+                {/* HÀNG 2: Dùng slice(3, 5) để lấy 2 nút còn lại */}
+                <div className="flex justify-center gap-3 md:gap-4">
+                  {features.slice(3, 5).map((item, index) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link key={`row2-${index}`} to={item.link}>
+                        <div className="bg-background/95 backdrop-blur-xl border border-border p-3 md:p-5 rounded-2xl flex items-center gap-3 shadow-2xl hover:bg-muted transition-colors duration-300 hover:-translate-y-2">
+                          <div
+                            className={`p-2.5 rounded-xl text-white bg-gradient-to-br ${item.color} shadow-md`}
+                          >
+                            <Icon className="h-5 w-5 md:h-6 md:w-6" />
+                          </div>
+                          <span className="text-sm md:text-base font-semibold whitespace-nowrap">
+                            {item.title}
+                          </span>
+                        </div>
+                      </Link>
+                    );
+                  })}
                 </div>
-
-                <Button>Booking Now</Button>
               </div>
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Venkata K.</p>
-
-                  <p className="text-sm text-muted-foreground">Software Engineer | Amazon</p>
-                </div>
-
-                <Button>Booking Now</Button>
-              </div>
-
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="font-medium">Peer mock interviews</p>
-
-                  <p className="text-sm text-muted-foreground">
-                    Practice with peers every day on our live mock interview platform.
-                  </p>
-                </div>
-
-                <Button>Booking Now</Button>
-              </div>
-            </Card>
+            </div>
           </div>
         </div>
-      </div>
-    </Layout>
+      </Layout>
+      <Footer />
+    </>
   );
 }
