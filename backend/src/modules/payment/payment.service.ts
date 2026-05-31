@@ -11,7 +11,6 @@ import { createHmac, timingSafeEqual, randomUUID } from 'crypto';
 import { PrismaService } from '@/prisma/prisma.service';
 import { PaymentStatus, PaymentProvider, Currency } from '@prisma/client';
 import { WalletService } from '../wallet/wallet.service';
-import { sepayConfig } from '@/config/sepay.config';
 
 @Injectable()
 export class PaymentService {
@@ -83,6 +82,8 @@ export class PaymentService {
     rawBody: string,
     signatureHeader?: string,
     timestampHeader?: string,
+    method?: string,
+    url?: string,
   ) {
     // 1. Log ngay để debug/đối soát
     const log = await this.prisma.paymentWebhookLog.create({
@@ -110,8 +111,17 @@ export class PaymentService {
     }
 
     // 3. Verify HMAC-SHA256 signature (khi đã cấu hình secret)
-    if (sepayConfig.webhookSecret) {
-      if (!this.verifySignature(rawBody, signatureHeader ?? '')) {
+    if (process.env.SEPAY_WEBHOOK_SECRET) {
+      // Gọi verifySignature với đủ tham số
+      if (
+        !this.verifySignature(
+          rawBody,
+          signatureHeader ?? '',
+          timestampHeader ?? '',
+          method ?? 'POST',
+          url ?? '/api/v1/payment/webhook/sepay',
+        )
+      ) {
         await this.updateWebhookLog(log.id, 'FAILED', 'Invalid signature');
         throw new ForbiddenException('Invalid signature');
       }
@@ -266,20 +276,26 @@ export class PaymentService {
    * Cần strip prefix "sha256=" trước khi so sánh.
    * Dùng timingSafeEqual để tránh timing attack.
    */
-  private verifySignature(rawBody: string, signature: string): boolean {
+  private verifySignature(
+    rawBody: string,
+    signatureHeader: string,
+    timestamp: string,
+    method: string,
+    url: string,
+  ): boolean {
+    const secret = process.env.SEPAY_WEBHOOK_SECRET;
+    if (!secret) return false;
+    // Tạo chuỗi ký theo đúng thứ tự: method + "\n" + url + "\n" + rawBody + "\n" + timestamp
+    const data = `${method}\n${url}\n${rawBody}\n${timestamp}`;
+    const computed = createHmac('sha256', secret)
+      .update(data, 'utf8')
+      .digest('hex');
+    const signatureHex = signatureHeader.startsWith('sha256=')
+      ? signatureHeader.slice(7)
+      : signatureHeader;
     try {
-      // Strip prefix "sha256=" nếu có
-      const hexSignature = signature.startsWith('sha256=')
-        ? signature.slice(7)
-        : signature;
-
-      const expected = createHmac('sha256', sepayConfig.webhookSecret)
-        .update(rawBody, 'utf8')
-        .digest('hex');
-
-      const expectedBuf = Buffer.from(expected, 'hex');
-      const receivedBuf = Buffer.from(hexSignature, 'hex');
-
+      const expectedBuf = Buffer.from(computed, 'hex');
+      const receivedBuf = Buffer.from(signatureHex, 'hex');
       if (expectedBuf.length !== receivedBuf.length) return false;
       return timingSafeEqual(expectedBuf, receivedBuf);
     } catch {

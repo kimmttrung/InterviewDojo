@@ -25,6 +25,7 @@ import { Roles } from '../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { ResponseMessage } from '@/common/decorators/response-message.decorator';
 import { Messages } from '@/common/constants/messages.constant';
+import { BadRequestException } from '@nestjs/common';
 
 @Controller('payment')
 export class PaymentController {
@@ -67,15 +68,20 @@ export class PaymentController {
   sepayWebhook(
     @Body() payload: any,
     @Req() req: RawBodyRequest<Request>,
-    @Headers('x-sepay-signature') signature: string, // SePay gửi "X-SePay-Signature"
-    @Headers('x-sepay-timestamp') timestamp: string, // Unix timestamp, dùng chống replay
+    @Headers('x-sepay-signature') signature: string,
+    @Headers('x-sepay-timestamp') timestamp: string,
   ) {
-    const rawBody = req.rawBody?.toString('utf8') ?? JSON.stringify(payload);
+    if (!req.rawBody) throw new BadRequestException('Missing raw body');
+    const rawBody = req.rawBody.toString('utf8');
+    const method = req.method; // 'POST'
+    const url = req.url; // '/api/v1/payment/webhook/sepay'
     return this.paymentService.handleSePayWebhook(
       payload,
       rawBody,
       signature,
       timestamp,
+      method,
+      url,
     );
   }
 
