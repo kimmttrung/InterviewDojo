@@ -183,6 +183,27 @@ describe('DashboardService', () => {
     });
   });
 
+  it('uses UNKNOWN session type when feedback has no session relation', async () => {
+    const createdAt = new Date('2026-01-03T00:00:00.000Z');
+    prisma.feedback.findMany.mockResolvedValue([
+      {
+        overallScore: 9,
+        createdAt,
+        session: null,
+      },
+    ]);
+    prisma.mockSession.findMany.mockResolvedValue([]);
+    prisma.codeSubmission.count.mockResolvedValue(0);
+    prisma.userBookmark.count.mockResolvedValue(0);
+
+    const result = await service.getAnalyticsOverview(7);
+
+    expect(result.scoreChart).toEqual([
+      { date: createdAt, score: 9, sessionType: 'UNKNOWN' },
+    ]);
+    expect(result.sessionBreakdown).toEqual({ mentor: 0, p2p: 0, solo: 0 });
+  });
+
   it('returns zero overall score when no feedback exists', async () => {
     prisma.feedback.findMany.mockResolvedValue([]);
     prisma.mockSession.findMany.mockResolvedValue([]);

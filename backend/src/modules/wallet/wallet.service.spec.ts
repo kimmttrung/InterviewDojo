@@ -10,10 +10,12 @@ describe('WalletService', () => {
   const prisma = {
     user: {
       findUnique: jest.fn(),
+      update: jest.fn(),
     },
     walletTransaction: {
       count: jest.fn(),
       findMany: jest.fn(),
+      create: jest.fn(),
     },
   };
 
@@ -150,5 +152,64 @@ describe('WalletService', () => {
         take: 50,
       }),
     );
+  });
+
+  it('depositAtomic - deposits credit and records a wallet transaction', async () => {
+    prisma.user.findUnique.mockResolvedValue({ creditBalance: 100 });
+    prisma.user.update.mockResolvedValue({ id: 1, creditBalance: 250 });
+    prisma.walletTransaction.create.mockResolvedValue({});
+
+    const result = await service.depositAtomic(1, 150, 'DEP123', 'Top up');
+
+    expect(result).toEqual({ id: 1, creditBalance: 250 });
+    expect(prisma.user.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { creditBalance: { increment: 150 } },
+      select: { id: true, creditBalance: true },
+    });
+    expect(prisma.walletTransaction.create).toHaveBeenCalledWith({
+      data: {
+        userId: 1,
+        type: WalletTransactionType.DEPOSIT,
+        amount: 150,
+        balanceBefore: 100,
+        balanceAfter: 250,
+        referenceId: 'DEP123',
+        note: 'Top up',
+      },
+    });
+  });
+
+  it('depositAtomic - uses transaction client and stores null note by default', async () => {
+    const tx = {
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ creditBalance: 10 }),
+        update: jest.fn().mockResolvedValue({ id: 2, creditBalance: 30 }),
+      },
+      walletTransaction: {
+        create: jest.fn().mockResolvedValue({}),
+      },
+    };
+
+    await expect(
+      service.depositAtomic(2, 20, 'DEP456', undefined, tx as any),
+    ).resolves.toEqual({ id: 2, creditBalance: 30 });
+
+    expect(tx.walletTransaction.create).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ note: null }),
+      }),
+    );
+    expect(prisma.user.update).not.toHaveBeenCalled();
+  });
+
+  it('depositAtomic - rejects a missing user', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.depositAtomic(404, 100, 'DEP404'),
+    ).rejects.toBeInstanceOf(NotFoundException);
+    expect(prisma.user.update).not.toHaveBeenCalled();
+    expect(prisma.walletTransaction.create).not.toHaveBeenCalled();
   });
 });
