@@ -37,7 +37,7 @@ export default function QuestionBank() {
       <div className="max-w-7xl mx-auto px-6 py-8 space-y-6 bg-white min-h-screen">
         <div className="flex justify-between items-start">
           <div className="space-y-1">
-            <h1 className="text-4xl font-extrabold text-slate-900 leading-tight">Question Bank</h1>
+            <h1 className="text-3xl font-bold tracking-tight">Question Bank</h1>
             <p className="text-slate-500">Explore {data?.meta.total || 0} technical questions</p>
           </div>
         </div>

@@ -489,6 +489,40 @@ export class MentorPayoutService {
     });
   }
 
+  async getMyPayouts(mentorId: number, dto: QueryMentorPayoutDto) {
+    const { page = 1, limit = 15, status } = dto;
+    const safeLimit = Math.min(limit, 100);
+    const skip = (page - 1) * safeLimit;
+
+    // Bắt buộc phải filter theo mentorId để bảo mật
+    const where: Prisma.MentorPayoutWhereInput = { mentorId };
+
+    if (status) {
+      where.status = status;
+    }
+
+    const [total, items] = await Promise.all([
+      this.prisma.mentorPayout.count({ where }),
+      this.prisma.mentorPayout.findMany({
+        where,
+        skip,
+        take: safeLimit,
+        orderBy: { createdAt: 'desc' },
+        include: this.payoutInclude(),
+      }),
+    ]);
+
+    return {
+      items,
+      meta: {
+        total,
+        page,
+        limit: safeLimit,
+        totalPages: Math.ceil(total / safeLimit),
+      },
+    };
+  }
+
   private async markPayoutReviewed(
     tx: Prisma.TransactionClient,
     payoutId: number,

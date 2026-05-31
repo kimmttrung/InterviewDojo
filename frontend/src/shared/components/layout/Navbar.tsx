@@ -63,8 +63,8 @@ export function Navbar() {
       <div className="flex h-16 items-center justify-between px-6 gap-6">
         {/* LOGO */}
         <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold shadow">
-            ID
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold mx-auto mb-4 shadow-lg shadow-purple-500/30 transform rotate-12">
+            <span className="text-xl -rotate-12">ID</span>
           </div>
 
           <div className="hidden sm:flex flex-col">
