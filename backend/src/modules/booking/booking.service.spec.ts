@@ -370,6 +370,31 @@ describe('BookingService', () => {
     }
   });
 
+  it('uploadAttachment - returns upload metadata and wraps upload failures', async () => {
+    cloudinaryServiceMock.uploadRawFile
+      .mockResolvedValueOnce({
+        secure_url: 'https://cdn.test/file.pdf',
+        public_id: 'booking/file',
+      })
+      .mockRejectedValueOnce(new Error('Upload failed'))
+      .mockRejectedValueOnce({});
+
+    await expect(
+      service.uploadAttachment({ buffer: Buffer.from('pdf') } as any),
+    ).resolves.toEqual({
+      secure_url: 'https://cdn.test/file.pdf',
+      public_id: 'booking/file',
+    });
+
+    await expect(
+      service.uploadAttachment({ buffer: Buffer.from('bad') } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.uploadAttachment({ buffer: Buffer.from('bad') } as any),
+    ).rejects.toThrow('Lỗi upload Cloudinary');
+  });
+
   it('accept - creates a session, schedules its ending and emits updates', async () => {
     const pending = { ...booking, status: BookingStatus.PENDING_ACCEPTANCE };
     const mockSession = {
@@ -435,6 +460,103 @@ describe('BookingService', () => {
 
     expect(socketService.emitToUser).toHaveBeenCalledTimes(4);
     expect(result.status).toBe(BookingStatus.ACCEPTED);
+  });
+
+  it('accept - still succeeds when queue scheduling fails', async () => {
+    const pending = { ...booking, status: BookingStatus.PENDING_ACCEPTANCE };
+    const mockSession = {
+      id: 81,
+      scheduledAt: pending.startTime,
+      durationMinutes: 60,
+      meetingLink: null,
+    };
+    const tx = {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue(pending),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest
+          .fn()
+          .mockResolvedValue({ ...pending, status: BookingStatus.ACCEPTED }),
+      },
+      mockSession: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(mockSession),
+        update: jest.fn().mockResolvedValue({
+          ...mockSession,
+          meetingLink: '/meeting/81',
+        }),
+      },
+      bookingActionLog: { create: jest.fn() },
+      notification: { create: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+    streamServiceMock.getOrCreateMeetingLink.mockResolvedValueOnce(
+      '/meeting/81',
+    );
+    sessionService.scheduleSessionEnd.mockRejectedValueOnce(
+      new Error('queue unavailable'),
+    );
+    const errorSpy = jest.spyOn(console, 'error').mockImplementation();
+
+    await expect(service.accept(20, 2)).resolves.toEqual(
+      expect.objectContaining({ status: BookingStatus.ACCEPTED }),
+    );
+    expect(errorSpy).toHaveBeenCalledWith(
+      expect.stringContaining('Failed to schedule session jobs'),
+      expect.any(Error),
+    );
+    errorSpy.mockRestore();
+  });
+
+  it('accept - rejects when transaction does not return a booking or session', async () => {
+    prisma.$transaction.mockImplementationOnce(async () => undefined);
+
+    await expect(service.accept(20, 2)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
+  it('accept - uses default duration when booking snapshot duration is missing', async () => {
+    const pending = {
+      ...booking,
+      status: BookingStatus.PENDING_ACCEPTANCE,
+      snapshotPlanDuration: null,
+    };
+    const mockSession = {
+      id: 82,
+      scheduledAt: pending.startTime,
+      durationMinutes: 60,
+      meetingLink: null,
+    };
+    const tx = {
+      booking: {
+        findUnique: jest.fn().mockResolvedValue(pending),
+        findFirst: jest.fn().mockResolvedValue(null),
+        update: jest
+          .fn()
+          .mockResolvedValue({ ...pending, status: BookingStatus.ACCEPTED }),
+      },
+      mockSession: {
+        findFirst: jest.fn().mockResolvedValue(null),
+        create: jest.fn().mockResolvedValue(mockSession),
+        update: jest.fn().mockResolvedValue({
+          ...mockSession,
+          meetingLink: '/meeting/82',
+        }),
+      },
+      bookingActionLog: { create: jest.fn() },
+      notification: { create: jest.fn() },
+    };
+    prisma.$transaction.mockImplementation(async (callback) => callback(tx));
+    streamServiceMock.getOrCreateMeetingLink.mockResolvedValueOnce(
+      '/meeting/82',
+    );
+
+    await service.accept(20, 2);
+
+    expect(tx.mockSession.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({ durationMinutes: 60 }),
+    });
   });
 
   it('accept - rejects invalid ownership, status and time conflicts', async () => {
@@ -513,6 +635,39 @@ describe('BookingService', () => {
     expect(result.status).toBe(BookingStatus.REJECTED);
   });
 
+  it('reject - rejects missing, foreign, or non-pending bookings', async () => {
+    prisma.$transaction.mockImplementationOnce(async (callback) =>
+      callback({ booking: { findUnique: jest.fn().mockResolvedValue(null) } }),
+    );
+    await expect(service.reject(404, 2)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    prisma.$transaction.mockImplementationOnce(async (callback) =>
+      callback({
+        booking: {
+          findUnique: jest.fn().mockResolvedValue({ ...booking, mentorId: 99 }),
+        },
+      }),
+    );
+    await expect(service.reject(20, 2)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+
+    prisma.$transaction.mockImplementationOnce(async (callback) =>
+      callback({
+        booking: {
+          findUnique: jest
+            .fn()
+            .mockResolvedValue({ ...booking, status: BookingStatus.ACCEPTED }),
+        },
+      }),
+    );
+    await expect(service.reject(20, 2)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
+  });
+
   it('findAll scopes results by role and rejects unauthorized roles', async () => {
     prisma.booking.count.mockResolvedValue(1);
     prisma.booking.findMany.mockResolvedValue([booking]);
@@ -578,5 +733,28 @@ describe('BookingService', () => {
     await expect(
       service.updateStatus(1, 2, { status: BookingStatus.CANCELLED }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('mapToBookingResponse covers optional relation and answer fallbacks', () => {
+    const mappedWithoutRelations = (service as any).mapToBookingResponse({
+      ...booking,
+      coachingPlan: null,
+      candidate: null,
+      mentor: null,
+    });
+    expect(mappedWithoutRelations.planDetails).toBeUndefined();
+    expect(mappedWithoutRelations.candidate).toBeUndefined();
+    expect(mappedWithoutRelations.mentor).toBeUndefined();
+
+    const mappedAnswers = (service as any).mapToBookingResponse(
+      {
+        ...booking,
+        answers: [
+          { questionId: 1, question: null, answerText: 'A', fileUrl: null },
+        ],
+      },
+      true,
+    );
+    expect(mappedAnswers.answers[0].questionText).toBe('');
   });
 });

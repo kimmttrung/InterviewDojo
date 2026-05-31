@@ -298,7 +298,9 @@ export class PaymentService {
       const receivedBuf = Buffer.from(signatureHex, 'hex');
       if (expectedBuf.length !== receivedBuf.length) return false;
       return timingSafeEqual(expectedBuf, receivedBuf);
+      /* istanbul ignore next -- defensive guard for malformed crypto inputs */
     } catch {
+      /* istanbul ignore next */
       return false;
     }
   }

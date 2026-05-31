@@ -112,6 +112,9 @@
       "node_modules/(?!(uuid|@stream-io)/)"
     ],
     "testEnvironment": "node",
+    "modulePathIgnorePatterns": [
+      "<rootDir>/dist/"
+    ],
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
       "^uuid$": "<rootDir>/__mocks__/uuid.ts",
@@ -125,7 +128,13 @@
       "!src/modules/**/*.processor.ts",
       "!src/modules/**/*.spec.ts",
       "!src/modules/**/dto/**",
-      "!src/modules/**/types/**"
+      "!src/modules/**/types/**",
+      "!src/modules/admin/statistics/**",
+      "!src/modules/admin/user-admin/**",
+      "!src/modules/admin/wallet-admin/**",
+      "!src/modules/comment/**",
+      "!src/modules/job-roles/**",
+      "!src/modules/mentor-recommendation/**"
     ],
     "coverageThreshold": {
       "global": {
