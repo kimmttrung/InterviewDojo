@@ -27,7 +27,7 @@ export default function CandidateSessionsPage() {
     <Layout>
       <div className="flex flex-col gap-6 p-6">
         <div className="flex justify-between items-center">
-          <h1 className="text-2xl font-bold">My Sessions</h1>
+          <h1 className="text-3xl font-bold tracking-tight">My Sessions</h1>
           <Button variant="outline" onClick={handleRefresh} disabled={isRefreshing}>
             <RefreshCw className={`mr-2 h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
             {isRefreshing ? 'Refreshing...' : 'Refresh'}

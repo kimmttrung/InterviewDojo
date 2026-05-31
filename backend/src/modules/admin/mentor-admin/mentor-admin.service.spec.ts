@@ -58,6 +58,21 @@ describe('MentorAdminService', () => {
     );
   });
 
+  it('lists all mentor profiles when no status filter is provided', async () => {
+    prisma.user.findMany.mockResolvedValue([]);
+    prisma.user.count.mockResolvedValue(0);
+
+    await service.findAll({ page: 1, limit: 20 } as any);
+
+    expect(prisma.user.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { mentorProfile: { isNot: null } },
+        skip: 0,
+        take: 20,
+      }),
+    );
+  });
+
   it('maps mentor detail skills from user skills', async () => {
     prisma.user.findUnique.mockResolvedValue({
       id: 1,
@@ -91,6 +106,14 @@ describe('MentorAdminService', () => {
     prisma.user.findUnique.mockResolvedValue({ id: 1, mentorProfile: null });
 
     await expect(service.findOne(1)).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('throws when mentor detail user is missing', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+
+    await expect(service.findOne(404)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('approves a pending mentor, upgrades user role, writes log, and emits event', async () => {
@@ -141,6 +164,14 @@ describe('MentorAdminService', () => {
     );
   });
 
+  it('rejects approving a missing mentor profile', async () => {
+    prisma.mentorProfile.findUnique.mockResolvedValue(null);
+
+    await expect(service.approve(404, 99)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
   it('rejects a mentor with an admin reason and writes an approval log', async () => {
     prisma.mentorProfile.findUnique.mockResolvedValue({
       id: 9,
@@ -165,5 +196,18 @@ describe('MentorAdminService', () => {
         },
       }),
     ]);
+  });
+
+  it('rejects missing or already rejected mentor profiles during rejection', async () => {
+    prisma.mentorProfile.findUnique
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ approvalStatus: ApprovalStatus.REJECTED });
+
+    await expect(service.reject(404, 'Missing', 99)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    await expect(service.reject(1, 'Missing', 99)).rejects.toBeInstanceOf(
+      BadRequestException,
+    );
   });
 });

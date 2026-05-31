@@ -216,7 +216,8 @@ export default function Login() {
 
       <Card className="w-full max-w-md p-8 bg-background/95 backdrop-blur-xl shadow-2xl border-none ring-1 ring-white/10">
         <div className="text-center mb-8">
-          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-primary text-primary-foreground font-bold mx-auto mb-4 shadow-lg shadow-primary/20 transform rotate-12">
+          {/* Đã sửa bg-primary thành dải màu gradient tím và đổi viền bóng shadow */}
+          <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold mx-auto mb-4 shadow-lg shadow-purple-500/30 transform rotate-12">
             <span className="text-2xl -rotate-12">ID</span>
           </div>
           <h1 className="text-3xl font-bold text-foreground tracking-tight">{t('navbar.logo')}</h1>

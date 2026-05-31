@@ -3,10 +3,14 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../../prisma/prisma.service';
 import { JwtService } from '@nestjs/jwt';
 import { createMock } from '@golevelup/ts-jest';
-import { BadRequestException, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
 import { RegisterDto } from './dto/register.dto';
-import { Role } from '@prisma/client';
+import { Role, UserStatus } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { validate } from 'class-validator';
 
@@ -197,6 +201,37 @@ describe('AuthService - login', () => {
       service.login({ email: 'invalid-email', password: '123456' }),
     ).rejects.toThrow();
   });
+
+  it('should reject login for a banned user', async () => {
+    prisma.user.findUnique = jest.fn().mockResolvedValue({
+      ...mockUser,
+      status: UserStatus.BANNED,
+      bannedUntil: null,
+      banReason: 'Policy violation',
+    });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+    await expect(service.login(validDto)).rejects.toThrow(ForbiddenException);
+  });
+
+  it('should build ban payload with null fallback fields for permanent ban login', async () => {
+    prisma.user.findUnique = jest.fn().mockResolvedValue({
+      ...mockUser,
+      status: UserStatus.BANNED,
+      bannedUntil: null,
+      banReason: null,
+    });
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+    await expect(service.login(validDto)).rejects.toMatchObject({
+      response: expect.objectContaining({
+        banReason: null,
+        bannedUntilLocal: null,
+        remainingDays: null,
+        remainingHours: null,
+      }),
+    });
+  });
 });
 
 describe('RegisterDto Validation', () => {
@@ -279,6 +314,7 @@ describe('AuthService - account and token flows', () => {
       user: {
         findUnique: jest.fn(),
         create: jest.fn(),
+        updateMany: jest.fn(),
       },
       $transaction: jest.fn(),
     };
@@ -362,6 +398,58 @@ describe('AuthService - account and token flows', () => {
     });
   });
 
+  it('registers a mentor and creates the mentor profile in the transaction', async () => {
+    prisma.user.findUnique.mockResolvedValue(null);
+    (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
+    const mentorProfileCreate = jest.fn();
+    prisma.$transaction.mockImplementation(async (callback: any) =>
+      callback({
+        user: {
+          create: jest.fn().mockResolvedValue({
+            id: 6,
+            email: 'mentor@test.com',
+            role: Role.MENTOR,
+          }),
+        },
+        mentorProfile: { create: mentorProfileCreate },
+      }),
+    );
+    jwt.signAsync.mockResolvedValue('token');
+
+    await service.register({
+      email: 'mentor@test.com',
+      password: '123456',
+      name: 'Mentor',
+      role: Role.MENTOR,
+    });
+
+    expect(mentorProfileCreate).toHaveBeenCalledWith({
+      data: { userId: 6, headline: '' },
+    });
+  });
+
+  it('rejects duplicate email and admin role during registration', async () => {
+    prisma.user.findUnique
+      .mockResolvedValueOnce({ id: 1 })
+      .mockResolvedValueOnce(null);
+
+    await expect(
+      service.register({
+        email: 'exists@test.com',
+        password: '123456',
+        role: Role.CANDIDATE,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.register({
+        email: 'admin@test.com',
+        password: '123456',
+        role: Role.ADMIN,
+      } as any),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('creates admin account successfully', async () => {
     prisma.user.findUnique.mockResolvedValueOnce(null);
     (bcrypt.hash as jest.Mock).mockResolvedValue('hashed');
@@ -393,5 +481,91 @@ describe('AuthService - account and token flows', () => {
         name: 'Admin',
       }),
     ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('refreshes valid tokens and rejects invalid or missing users', async () => {
+    jwt.verifyAsync
+      .mockResolvedValueOnce({ sub: 1 })
+      .mockRejectedValueOnce(new Error('bad token'))
+      .mockResolvedValueOnce({ sub: 404 });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        email: 'user@test.com',
+        role: Role.CANDIDATE,
+        status: UserStatus.ACTIVE,
+        bannedUntil: null,
+        banReason: null,
+      })
+      .mockResolvedValueOnce(null);
+    jwt.signAsync
+      .mockResolvedValueOnce('access')
+      .mockResolvedValueOnce('refresh');
+
+    await expect(service.refresh({ refreshToken: 'valid' })).resolves.toEqual({
+      accessToken: 'access',
+      refreshToken: 'refresh',
+      user: { id: 1, email: 'user@test.com', role: Role.CANDIDATE },
+    });
+    await expect(
+      service.refresh({ refreshToken: 'bad' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+    await expect(
+      service.refresh({ refreshToken: 'missing-user' }),
+    ).rejects.toBeInstanceOf(UnauthorizedException);
+  });
+
+  it('rejects refresh for permanently and temporarily banned users', async () => {
+    jwt.verifyAsync
+      .mockResolvedValueOnce({ sub: 1 })
+      .mockResolvedValueOnce({ sub: 2 });
+    prisma.user.findUnique
+      .mockResolvedValueOnce({
+        id: 1,
+        email: 'ban@test.com',
+        role: Role.CANDIDATE,
+        status: UserStatus.BANNED,
+        bannedUntil: null,
+        banReason: 'Abuse',
+      })
+      .mockResolvedValueOnce({
+        id: 2,
+        email: 'temp@test.com',
+        role: Role.CANDIDATE,
+        status: UserStatus.BANNED,
+        bannedUntil: new Date(Date.now() + 26 * 60 * 60 * 1000),
+        banReason: 'Spam',
+      });
+
+    await expect(
+      service.refresh({ refreshToken: 'permanent' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(
+      service.refresh({ refreshToken: 'temporary' }),
+    ).rejects.toBeInstanceOf(ForbiddenException);
+  });
+
+  it('auto-unbans expired temporary bans during refresh', async () => {
+    jwt.verifyAsync.mockResolvedValue({ sub: 3 });
+    prisma.user.findUnique.mockResolvedValue({
+      id: 3,
+      email: 'expired@test.com',
+      role: Role.CANDIDATE,
+      status: UserStatus.BANNED,
+      bannedUntil: new Date(Date.now() - 60_000),
+      banReason: 'Expired',
+    });
+    jwt.signAsync
+      .mockResolvedValueOnce('access')
+      .mockResolvedValueOnce('refresh');
+    prisma.user.updateMany.mockResolvedValue({ count: 1 });
+
+    await expect(service.refresh({ refreshToken: 'expired' })).resolves.toEqual(
+      expect.objectContaining({ accessToken: 'access' }),
+    );
+    expect(prisma.user.updateMany).toHaveBeenCalledWith({
+      where: { id: 3, status: UserStatus.BANNED },
+      data: { status: UserStatus.ACTIVE, banReason: null, bannedUntil: null },
+    });
   });
 });

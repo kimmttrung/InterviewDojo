@@ -82,8 +82,6 @@ export class PaymentService {
     rawBody: string,
     signatureHeader?: string,
     timestampHeader?: string,
-    method?: string,
-    url?: string,
   ) {
     // 1. Log ngay để debug/đối soát
     const log = await this.prisma.paymentWebhookLog.create({
@@ -118,8 +116,6 @@ export class PaymentService {
           rawBody,
           signatureHeader ?? '',
           timestampHeader ?? '',
-          method ?? 'POST',
-          url ?? '/api/v1/payment/webhook/sepay',
         )
       ) {
         await this.updateWebhookLog(log.id, 'FAILED', 'Invalid signature');
@@ -269,36 +265,39 @@ export class PaymentService {
   /**
    * Verify HMAC-SHA256 signature của SePay.
    *
-   * SePay gửi header:
+   * SePay ký theo format: HMAC-SHA256("{timestamp}.{rawBody}", secret)
+   * Header gửi kèm:
    *   X-SePay-Signature: sha256=<hex>
    *   X-SePay-Timestamp: <unix_timestamp>
    *
-   * Cần strip prefix "sha256=" trước khi so sánh.
-   * Dùng timingSafeEqual để tránh timing attack.
+   * Ref: https://developer.sepay.vn/vi/sepay-webhooks/xac-thuc
    */
   private verifySignature(
     rawBody: string,
     signatureHeader: string,
     timestamp: string,
-    method: string,
-    url: string,
   ): boolean {
     const secret = process.env.SEPAY_WEBHOOK_SECRET;
     if (!secret) return false;
-    // Tạo chuỗi ký theo đúng thứ tự: method + "\n" + url + "\n" + rawBody + "\n" + timestamp
-    const data = `${method}\n${url}\n${rawBody}\n${timestamp}`;
+
+    // Format chuẩn SePay: "{timestamp}.{rawBody}"
+    const data = `${timestamp}.${rawBody}`;
     const computed = createHmac('sha256', secret)
       .update(data, 'utf8')
       .digest('hex');
+
     const signatureHex = signatureHeader.startsWith('sha256=')
       ? signatureHeader.slice(7)
       : signatureHeader;
+
     try {
       const expectedBuf = Buffer.from(computed, 'hex');
       const receivedBuf = Buffer.from(signatureHex, 'hex');
       if (expectedBuf.length !== receivedBuf.length) return false;
       return timingSafeEqual(expectedBuf, receivedBuf);
+      /* istanbul ignore next -- defensive guard for malformed crypto inputs */
     } catch {
+      /* istanbul ignore next */
       return false;
     }
   }

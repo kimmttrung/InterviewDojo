@@ -111,10 +111,10 @@
     "transformIgnorePatterns": [
       "node_modules/(?!(uuid|@stream-io)/)"
     ],
+    "testEnvironment": "node",
     "modulePathIgnorePatterns": [
       "<rootDir>/dist/"
     ],
-    "testEnvironment": "node",
     "moduleNameMapper": {
       "^@/(.*)$": "<rootDir>/src/$1",
       "^uuid$": "<rootDir>/__mocks__/uuid.ts",
@@ -129,25 +129,12 @@
       "!src/modules/**/*.spec.ts",
       "!src/modules/**/dto/**",
       "!src/modules/**/types/**",
-      "!src/modules/admin/**/*.service.ts",
-      "!src/modules/ai-summary/**/*.service.ts",
-      "!src/modules/auth/**/*.service.ts",
-      "!src/modules/booking/**/*.service.ts",
-      "!src/modules/candidate-dashboard/**/*.service.ts",
-      "!src/modules/cloudinary/**/*.service.ts",
-      "!src/modules/comment/**/*.service.ts",
-      "!src/modules/mentor-payout/**/*.service.ts",
-      "!src/modules/mentor-recommendation/recommendation.service.ts",
-      "!src/modules/mentor-recommendation/services/embedding.service.ts",
-      "!src/modules/mentor-recommendation/services/evaluate-recommend.service.ts",
-      "!src/modules/mentor-recommendation/services/feature-builder.service.ts",
-      "!src/modules/mentor-recommendation/services/target-role-score.service.ts",
-      "!src/modules/notifications/**/*.service.ts",
-      "!src/modules/payment/**/*.service.ts",
-      "!src/modules/questions/**/*.service.ts",
-      "!src/modules/reports/**/*.service.ts",
-      "!src/modules/session/**/*.service.ts",
-      "!src/modules/wallet/**/*.service.ts"
+      "!src/modules/admin/statistics/**",
+      "!src/modules/admin/user-admin/**",
+      "!src/modules/admin/wallet-admin/**",
+      "!src/modules/comment/**",
+      "!src/modules/job-roles/**",
+      "!src/modules/mentor-recommendation/**"
     ],
     "coverageThreshold": {
       "global": {

@@ -100,6 +100,88 @@ describe('ReportsService', () => {
     );
   });
 
+  it('uploads video evidence and rejects unsupported evidence files', async () => {
+    prisma.user.findUnique.mockResolvedValue({ id: 2 });
+    prisma.userReport.findFirst.mockResolvedValue(null);
+    prisma.userReport.create.mockResolvedValue({
+      ...report,
+      evidenceUrls: ['https://cdn.test/evidence.mp4'],
+    });
+    cloudinaryService.uploadVideo.mockResolvedValue({
+      secure_url: 'https://cdn.test/evidence.mp4',
+    } as any);
+
+    await service.createReport(
+      1,
+      {
+        targetType: ReportTargetType.USER,
+        type: ReportType.HARASSMENT,
+        reason: 'Bad behavior',
+        targetUserId: 2,
+      },
+      [{ mimetype: 'video/mp4' } as any],
+    );
+
+    expect(cloudinaryService.uploadVideo).toHaveBeenCalledWith(
+      { mimetype: 'video/mp4' },
+      'reports/evidence_videos',
+    );
+
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.USER,
+          type: ReportType.HARASSMENT,
+          reason: 'Bad behavior',
+          targetUserId: 2,
+        },
+        [{ mimetype: 'application/pdf' } as any],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
+  it('validates invalid user report targets', async () => {
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.USER,
+          type: ReportType.HARASSMENT,
+          reason: 'Missing target',
+        } as any,
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.USER,
+          type: ReportType.HARASSMENT,
+          reason: 'Self report',
+          targetUserId: 1,
+        },
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.user.findUnique.mockResolvedValue(null);
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.USER,
+          type: ReportType.HARASSMENT,
+          reason: 'Missing user',
+          targetUserId: 2,
+        },
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
+
   it('rejects duplicate reports against the same user within seven days', async () => {
     prisma.user.findUnique.mockResolvedValue({ id: 2 });
     prisma.userReport.findFirst.mockResolvedValue({ id: 99 });
@@ -152,6 +234,137 @@ describe('ReportsService', () => {
     });
   });
 
+  it('validates question report targets and respects provided snapshots', async () => {
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.QUESTION,
+          type: ReportType.WRONG_ANSWER,
+          reason: 'Missing question',
+        } as any,
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.question.findUnique.mockResolvedValueOnce(null);
+    await expect(
+      service.createReport(
+        1,
+        {
+          targetType: ReportTargetType.QUESTION,
+          type: ReportType.WRONG_ANSWER,
+          reason: 'Question not found',
+          targetQuestionId: 99,
+        },
+        [],
+      ),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    prisma.userReport.create.mockResolvedValue({
+      ...report,
+      targetType: ReportTargetType.QUESTION,
+      targetUserId: null,
+      targetUser: null,
+      targetQuestionId: 7,
+      snapshotQuestionTitle: 'Provided title',
+    });
+
+    await service.createReport(
+      1,
+      {
+        targetType: ReportTargetType.QUESTION,
+        type: ReportType.WRONG_ANSWER,
+        reason: 'Bad answer',
+        targetQuestionId: 7,
+        snapshotQuestionTitle: 'Provided title',
+      },
+      [],
+    );
+
+    expect(prisma.question.findUnique).toHaveBeenCalledTimes(1);
+    expect(prisma.userReport.create).toHaveBeenCalledWith({
+      data: expect.objectContaining({
+        targetUserId: null,
+        targetQuestionId: 7,
+        snapshotQuestionTitle: 'Provided title',
+      }),
+      include: expect.any(Object),
+    });
+  });
+
+  it('finds reports with filters and maps missing optional relations safely', async () => {
+    prisma.userReport.findMany.mockResolvedValue([
+      {
+        ...report,
+        reporter: null,
+        targetUser: null,
+        targetComment: null,
+      },
+    ]);
+    prisma.userReport.count.mockResolvedValue(1);
+
+    const result = await service.findAll({
+      page: 2,
+      limit: 5,
+      status: ReportStatus.PENDING,
+      targetType: ReportTargetType.USER,
+    });
+
+    expect(prisma.userReport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {
+          status: ReportStatus.PENDING,
+          targetType: ReportTargetType.USER,
+        },
+        skip: 5,
+        take: 5,
+      }),
+    );
+    expect(result.items[0]).toEqual(
+      expect.objectContaining({
+        reporterName: '',
+        targetUserEmail: null,
+        targetCommentContent: 'Bình luận này đã bị xóa',
+      }),
+    );
+    expect(result.meta).toEqual({ total: 1, page: 2, limit: 5, totalPages: 1 });
+  });
+
+  it('finds reports with default pagination when no filters are provided', async () => {
+    prisma.userReport.findMany.mockResolvedValue([]);
+    prisma.userReport.count.mockResolvedValue(0);
+
+    const result = await service.findAll({});
+
+    expect(prisma.userReport.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: {},
+        skip: 0,
+        take: 10,
+      }),
+    );
+    expect(result.meta).toEqual({
+      total: 0,
+      page: 1,
+      limit: 10,
+      totalPages: 0,
+    });
+  });
+
+  it('finds one report and rejects a missing report', async () => {
+    prisma.userReport.findUnique
+      .mockResolvedValueOnce(report)
+      .mockResolvedValueOnce(null);
+
+    await expect(service.findOne(10)).resolves.toEqual(
+      expect.objectContaining({ id: 10 }),
+    );
+    await expect(service.findOne(404)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
   it('updates a pending report status by admin', async () => {
     prisma.userReport.findUnique.mockResolvedValue(report);
     prisma.userReport.update.mockResolvedValue({
@@ -185,6 +398,31 @@ describe('ReportsService', () => {
     ).rejects.toBeInstanceOf(NotFoundException);
   });
 
+  it('rejects updating an already processed report and stores null admin note', async () => {
+    prisma.userReport.findUnique
+      .mockResolvedValueOnce({ ...report, status: ReportStatus.RESOLVED })
+      .mockResolvedValueOnce(report);
+    prisma.userReport.update.mockResolvedValue({
+      ...report,
+      status: ReportStatus.REJECTED,
+      adminNote: null,
+    });
+
+    await expect(
+      service.updateStatus(10, 99, { status: ReportStatus.REJECTED }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+
+    await service.updateStatus(10, 99, { status: ReportStatus.REJECTED });
+    expect(prisma.userReport.update).toHaveBeenCalledWith({
+      where: { id: 10 },
+      data: expect.objectContaining({
+        status: ReportStatus.REJECTED,
+        adminNote: null,
+      }),
+      include: expect.any(Object),
+    });
+  });
+
   it('creates a comment report against the comment author', async () => {
     prisma.comment.findUnique.mockResolvedValue({
       userId: 5,
@@ -206,5 +444,13 @@ describe('ReportsService', () => {
         type: ReportType.SPAM,
       }),
     });
+  });
+
+  it('rejects reporting a missing comment', async () => {
+    prisma.comment.findUnique.mockResolvedValue(null);
+
+    await expect(
+      service.reportComment(1, { commentId: 404, reason: ReportType.SPAM }),
+    ).rejects.toBeInstanceOf(NotFoundException);
   });
 });

@@ -132,4 +132,41 @@ describe('AiService', () => {
     expect(prompt).toContain(JSON.stringify([{ score: 7 }]));
     expect(prompt).toContain(JSON.stringify([{ score: 8 }]));
   });
+
+  it('summarizeMentorBio - returns empty string for blank input', async () => {
+    await expect(service.summarizeMentorBio('   ')).resolves.toBe('');
+    expect(createMock).not.toHaveBeenCalled();
+  });
+
+  it('summarizeMentorBio - returns trimmed AI summary', async () => {
+    createMock.mockResolvedValue({
+      choices: [{ message: { content: '  Backend mentor, Node.js, AWS.  ' } }],
+    });
+
+    const result = await service.summarizeMentorBio(
+      'Hello, I mentor backend interviews with Node.js and AWS.',
+    );
+
+    expect(result).toBe('Backend mentor, Node.js, AWS.');
+    expect(createMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: AI_MODEL.FEEDBACK_SUMMARY,
+        temperature: 0.1,
+        messages: [
+          expect.objectContaining({
+            role: 'user',
+            content: expect.stringContaining('RAW BIOGRAPHY'),
+          }),
+        ],
+      }),
+    );
+  });
+
+  it('summarizeMentorBio - falls back to original bio when AI returns no content', async () => {
+    createMock.mockResolvedValue({ choices: [{ message: { content: '' } }] });
+
+    await expect(service.summarizeMentorBio('Raw mentor bio')).resolves.toBe(
+      'Raw mentor bio',
+    );
+  });
 });

@@ -181,6 +181,22 @@ describe('QuestionsService', () => {
       expect(result.items[0].isBookmarked).toBe(true);
     });
 
+    it('should filter by bookmarked questions when user id is provided', async () => {
+      prisma.question.findMany.mockResolvedValue([]);
+      prisma.question.count.mockResolvedValue(0);
+      prisma.userBookmark.findMany.mockResolvedValue([]);
+
+      await service.findAll({ bookmarked: true } as any, 7);
+
+      expect(prisma.question.findMany).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({
+            bookmarks: { some: { userId: 7 } },
+          }),
+        }),
+      );
+    });
+
     it('should return empty optional text and relation arrays when coding data is absent', async () => {
       prisma.question.findMany.mockResolvedValue([
         {
@@ -510,6 +526,92 @@ describe('QuestionsService', () => {
           codingQuestion: {
             update: expect.objectContaining({
               description: 'Updated',
+            }),
+          },
+        }),
+      });
+    });
+
+    it('should update coding test cases when provided', async () => {
+      prisma.question.findUnique.mockResolvedValue({
+        id: 1,
+        type: QuestionType.CODING,
+      } as any);
+      prisma.question.update.mockResolvedValue({} as any);
+
+      await service.update(1, {
+        codingData: {
+          description: 'Updated',
+          testCases: [
+            {
+              input: '1 2',
+              expectedOutput: '3',
+              isSample: true,
+              isHidden: false,
+              points: 2,
+            },
+          ],
+        },
+      } as any);
+
+      expect(prisma.question.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({
+          codingQuestion: {
+            update: expect.objectContaining({
+              testCases: {
+                deleteMany: {},
+                create: [
+                  {
+                    input: '1 2',
+                    expectedOutput: '3',
+                    isSample: true,
+                    isHidden: false,
+                    points: 2,
+                    order: 0,
+                  },
+                ],
+              },
+            }),
+          },
+        }),
+      });
+    });
+
+    it('should apply default values when updating coding test cases', async () => {
+      prisma.question.findUnique.mockResolvedValue({
+        id: 1,
+        type: QuestionType.CODING,
+      } as any);
+      prisma.question.update.mockResolvedValue({} as any);
+
+      await service.update(1, {
+        codingData: {
+          testCases: [
+            {
+              input: 'input',
+              expectedOutput: 'output',
+            },
+          ],
+        },
+      } as any);
+
+      expect(prisma.question.update).toHaveBeenCalledWith({
+        where: { id: 1 },
+        data: expect.objectContaining({
+          codingQuestion: {
+            update: expect.objectContaining({
+              testCases: {
+                deleteMany: {},
+                create: [
+                  expect.objectContaining({
+                    isSample: false,
+                    isHidden: false,
+                    points: 1,
+                    order: 0,
+                  }),
+                ],
+              },
             }),
           },
         }),
