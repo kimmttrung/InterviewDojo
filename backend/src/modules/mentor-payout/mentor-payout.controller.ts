@@ -76,3 +76,20 @@ export class AdminPayoutRetryController {
     return this.mentorPayoutService.retryPayoutForSession(sessionId);
   }
 }
+
+@Controller('mentor/payouts')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles(Role.MENTOR) // Chỉ Mentor mới được truy cập
+export class MentorOwnPayoutController {
+  constructor(private readonly mentorPayoutService: MentorPayoutService) {}
+
+  @Get()
+  getMyPayouts(
+    @CurrentUser() mentor: JwtPayload,
+    @Query(new ValidationPipe({ whitelist: true, transform: true }))
+    query: QueryMentorPayoutDto,
+  ) {
+    // Truyền mentor.sub (chính là ID của mentor đang đăng nhập) vào service
+    return this.mentorPayoutService.getMyPayouts(mentor.sub, query);
+  }
+}

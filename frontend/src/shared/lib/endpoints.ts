@@ -26,6 +26,7 @@ export const API_ENDPOINT = {
     SKILLS: '/mentors/skills',
     COACHING_PLANS: '/mentor/coaching-plans',
     UPLOAD_INTRODUCTION_VIDEO: '/mentors/upload/introduction-video',
+    PAYOUTS: '/mentor/payouts',
   },
   MENTORS: {
     GET_ALL: '/mentors',

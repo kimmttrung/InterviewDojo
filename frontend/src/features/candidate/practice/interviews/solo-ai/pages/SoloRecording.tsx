@@ -100,6 +100,8 @@ export default function SoloRecording() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [showQuestion, setShowQuestion] = useState(true);
   const [showTranscript, setShowTranscript] = useState(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isQuestionExpanded, setIsQuestionExpanded] = useState(false);
 
   useEffect(() => {
     let isCurrentRequest = true;
@@ -635,18 +637,48 @@ export default function SoloRecording() {
                       Choose a Question
                     </label>
 
-                    <select
-                      className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                      value={selectedQuestionId ?? ''}
-                      onChange={(e) => setSelectedQuestionId(Number(e.target.value))}
-                    >
-                      {questions.length === 0 && <option value="">No matching questions</option>}
-                      {questions.map((q) => (
-                        <option key={q.id} value={q.id}>
-                          {getQuestionText(q)}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="relative w-full">
+                      {/* Nút bấm hiển thị câu hỏi hiện tại */}
+                      <button
+                        type="button"
+                        className="w-full p-4 rounded-lg border bg-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all text-left flex justify-between items-center"
+                        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      >
+                        <span className="truncate mr-2">
+                          {selectedQuestion ? selectedQuestionTitle : 'Choose a Question'}
+                        </span>
+                        <span className="text-slate-400 text-xs">▼</span>
+                      </button>
+
+                      {/* Danh sách các câu hỏi khi mở */}
+                      {isDropdownOpen && (
+                        <div className="absolute z-50 mt-1 w-full max-h-60 overflow-y-auto rounded-lg border bg-white shadow-xl py-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                          {questions.length === 0 ? (
+                            <div className="p-4 text-sm text-slate-400 text-center">
+                              No matching questions
+                            </div>
+                          ) : (
+                            questions.map((q) => (
+                              <button
+                                key={q.id}
+                                type="button"
+                                className={`w-full text-left p-3 text-sm transition-colors hover:bg-indigo-50 block whitespace-normal break-words ${
+                                  q.id === selectedQuestionId
+                                    ? 'bg-indigo-50/50 text-indigo-600 font-medium'
+                                    : 'text-slate-700'
+                                }`}
+                                onClick={() => {
+                                  setSelectedQuestionId(q.id);
+                                  setIsDropdownOpen(false);
+                                }}
+                              >
+                                {getQuestionText(q)}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-4 pt-4">
@@ -761,12 +793,29 @@ export default function SoloRecording() {
                 )}
 
                 {showQuestion && (
-                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-12 pointer-events-none z-0">
-                    <div className="bg-indigo-600/95 backdrop-blur-md py-3 px-6 rounded-full border border-white/20 text-center text-white shadow-xl inline-block max-w-full truncate">
-                      <span className="text-sm font-bold uppercase tracking-wider opacity-80 mr-2">
-                        Q:
-                      </span>
-                      <span className="font-medium text-lg">"{selectedQuestionTitle}"</span>
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 w-full px-12 z-30 flex justify-center">
+                    <div className="bg-indigo-600/95 backdrop-blur-md py-3 px-6 rounded-2xl border border-white/20 text-white shadow-xl max-w-2xl transition-all duration-300">
+                      <div className="flex items-start gap-2">
+                        <span className="text-sm font-bold uppercase tracking-wider opacity-80 mt-1 shrink-0">
+                          Q:
+                        </span>
+                        <div className="text-left">
+                          <p
+                            className={`font-medium text-[16px] leading-relaxed transition-all ${!isQuestionExpanded ? 'line-clamp-1' : ''}`}
+                          >
+                            "{selectedQuestionTitle}"
+                          </p>
+                          {/* Nút Xem thêm / Thu gọn chỉ hiện khi câu hỏi dài */}
+                          {selectedQuestionTitle.length > 60 && (
+                            <button
+                              onClick={() => setIsQuestionExpanded(!isQuestionExpanded)}
+                              className="text-xs text-indigo-200 hover:text-white underline mt-1 font-semibold transition-colors block"
+                            >
+                              {isQuestionExpanded ? 'Collapse ▲' : 'Expand ▼'}
+                            </button>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   </div>
                 )}

@@ -15,7 +15,7 @@ export function MentorLayout({ children }: Props) {
       <div className="flex">
         <MentorSidebar />
 
-        <main className="flex-1 pt-16 lg:ml-64">
+        <main className="flex-1 pt-10 lg:ml-64">
           <div className="p-6 w-full">{children}</div>
         </main>
       </div>

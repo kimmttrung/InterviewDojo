@@ -21,9 +21,7 @@ export default function MentorListPage() {
         <div className="container mx-auto p-6 space-y-10">
           {/* Header Trang */}
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight text-slate-900">
-              Find Your Mentor
-            </h1>
+            <h1 className="text-3xl font-bold tracking-tight">Find Your Mentor</h1>
             <p className="text-sm text-muted-foreground mt-1">
               Connect with experts to accelerate your career growth.
             </p>

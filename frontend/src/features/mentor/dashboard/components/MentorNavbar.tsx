@@ -38,8 +38,8 @@ export function MentorNavbar() {
       <div className="flex h-16 items-center justify-between px-6">
         {/* LOGO */}
         <div className="flex items-center gap-3">
-          <div className="w-9 h-9 flex items-center justify-center rounded-lg bg-gradient-to-r from-indigo-500 to-purple-600 text-white font-bold">
-            M
+          <div className="flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-bold mx-auto mb-4 shadow-lg shadow-purple-500/30 transform rotate-12">
+            <span className="text-xl -rotate-12">M</span>
           </div>
           <span className="font-semibold">Mentor Panel</span>
         </div>

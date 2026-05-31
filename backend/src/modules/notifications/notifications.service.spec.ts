@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { NotFoundException } from '@nestjs/common';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from '@/prisma/prisma.service';
 
@@ -10,6 +11,8 @@ describe('NotificationsService', () => {
       findMany: jest.fn(),
       count: jest.fn(),
       updateMany: jest.fn(),
+      findFirst: jest.fn(),
+      update: jest.fn(),
       create: jest.fn(),
     },
   };
@@ -168,5 +171,30 @@ describe('NotificationsService', () => {
 
     expect(result.targetUrl).toBe('/bookings/1');
     expect(prisma.notification.create).toHaveBeenCalledWith({ data });
+  });
+
+  it('togglePin - flips a notification pin state', async () => {
+    prisma.notification.findFirst.mockResolvedValue({ id: 1, isPinned: false });
+    prisma.notification.update.mockResolvedValue({ id: 1, isPinned: true });
+
+    const result = await service.togglePin(10, 1);
+
+    expect(result).toEqual({ id: 1, isPinned: true });
+    expect(prisma.notification.findFirst).toHaveBeenCalledWith({
+      where: { id: 1, userId: 10 },
+    });
+    expect(prisma.notification.update).toHaveBeenCalledWith({
+      where: { id: 1 },
+      data: { isPinned: true },
+    });
+  });
+
+  it('togglePin - rejects missing or unauthorized notifications', async () => {
+    prisma.notification.findFirst.mockResolvedValue(null);
+
+    await expect(service.togglePin(10, 404)).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+    expect(prisma.notification.update).not.toHaveBeenCalled();
   });
 });

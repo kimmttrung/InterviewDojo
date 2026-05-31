@@ -73,15 +73,11 @@ export class PaymentController {
   ) {
     if (!req.rawBody) throw new BadRequestException('Missing raw body');
     const rawBody = req.rawBody.toString('utf8');
-    const method = req.method; // 'POST'
-    const url = req.url; // '/api/v1/payment/webhook/sepay'
     return this.paymentService.handleSePayWebhook(
       payload,
       rawBody,
       signature,
       timestamp,
-      method,
-      url,
     );
   }
 
