@@ -20,11 +20,13 @@ export const useSessionSocket = () => {
     socket.on('SESSION_UPDATED', handleSessionUpdate);
     socket.on('SESSION_ACCEPTED', handleSessionUpdate);
     socket.on('SESSION_ENDED', handleSessionEnded);
+    socket.on('call_ended', handleSessionEnded);
 
     return () => {
       socket.off('SESSION_UPDATED', handleSessionUpdate);
       socket.off('SESSION_ACCEPTED', handleSessionUpdate);
       socket.off('SESSION_ENDED', handleSessionEnded);
+      socket.on('call_ended', handleSessionEnded);
     };
   }, [socket, queryClient]);
 };

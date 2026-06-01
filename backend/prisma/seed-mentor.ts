@@ -537,8 +537,8 @@ async function main() {
           categoryId: categories[categoryIdx].id,
           title: `1-on-1 ${categories[categoryIdx].name} Session`,
           description: `I will help you with ${categories[categoryIdx].name.toLowerCase()} and share my industry experience.`,
-          duration: 60, // 60 phút
-          price: 50.0 + (i % 5) * 10, // $50 - $90
+          duration: 60,
+          price: 50.0 + (i % 5) * 10,
           isActive: true,
         },
       });
