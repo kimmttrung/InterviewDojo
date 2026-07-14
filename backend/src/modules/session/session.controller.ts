@@ -31,7 +31,7 @@ export class SessionController {
     @Query(new ValidationPipe({ whitelist: true, transform: true }))
     query: GetSessionsDto,
   ): Promise<PaginatedResponse<SessionItem>> {
-    const userId = Number(user.sub || user.id);
+    const userId = Number(user.sub);
     return this.sessionService.getSessions(userId, query);
   }
 
@@ -42,12 +42,12 @@ export class SessionController {
     @Param('sessionId') sessionId: string,
     @Body('reason') reason: string,
   ) {
-    const userId = Number(user.sub || user.id);
+    const userId = Number(user.sub);
     return this.sessionService.cancelSession(userId, +sessionId, reason);
   }
 
   @Post(':id/meeting-link')
-  @ResponseMessage('Lấy link meeting thành công') // hoặc thêm message trong Messages nếu muốn
+  @ResponseMessage(Messages.SESSION.MEETING_LINK_READY)
   async getMeetingLink(
     @CurrentUser() user: any, // 👈 dùng CurrentUser thay vì @Req
     @Param('id') sessionId: string,
@@ -65,5 +65,12 @@ export class SessionController {
   async getSessionDetail(@CurrentUser() user: any, @Param('id') id: string) {
     const userId = Number(user.sub || user.id);
     return this.sessionService.getSessionDetail(+id, userId);
+  }
+
+  @Post(':id/finish')
+  @ResponseMessage(Messages.SESSION.SESSION_ENDED)
+  async finishSession(@CurrentUser() user: any, @Param('id') id: string) {
+    const userId = Number(user.sub || user.id);
+    return this.sessionService.finishSession(+id, userId);
   }
 }

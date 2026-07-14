@@ -19,3 +19,8 @@ export const getMeetingLink = async (sessionId: number | string) => {
   console.log('check res', response);
   return response.data.data.meetingLink as string;
 };
+
+export const finishSession = async (sessionId: number | string) => {
+  const response = await api.post(`/sessions/${sessionId}/finish`);
+  return response.data;
+};
