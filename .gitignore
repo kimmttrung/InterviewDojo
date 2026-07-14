@@ -45,3 +45,4 @@ backend/docs/
 
 *.secrets
 *event.json
+CLAUDE.md
