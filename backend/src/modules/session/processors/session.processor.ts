@@ -41,7 +41,6 @@ export class SessionProcessor extends WorkerHost {
       }
       return;
     }
-    console.log(`✅ Processing end-session for session ${sessionId}`);
 
     await this.prisma.mockSession.update({
       where: { id: sessionId },

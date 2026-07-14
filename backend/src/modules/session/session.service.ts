@@ -1041,4 +1041,66 @@ export class SessionService {
       opts: { delay, jobId: `session-${session.id}` },
     };
   }
+
+  async finishSession(sessionId: number, userId: number) {
+    const session = await this.prisma.mockSession.findUnique({
+      where: { id: sessionId },
+      include: {
+        booking: { select: { mentorId: true, candidateId: true } },
+        match: { select: { candidateAId: true, candidateBId: true } },
+      },
+    });
+
+    if (!session) {
+      throw new NotFoundException('Session không tồn tại');
+    }
+
+    const isParticipant =
+      session.intervieweeId === userId ||
+      session.booking?.mentorId === userId ||
+      session.booking?.candidateId === userId ||
+      session.match?.candidateAId === userId ||
+      session.match?.candidateBId === userId;
+
+    if (!isParticipant) {
+      throw new ForbiddenException('Bạn không có quyền kết thúc session này');
+    }
+
+    if (session.status !== SessionStatus.COMPLETED) {
+      await this.prisma.mockSession.update({
+        where: { id: sessionId },
+        data: { status: SessionStatus.COMPLETED },
+      });
+
+      if (session.booking) {
+        await this.mentorPayoutService.payoutCompletedSessionSafely(sessionId);
+      }
+    }
+
+    // 4. Xóa Job kết thúc tự động trong Redis Queue (nếu có) để giải phóng tài nguyên
+    await this.sessionQueue.remove(`session-${sessionId}`);
+
+    // 5. Gom danh sách User ID liên quan để bắn Socket
+    const affectedUserIds = new Set<number>();
+    affectedUserIds.add(session.intervieweeId);
+
+    if (session.booking) {
+      affectedUserIds.add(session.booking.mentorId);
+      affectedUserIds.add(session.booking.candidateId);
+    }
+    if (session.match) {
+      affectedUserIds.add(session.match.candidateAId);
+      affectedUserIds.add(session.match.candidateBId);
+    }
+
+    for (const id of affectedUserIds) {
+      this.socketService.emitToUser(id, 'SESSION_ENDED', { sessionId });
+
+      this.socketService.emitToUser(id, 'call_ended', {
+        sessionId,
+        endedBy: userId,
+      });
+    }
+    return { success: true, message: 'Session kết thúc thành công' };
+  }
 }

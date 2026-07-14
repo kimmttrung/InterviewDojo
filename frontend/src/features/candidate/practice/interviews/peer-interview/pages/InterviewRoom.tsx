@@ -24,6 +24,7 @@ import { FeedbackForm } from '@/features/shared-domain/feedback/components/Feedb
 import { useCursorSync } from '../hooks/useCursorSync';
 import { CursorOverlay } from '../components/CursorOverlay';
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from '@/components/ui/resizable';
+import { finishSession } from '../../../../../session/services/session.services';
 
 export default function InterviewRoom() {
   // const navigate = useNavigate();
@@ -70,10 +71,19 @@ export default function InterviewRoom() {
   const { data: myFeedback, isLoading: feedbackLoading } = useMyFeedback(sessionId);
   // const { data: partnerFeedback, isLoading } = usePartnerFeedback(sessionId);
 
-  // 🔥 Xử lý khi người dùng chủ động bấm nút rời phòng
-  const handleLeaveRoom = () => {
+  const handleLeaveRoom = async () => {
     setIsLeaving(true);
-    setShowFeedback(true); // hiện modal feedback ngay lập tức
+
+    try {
+      if (sessionId) {
+        await finishSession(sessionId);
+      }
+    } catch (error) {
+      console.error('Lỗi khi kết thúc session:', error);
+    } finally {
+      // 2. Hiện modal feedback
+      setShowFeedback(true);
+    }
   };
 
   // Khi session kết thúc (tự động), cũng hiện feedback

@@ -229,6 +229,7 @@ export const Messages = {
   SESSION: {
     SESSION_ACCEPTED: 'Session đã được chấp nhận',
     SESSION_REJECTED: 'Session đã bị từ chối',
+    SESSION_ENDED: 'Session đã kết thúc',
     SESSION_FETCHED: 'Lấy danh sách phiên học thành công',
     SESSION_CANCELLED: 'Session đã bị hủy',
     MEETING_LINK_READY: 'Đã cập nhật link họp thành công',
